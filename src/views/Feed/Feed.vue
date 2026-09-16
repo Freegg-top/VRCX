@@ -146,9 +146,6 @@
     const hasDateFilter = computed(() => !!(feedTable.value.dateFrom || feedTable.value.dateTo));
     const activeFilterCount = computed(() => (hasDateFilter.value ? 1 : 0));
 
-    /**
-     *
-     */
     function applyDateFilter() {
         if (dateRange.value?.start) {
             const s = dateRange.value.start;
@@ -166,9 +163,6 @@
         feedTableLookup();
     }
 
-    /**
-     *
-     */
     function clearDateFilter() {
         dateRange.value = undefined;
         feedTable.value.dateFrom = '';
@@ -182,7 +176,6 @@
     const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
     /**
-     *
      * @param row
      */
     function getFeedRowId(row) {
@@ -242,7 +235,6 @@
     });
 
     /**
-     *
      * @param value
      */
     function handleFeedFilterChange(value) {

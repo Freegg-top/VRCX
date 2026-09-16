@@ -23,16 +23,8 @@ import {
     parseLocation,
     replaceBioSymbols
 } from '../shared/utils';
-import {
-    instanceRequest,
-    queryRequest,
-    userRequest,
-    worldRequest
-} from '../api';
-import {
-    accessTypeLocaleKeyMap,
-    instanceContentSettings
-} from '../shared/constants';
+import { instanceRequest, queryRequest, userRequest, worldRequest } from '../api';
+import { accessTypeLocaleKeyMap, instanceContentSettings } from '../shared/constants';
 import { database } from '../services/database';
 import { fetchMutualCountsForPlayers } from '../coordinators/mutualCoordinator';
 import { resolveRef } from '../shared/utils/resolveRef';
@@ -70,26 +62,14 @@ export const useInstanceStore = defineStore('Instance', () => {
 
     let cachedInstances = new Map();
 
-    /**
-     *
-     */
     function cleanInstanceCache() {
         const friendLocationTags = new Set(
-            [...friendStore.friends.values()]
-                .map((f) => f.$location?.tag)
-                .filter(Boolean)
+            [...friendStore.friends.values()].map((f) => f.$location?.tag).filter(Boolean)
         );
-        evictMapCache(
-            cachedInstances,
-            200,
-            (_value, key) => friendLocationTags.has(key),
-            {
-                sortFn: (a, b) =>
-                    (Date.parse(a.value.$fetchedAt) || 0) -
-                    (Date.parse(b.value.$fetchedAt) || 0),
-                logLabel: 'Instance cache cleanup'
-            }
-        );
+        evictMapCache(cachedInstances, 200, (_value, key) => friendLocationTags.has(key), {
+            sortFn: (a, b) => (Date.parse(a.value.$fetchedAt) || 0) - (Date.parse(b.value.$fetchedAt) || 0),
+            logLabel: 'Instance cache cleanup'
+        });
     }
 
     const lastInstanceApplied = ref('');
@@ -183,9 +163,6 @@ export const useInstanceStore = defineStore('Instance', () => {
         { flush: 'sync' }
     );
 
-    /**
-     *
-     */
     async function getInstanceJoinHistory() {
         try {
             const data = await database.getInstanceJoinHistory();
@@ -199,7 +176,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param location
      * @param dateTime
      */
@@ -216,9 +192,6 @@ export const useInstanceStore = defineStore('Instance', () => {
         instanceJoinHistory.set(location, epoch);
     }
 
-    /**
-     *
-     */
     function hidePreviousInstancesDialogs() {
         previousInstancesInfoDialog.value.visible = false;
         previousInstancesListDialog.value.visible = false;
@@ -239,7 +212,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param input
      */
     function resolveUserRef(input) {
@@ -252,7 +224,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param input
      */
     function resolveWorldRef(input) {
@@ -260,13 +231,11 @@ export const useInstanceStore = defineStore('Instance', () => {
             emptyDefault: { id: '', name: '' },
             idAlias: 'worldId',
             nameKey: 'name',
-            fetchFn: (id) =>
-                queryRequest.fetch('world.location', { worldId: id })
+            fetchFn: (id) => queryRequest.fetch('world.location', { worldId: id })
         });
     }
 
     /**
-     *
      * @param input
      */
     function resolveGroupRef(input) {
@@ -279,7 +248,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param accessTypeNameRaw
      */
     function translateAccessType(accessTypeNameRaw) {
@@ -287,10 +255,7 @@ export const useInstanceStore = defineStore('Instance', () => {
         if (!key) {
             return accessTypeNameRaw;
         }
-        if (
-            accessTypeNameRaw === 'groupPublic' ||
-            accessTypeNameRaw === 'groupPlus'
-        ) {
+        if (accessTypeNameRaw === 'groupPublic' || accessTypeNameRaw === 'groupPlus') {
             const groupKey = accessTypeLocaleKeyMap.group;
             return `${t(groupKey)} ${t(key)}`;
         }
@@ -298,24 +263,15 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param instanceId
      * @param worldNameOverride
      */
-    function formatPreviousInstancesInfoLabel(
-        instanceId,
-        worldNameOverride = ''
-    ) {
+    function formatPreviousInstancesInfoLabel(instanceId, worldNameOverride = '') {
         const location = parseLocation(instanceId);
         const worldId = location.worldId;
-        const worldName =
-            worldNameOverride ||
-            (worldId ? worldStore.cachedWorlds.get(worldId)?.name : '') ||
-            '';
+        const worldName = worldNameOverride || (worldId ? worldStore.cachedWorlds.get(worldId)?.name : '') || '';
         const baseLabel = worldName || worldId || instanceId || '';
-        const accessTypeLabel = translateAccessType(
-            location.accessTypeName || ''
-        );
+        const accessTypeLabel = translateAccessType(location.accessTypeName || '');
         if (!accessTypeLabel || !location.instanceId) {
             return baseLabel;
         }
@@ -323,7 +279,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param instanceId
      */
     function showPreviousInstancesInfoDialog(instanceId) {
@@ -332,26 +287,18 @@ export const useInstanceStore = defineStore('Instance', () => {
         uiStore.openDialog({
             type: 'previous-instances-info',
             id: instanceId || '',
-            label: instanceId
-                ? formatPreviousInstancesInfoLabel(instanceId)
-                : ''
+            label: instanceId ? formatPreviousInstancesInfoLabel(instanceId) : ''
         });
         if (instanceId) {
             const location = parseLocation(instanceId);
-            if (
-                location.worldId &&
-                !worldStore.cachedWorlds.get(location.worldId)?.name
-            ) {
+            if (location.worldId && !worldStore.cachedWorlds.get(location.worldId)?.name) {
                 queryRequest
                     .fetch('world.dialog', { worldId: location.worldId })
                     .then((args) => {
                         uiStore.setDialogCrumbLabel(
                             'previous-instances-info',
                             instanceId,
-                            formatPreviousInstancesInfoLabel(
-                                instanceId,
-                                args?.ref?.name || ''
-                            )
+                            formatPreviousInstancesInfoLabel(instanceId, args?.ref?.name || '')
                         );
                     })
                     .catch(() => {});
@@ -360,7 +307,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param variant
      * @param targetRef
      */
@@ -391,9 +337,6 @@ export const useInstanceStore = defineStore('Instance', () => {
         });
     }
 
-    /**
-     *
-     */
     function updateCurrentInstanceWorld() {
         let L;
         let instanceId = locationStore.lastLocation.location;
@@ -435,31 +378,24 @@ export const useInstanceStore = defineStore('Instance', () => {
                 })
                 .then((args) => {
                     currentInstanceWorld.value.ref = args.ref;
-                    const { isPC, isQuest, isIos } = getAvailablePlatforms(
-                        args.ref.unityPackages
-                    );
+                    const { isPC, isQuest, isIos } = getAvailablePlatforms(args.ref.unityPackages);
                     currentInstanceWorld.value.isPC = isPC;
                     currentInstanceWorld.value.isQuest = isQuest;
                     currentInstanceWorld.value.isIos = isIos;
-                    currentInstanceWorld.value.avatarScalingDisabled =
-                        args.ref?.tags.includes(
-                            'feature_avatar_scaling_disabled'
-                        );
+                    currentInstanceWorld.value.avatarScalingDisabled = args.ref?.tags.includes(
+                        'feature_avatar_scaling_disabled'
+                    );
                     currentInstanceWorld.value.focusViewDisabled =
                         args.ref?.tags.includes('feature_focus_view_disabled');
                     checkVRChatCache(args.ref)
                         .then((cacheInfo) => {
                             if (cacheInfo.Item1 > 0) {
                                 currentInstanceWorld.value.inCache = true;
-                                currentInstanceWorld.value.cacheSize =
-                                    formatFileSize(cacheInfo.Item1);
+                                currentInstanceWorld.value.cacheSize = formatFileSize(cacheInfo.Item1);
                             }
                         })
                         .catch((error) => {
-                            console.error(
-                                'Error checking VRChat cache:',
-                                error
-                            );
+                            console.error('Error checking VRChat cache:', error);
                         });
                     getBundleDateSize(args.ref);
                     return args;
@@ -474,17 +410,14 @@ export const useInstanceStore = defineStore('Instance', () => {
                 })
                 .then((args) => {
                     currentInstanceWorld.value.ref = args.ref;
-                    const { isPC, isQuest, isIos } = getAvailablePlatforms(
-                        args.ref.unityPackages
-                    );
+                    const { isPC, isQuest, isIos } = getAvailablePlatforms(args.ref.unityPackages);
                     currentInstanceWorld.value.isPC = isPC;
                     currentInstanceWorld.value.isQuest = isQuest;
                     currentInstanceWorld.value.isIos = isIos;
                     checkVRChatCache(args.ref).then((cacheInfo) => {
                         if (cacheInfo.Item1 > 0) {
                             currentInstanceWorld.value.inCache = true;
-                            currentInstanceWorld.value.cacheSize =
-                                formatFileSize(cacheInfo.Item1);
+                            currentInstanceWorld.value.cacheSize = formatFileSize(cacheInfo.Item1);
                         }
                     });
                 });
@@ -505,10 +438,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                             currentInstanceWorld.value.instance = args.ref;
                         })
                         .catch((error) => {
-                            console.error(
-                                'Error fetching instance data:',
-                                error
-                            );
+                            console.error('Error fetching instance data:', error);
                         });
                 }
             }
@@ -516,9 +446,8 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param {object} json
-     * @returns {object} ref
+     * @returns {object} Ref
      */
     function applyInstance(json) {
         if (!json?.id) {
@@ -549,29 +478,17 @@ export const useInstanceStore = defineStore('Instance', () => {
         if (ref?.world?.name) {
             ref.world.name = replaceBioSymbols(ref.world.name);
         }
-        ref.$disabledContentSettings = computeDisabledContentSettings(
-            json.contentSettings,
-            instanceContentSettings
-        );
+        ref.$disabledContentSettings = computeDisabledContentSettings(json.contentSettings, instanceContentSettings);
         if (ref.displayName) {
             ref.displayName = replaceBioSymbols(ref.displayName);
         }
-        if (
-            userStore.userDialog.visible &&
-            userStore.userDialog.ref?.$location?.tag === ref.id
-        ) {
+        if (userStore.userDialog.visible && userStore.userDialog.ref?.$location?.tag === ref.id) {
             userStore.applyUserDialogLocation();
         }
-        if (
-            worldStore.worldDialog.visible &&
-            worldStore.worldDialog.id === ref.worldId
-        ) {
+        if (worldStore.worldDialog.visible && worldStore.worldDialog.id === ref.worldId) {
             applyWorldDialogInstances();
         }
-        if (
-            groupStore.groupDialog.visible &&
-            groupStore.groupDialog.id === ref.ownerId
-        ) {
+        if (groupStore.groupDialog.visible && groupStore.groupDialog.id === ref.ownerId) {
             applyGroupDialogInstances();
         }
         for (const groupInstance of groupStore.groupInstances) {
@@ -584,7 +501,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param location
      */
     async function getInstanceName(location) {
@@ -607,10 +523,9 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param {string} worldId
      * @param {any} options
-     * @returns {Promise<{json: *, params}|null>}
+     * @returns {Promise<{ json: any; params } | null>}
      */
     async function createNewInstance(worldId = '', options) {
         let D = options;
@@ -618,31 +533,13 @@ export const useInstanceStore = defineStore('Instance', () => {
         if (!D) {
             D = {
                 loading: false,
-                accessType: await configRepository.getString(
-                    'instanceDialogAccessType',
-                    'public'
-                ),
-                region: await configRepository.getString(
-                    'instanceRegion',
-                    'US West'
-                ),
+                accessType: await configRepository.getString('instanceDialogAccessType', 'public'),
+                region: await configRepository.getString('instanceRegion', 'US West'),
                 worldId: worldId,
-                groupId: await configRepository.getString(
-                    'instanceDialogGroupId',
-                    ''
-                ),
-                groupAccessType: await configRepository.getString(
-                    'instanceDialogGroupAccessType',
-                    'plus'
-                ),
-                ageGate: await configRepository.getBool(
-                    'instanceDialogAgeGate',
-                    false
-                ),
-                queueEnabled: await configRepository.getBool(
-                    'instanceDialogQueueEnabled',
-                    true
-                ),
+                groupId: await configRepository.getString('instanceDialogGroupId', ''),
+                groupAccessType: await configRepository.getString('instanceDialogGroupAccessType', 'plus'),
+                ageGate: await configRepository.getBool('instanceDialogAgeGate', false),
+                queueEnabled: await configRepository.getBool('instanceDialogQueueEnabled', true),
                 roleIds: [],
                 groupRef: {}
             };
@@ -694,11 +591,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                 params.minimumAvatarPerformance = D.minimumAvatarPerformance;
             }
         }
-        if (
-            D.ageGate &&
-            type === 'group' &&
-            hasGroupPermission(D.groupRef, 'group-instance-age-gated-create')
-        ) {
+        if (D.ageGate && type === 'group' && hasGroupPermission(D.groupRef, 'group-instance-age-gated-create')) {
             params.ageGate = true;
         }
         if (D.displayName) {
@@ -713,16 +606,10 @@ export const useInstanceStore = defineStore('Instance', () => {
         }
     }
 
-    /**
-     *
-     */
     function applyWorldDialogInstances() {
         debounce(applyWorldDialogInstancesDebounced, 100)();
     }
 
-    /**
-     *
-     */
     function applyWorldDialogInstancesDebounced() {
         let ref;
         let instance;
@@ -758,9 +645,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                 ref: {}
             };
         }
-        const cachedCurrentUser = userStore.cachedUsers.get(
-            userStore.currentUser.id
-        );
+        const cachedCurrentUser = userStore.cachedUsers.get(userStore.currentUser.id);
         const lastLocation$ = cachedCurrentUser?.$location;
         const playersInInstance = locationStore.lastLocation.playerList;
         if (lastLocation$?.worldId === D.id && playersInInstance.size > 0) {
@@ -887,20 +772,14 @@ export const useInstanceStore = defineStore('Instance', () => {
         }
         rooms.sort(function (a, b) {
             // sort selected and current instance to top
-            if (
-                b.location === D.$location.tag ||
-                b.location === lastLocation$?.tag
-            ) {
+            if (b.location === D.$location.tag || b.location === lastLocation$?.tag) {
                 // sort selected instance above current instance
                 if (a.location === D.$location.tag) {
                     return -1;
                 }
                 return 1;
             }
-            if (
-                a.location === D.$location.tag ||
-                a.location === lastLocation$?.tag
-            ) {
+            if (a.location === D.$location.tag || a.location === lastLocation$?.tag) {
                 // sort selected instance above current instance
                 if (b.location === D.$location.tag) {
                     return 1;
@@ -908,11 +787,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                 return -1;
             }
             // sort by number of users when no friends in instance
-            if (
-                a.users.length === 0 &&
-                b.users.length === 0 &&
-                a.ref?.userCount !== b.ref?.userCount
-            ) {
+            if (a.users.length === 0 && b.users.length === 0 && a.ref?.userCount !== b.ref?.userCount) {
                 if (a.ref?.userCount < b.ref?.userCount) {
                     return 1;
                 }
@@ -932,7 +807,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param {object} inputInstances
      */
     function applyGroupDialogInstances(inputInstances) {
@@ -963,9 +837,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                 };
             }
         }
-        const cachedCurrentUser = userStore.cachedUsers.get(
-            userStore.currentUser.id
-        );
+        const cachedCurrentUser = userStore.cachedUsers.get(userStore.currentUser.id);
         const lastLocation$ = cachedCurrentUser?.$location;
         const currentLocation = lastLocation$?.tag;
         const playersInInstance = locationStore.lastLocation.playerList;
@@ -1097,9 +969,6 @@ export const useInstanceStore = defineStore('Instance', () => {
         D.instances = rooms;
     }
 
-    /**
-     *
-     */
     function removeAllQueuedInstances() {
         queuedInstances.forEach((ref) => {
             toast.info(`Removed instance ${ref.$worldName} from queue`);
@@ -1109,7 +978,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param {string} instanceId
      */
     function removeQueuedInstance(instanceId) {
@@ -1121,7 +989,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param {string} instanceId
      */
     function applyQueuedInstance(instanceId) {
@@ -1149,18 +1016,11 @@ export const useInstanceStore = defineStore('Instance', () => {
                     })
                     .then((args) => {
                         if (args.json?.queueSize) {
-                            instanceQueueUpdate(
-                                instanceId,
-                                args.json?.queueSize,
-                                args.json?.queueSize
-                            );
+                            instanceQueueUpdate(instanceId, args.json?.queueSize, args.json?.queueSize);
                         }
                     })
                     .catch((error) => {
-                        console.error(
-                            'Error fetching instance data for queue:',
-                            error
-                        );
+                        console.error('Error fetching instance data for queue:', error);
                     });
             }
             instanceQueueUpdate(instanceId, 0, 0);
@@ -1168,7 +1028,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param {string} instanceId
      */
     function instanceQueueReady(instanceId) {
@@ -1195,9 +1054,7 @@ export const useInstanceStore = defineStore('Instance', () => {
         };
         if (
             notificationStore.notificationTable.filters[0].value.length === 0 ||
-            notificationStore.notificationTable.filters[0].value.includes(
-                noty.type
-            )
+            notificationStore.notificationTable.filters[0].value.includes(noty.type)
         ) {
             uiStore.notifyMenu('notification');
         }
@@ -1207,7 +1064,6 @@ export const useInstanceStore = defineStore('Instance', () => {
     }
 
     /**
-     *
      * @param {string} instanceId
      * @param {number} position
      * @param {number} queueSize
@@ -1235,11 +1091,7 @@ export const useInstanceStore = defineStore('Instance', () => {
         if (!ref.$worldName) {
             ref.$worldName = await getWorldName(instanceId);
         }
-        const location = displayLocation(
-            instanceId,
-            ref.$worldName,
-            ref.$groupName
-        );
+        const location = displayLocation(instanceId, ref.$worldName, ref.$groupName);
         toast.dismiss(ref.$msgBox ?? undefined);
         ref.$msgBox = toast.info(
             `You are in position ${ref.position} of ${ref.queueSize} in the queue for ${location} `,
@@ -1254,9 +1106,6 @@ export const useInstanceStore = defineStore('Instance', () => {
         // workerTimers.setTimeout(this.instanceQueueTimeout, 3600000);
     }
 
-    /**
-     *
-     */
     function getCurrentInstanceUserList() {
         if (!watchState.isFriendsLoaded) {
             return;
@@ -1274,9 +1123,6 @@ export const useInstanceStore = defineStore('Instance', () => {
         }
     }
 
-    /**
-     *
-     */
     function updatePlayerListExecute() {
         try {
             updatePlayerListDebounce();
@@ -1287,9 +1133,6 @@ export const useInstanceStore = defineStore('Instance', () => {
         state.updatePlayerListPending = false;
     }
 
-    /**
-     *
-     */
     function updatePlayerListDebounce() {
         const users = [];
         const pushUser = function (ref) {
@@ -1303,9 +1146,7 @@ export const useInstanceStore = defineStore('Instance', () => {
             photonStore.photonLobbyCurrent.forEach((ref1, id) => {
                 if (typeof ref1 !== 'undefined') {
                     if (
-                        (typeof ref.id !== 'undefined' &&
-                            typeof ref1.id !== 'undefined' &&
-                            ref1.id === ref.id) ||
+                        (typeof ref.id !== 'undefined' && typeof ref1.id !== 'undefined' && ref1.id === ref.id) ||
                         (typeof ref.displayName !== 'undefined' &&
                             typeof ref1.displayName !== 'undefined' &&
                             ref1.displayName === ref.displayName)
@@ -1315,10 +1156,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                 }
             });
             let isMaster = false;
-            if (
-                photonStore.photonLobbyMaster !== 0 &&
-                photonId === photonStore.photonLobbyMaster
-            ) {
+            if (photonStore.photonLobbyMaster !== 0 && photonId === photonStore.photonLobbyMaster) {
                 isMaster = true;
             }
             let isModerator = false;
@@ -1358,8 +1196,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                 }
                 isBlocked = ref.$moderations.isBlocked;
                 isMuted = ref.$moderations.isMuted;
-                isAvatarInteractionDisabled =
-                    ref.$moderations.isAvatarInteractionDisabled;
+                isAvatarInteractionDisabled = ref.$moderations.isAvatarInteractionDisabled;
                 isChatBoxMuted = ref.$moderations.isChatBoxMuted;
                 ageVerified = ref.ageVerificationStatus === '18+';
             }
@@ -1402,10 +1239,7 @@ export const useInstanceStore = defineStore('Instance', () => {
                     if (typeof ref !== 'undefined') {
                         pushUser(ref);
                     } else {
-                        let { joinTime } =
-                            locationStore.lastLocation.playerList.get(
-                                player.userId
-                            );
+                        let { joinTime } = locationStore.lastLocation.playerList.get(player.userId);
                         if (!joinTime) {
                             joinTime = Date.now();
                         }

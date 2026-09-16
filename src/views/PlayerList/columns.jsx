@@ -11,12 +11,7 @@ import {
     Smartphone
 } from 'lucide-vue-next';
 
-import {
-    getFaviconUrl,
-    languageClass,
-    openExternalLink,
-    statusClass
-} from '../../shared/utils';
+import { getFaviconUrl, languageClass, openExternalLink, statusClass } from '../../shared/utils';
 import { i18n } from '../../plugins';
 
 const { t } = i18n.global;
@@ -59,8 +54,7 @@ const getInstanceIconWeight = (item) => {
     return value;
 };
 
-const sortInstanceIcon = (a, b) =>
-    getInstanceIconWeight(b) - getInstanceIconWeight(a);
+const sortInstanceIcon = (a, b) => getInstanceIconWeight(b) - getInstanceIconWeight(a);
 
 export const createColumns = ({
     randomUserColours,
@@ -93,10 +87,7 @@ export const createColumns = ({
                                 e.target.nextElementSibling.style.display = '';
                             }}
                         />
-                        <div
-                            class="h-4 w-4 rounded-sm bg-muted flex items-center justify-center"
-                            style="display: none"
-                        >
+                        <div class="h-4 w-4 rounded-sm bg-muted flex items-center justify-center" style="display: none">
                             <User class="h-3 w-3 text-muted-foreground" />
                         </div>
                     </div>
@@ -113,8 +104,7 @@ export const createColumns = ({
                 }),
             size: 90,
             meta: { label: () => t('table.playerList.timer') },
-            sortingFn: (rowA, rowB) =>
-                (rowA.original?.timer ?? 0) - (rowB.original?.timer ?? 0),
+            sortingFn: (rowA, rowB) => (rowA.original?.timer ?? 0) - (rowB.original?.timer ?? 0),
             cell: ({ row }) => <Timer epoch={row.original?.timer} />
         },
         {
@@ -127,34 +117,25 @@ export const createColumns = ({
                 }),
             size: 200,
             meta: { label: () => t('table.playerList.displayName') },
-            sortingFn: (rowA, rowB) =>
-                sortAlphabetically(rowA.original, rowB.original, 'displayName'),
+            sortingFn: (rowA, rowB) => sortAlphabetically(rowA.original, rowB.original, 'displayName'),
             cell: ({ row }) => {
                 const userRef = row.original?.ref;
-                const style = randomUserColours?.value
-                    ? { color: userRef?.$userColour }
-                    : null;
+                const style = randomUserColours?.value ? { color: userRef?.$userColour } : null;
                 return <span style={style}>{userRef?.displayName ?? ''}</span>;
             }
         },
         {
             id: 'rank',
             accessorFn: (row) => row?.ref?.$trustSortNum,
-            header: ({ column }) =>
-                sortButton({ column, label: () => t('table.playerList.rank') }),
+            header: ({ column }) => sortButton({ column, label: () => t('table.playerList.rank') }),
             size: 110,
             meta: { label: () => t('table.playerList.rank') },
             sortingFn: (rowA, rowB) =>
-                (rowA.original?.ref?.$trustSortNum ?? 0) -
-                (rowB.original?.ref?.$trustSortNum ?? 0),
+                (rowA.original?.ref?.$trustSortNum ?? 0) - (rowB.original?.ref?.$trustSortNum ?? 0),
             cell: ({ row }) => {
                 const userRef = row.original?.ref;
                 return (
-                    <span
-                        class={['name', userRef?.$trustClass]
-                            .filter(Boolean)
-                            .join(' ')}
-                    >
+                    <span class={['name', userRef?.$trustClass].filter(Boolean).join(' ')}>
                         {userRef?.$trustLevel ?? ''}
                     </span>
                 );
@@ -176,17 +157,8 @@ export const createColumns = ({
                 const status = userRef?.status;
                 return (
                     <span class="flex w-full min-w-0 items-center gap-2">
-                        <i
-                            class={[
-                                'x-user-status',
-                                'shrink-0',
-                                'mr-1',
-                                status ? statusClass(status) : null
-                            ]}
-                        ></i>
-                        <span class="min-w-0 truncate">
-                            {userRef?.statusDescription ?? ''}
-                        </span>
+                        <i class={['x-user-status', 'shrink-0', 'mr-1', status ? statusClass(status) : null]}></i>
+                        <span class="min-w-0 truncate">{userRef?.statusDescription ?? ''}</span>
                     </span>
                 );
             }
@@ -206,13 +178,11 @@ export const createColumns = ({
                 disableVisibilityToggle: true,
                 defaultHidden: true
             },
-            sortingFn: (rowA, rowB) =>
-                (rowA.original?.photonId ?? 0) - (rowB.original?.photonId ?? 0),
+            sortingFn: (rowA, rowB) => (rowA.original?.photonId ?? 0) - (rowB.original?.photonId ?? 0),
             cell: ({ row }) => {
                 const userRef = row.original?.ref;
                 const userId = userRef?.id;
-                const isBlocked =
-                    userId && chatboxUserBlacklist?.value?.has?.(userId);
+                const isBlocked = userId && chatboxUserBlacklist?.value?.has?.(userId);
 
                 return (
                     <div class="flex items-center">
@@ -254,7 +224,7 @@ export const createColumns = ({
                 class: 'text-center',
                 label: () => t('table.playerList.icon')
             },
-            sortingFn: (rowA, rowB, columnId) => {
+            sortingFn: (rowA, rowB, _columnId) => {
                 const a = rowA.original;
                 const b = rowB.original;
                 return -sortInstanceIcon(a, b);
@@ -264,10 +234,7 @@ export const createColumns = ({
                 return (
                     <div class="flex items-center justify-center gap-1">
                         {r?.isMaster ? (
-                            <TooltipWrapper
-                                side="left"
-                                content="Instance Master"
-                            >
+                            <TooltipWrapper side="left" content="Instance Master">
                                 <span>👑</span>
                             </TooltipWrapper>
                         ) : null}
@@ -313,10 +280,7 @@ export const createColumns = ({
                             </TooltipWrapper>
                         ) : null}
                         {r?.isAvatarInteractionDisabled ? (
-                            <TooltipWrapper
-                                side="left"
-                                content="Avatar Interaction Disabled"
-                            >
+                            <TooltipWrapper side="left" content="Avatar Interaction Disabled">
                                 <span class="text-muted-foreground">🚫</span>
                             </TooltipWrapper>
                         ) : null}
@@ -327,9 +291,7 @@ export const createColumns = ({
                         ) : null}
                         {r?.timeoutTime ? (
                             <TooltipWrapper side="left" content="Timeout">
-                                <span class="text-destructive">
-                                    🔴{r.timeoutTime}s
-                                </span>
+                                <span class="text-destructive">🔴{r.timeoutTime}s</span>
                             </TooltipWrapper>
                         ) : null}
                         {r?.ageVerified ? (
@@ -368,8 +330,7 @@ export const createColumns = ({
                         ? null
                         : inVRMode
                           ? 'VR'
-                          : userRef?.last_platform === 'android' ||
-                              userRef?.last_platform === 'ios'
+                          : userRef?.last_platform === 'android' || userRef?.last_platform === 'ios'
                             ? 'M'
                             : 'D';
 
@@ -404,14 +365,7 @@ export const createColumns = ({
                                     )
                                 }}
                             >
-                                <span
-                                    class={[
-                                        'flags',
-                                        'inline-block',
-                                        'mr-1',
-                                        languageClass(item.key)
-                                    ]}
-                                />
+                                <span class={['flags', 'inline-block', 'mr-1', languageClass(item.key)]} />
                             </TooltipWrapper>
                         ))}
                     </div>
@@ -425,17 +379,14 @@ export const createColumns = ({
             enableSorting: false,
             meta: { label: () => t('table.playerList.bioLink') },
             cell: ({ row }) => {
-                const links =
-                    row.original?.ref?.bioLinks?.filter(Boolean) ?? [];
+                const links = row.original?.ref?.bioLinks?.filter(Boolean) ?? [];
                 return (
                     <div class="flex items-center">
                         {links.map((link, index) => (
                             <TooltipWrapper
                                 key={index}
                                 v-slots={{
-                                    content: () => (
-                                        <span>{String(link ?? '')}</span>
-                                    )
+                                    content: () => <span>{String(link ?? '')}</span>
                                 }}
                             >
                                 <img
@@ -466,10 +417,7 @@ export const createColumns = ({
             enableSorting: false,
             cell: ({ row }) => {
                 const note = row.original?.ref?.note;
-                const text =
-                    typeof note === 'string' || typeof note === 'number'
-                        ? String(note)
-                        : '';
+                const text = typeof note === 'string' || typeof note === 'number' ? String(note) : '';
                 return <span>{text}</span>;
             }
         }

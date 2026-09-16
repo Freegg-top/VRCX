@@ -4,7 +4,6 @@ import { database } from '../services/database';
 import { getAvatarName } from './avatarCoordinator';
 import { useFeedStore } from '../stores/feed';
 import { useFriendStore } from '../stores/friend';
-import { useGeneralSettingsStore } from '../stores/settings/general';
 import { useGroupStore } from '../stores/group';
 import { useInstanceStore } from '../stores/instance';
 import { useNotificationStore } from '../stores/notification';
@@ -15,6 +14,7 @@ import { useWorldStore } from '../stores/world';
 
 /**
  * Handles user diff events and applies cross-store side effects.
+ *
  * @param {object} ref Updated user reference.
  * @param {object} props Changed props with [new, old] tuples.
  * @param {object} [options] Test seams.
@@ -22,11 +22,7 @@ import { useWorldStore } from '../stores/world';
  * @param {function} [options.nowIso] ISO timestamp provider.
  * @returns {Promise<void>}
  */
-export async function runHandleUserUpdateFlow(
-    ref,
-    props,
-    { now = Date.now, nowIso = () => new Date().toJSON() } = {}
-) {
+export async function runHandleUserUpdateFlow(ref, props, { now = Date.now, nowIso = () => new Date().toJSON() } = {}) {
     const friendStore = useFriendStore();
     const userStore = useUserStore();
     const worldStore = useWorldStore();
@@ -35,7 +31,6 @@ export async function runHandleUserUpdateFlow(
     const feedStore = useFeedStore();
     const notificationStore = useNotificationStore();
     const sharedFeedStore = useSharedFeedStore();
-    const generalSettingsStore = useGeneralSettingsStore();
     const watchedStore = useWatchedStore();
 
     const { state, userDialog, applyUserDialogLocation, checkNote } = userStore;
@@ -72,10 +67,7 @@ export async function runHandleUserUpdateFlow(
 
         const previousLocationL = parseLocation(previousLocation);
         const newLocationL = parseLocation(newLocation);
-        if (
-            previousLocationL.tag === userDialog.$location.tag ||
-            newLocationL.tag === userDialog.$location.tag
-        ) {
+        if (previousLocationL.tag === userDialog.$location.tag || newLocationL.tag === userDialog.$location.tag) {
             // update user dialog instance occupants
             applyUserDialogLocation(true);
         }
@@ -114,9 +106,7 @@ export async function runHandleUserUpdateFlow(
             }
         }
         if (AppDebug.debugFriendState && previousLocation) {
-            console.log(
-                `${ref.displayName} GPS ${previousLocation} -> ${newLocation}`
-            );
+            console.log(`${ref.displayName} GPS ${previousLocation} -> ${newLocation}`);
         }
         if (previousLocation === 'offline') {
             previousLocation = '';
@@ -124,11 +114,7 @@ export async function runHandleUserUpdateFlow(
         if (!previousLocation) {
             // no previous location
             if (AppDebug.debugFriendState) {
-                console.log(
-                    ref.displayName,
-                    'Ignoring GPS, no previous location',
-                    newLocation
-                );
+                console.log(ref.displayName, 'Ignoring GPS, no previous location', newLocation);
             }
         } else if (ref.$previousLocation === newLocation) {
             // location traveled to is the same
@@ -158,88 +144,30 @@ export async function runHandleUserUpdateFlow(
             ref.$travelingToTime = now();
         }
     }
-    if (
-        props.location &&
-        props.location[0] === 'traveling' &&
-        props.location[1] !== 'traveling'
-    ) {
+    if (props.location && props.location[0] === 'traveling' && props.location[1] !== 'traveling') {
         // store previous location when user is traveling
         ref.$previousLocation = props.location[1];
         ref.$travelingToTime = now();
     }
-    let imageMatches = false;
-    if (
-        props.currentAvatarThumbnailImageUrl &&
-        props.currentAvatarThumbnailImageUrl[0] &&
-        props.currentAvatarThumbnailImageUrl[1] &&
-        props.currentAvatarThumbnailImageUrl[0] ===
-            props.currentAvatarThumbnailImageUrl[1]
-    ) {
-        imageMatches = true;
-    }
-    if (
-        (((props.currentAvatarImageUrl ||
-            props.currentAvatarThumbnailImageUrl) &&
-            !ref.profilePicOverride) ||
-            props.currentAvatarTags) &&
-        !imageMatches
-    ) {
-        let currentAvatarImageUrl = '';
-        let previousCurrentAvatarImageUrl = '';
-        let currentAvatarThumbnailImageUrl = '';
-        let previousCurrentAvatarThumbnailImageUrl = '';
-        let currentAvatarTags = '';
-        let previousCurrentAvatarTags = '';
-        if (props.currentAvatarImageUrl) {
-            currentAvatarImageUrl = props.currentAvatarImageUrl[0];
-            previousCurrentAvatarImageUrl = props.currentAvatarImageUrl[1];
-        } else {
-            currentAvatarImageUrl = ref.currentAvatarImageUrl;
-            previousCurrentAvatarImageUrl = ref.currentAvatarImageUrl;
+    if (props.iconUrl && props.iconUrl[0]) {
+        const currentIconUrl = props.iconUrl[0];
+        const previousIconUrl = props.iconUrl[1];
+        let avatarInfo = {
+            ownerId: '',
+            avatarName: ''
+        };
+        try {
+            avatarInfo = await getAvatarName(currentIconUrl);
+        } catch (err) {
+            console.log(err);
         }
-        if (props.currentAvatarThumbnailImageUrl) {
-            currentAvatarThumbnailImageUrl =
-                props.currentAvatarThumbnailImageUrl[0];
-            previousCurrentAvatarThumbnailImageUrl =
-                props.currentAvatarThumbnailImageUrl[1];
-        } else {
-            currentAvatarThumbnailImageUrl = ref.currentAvatarThumbnailImageUrl;
-            previousCurrentAvatarThumbnailImageUrl =
-                ref.currentAvatarThumbnailImageUrl;
-        }
-        if (props.currentAvatarTags) {
-            currentAvatarTags = props.currentAvatarTags[0];
-            previousCurrentAvatarTags = props.currentAvatarTags[1];
-            if (
-                ref.profilePicOverride &&
-                !props.currentAvatarThumbnailImageUrl
-            ) {
-                // forget last seen avatar
-                ref.currentAvatarImageUrl = '';
-                ref.currentAvatarThumbnailImageUrl = '';
-            }
-        } else {
-            currentAvatarTags = ref.currentAvatarTags;
-            previousCurrentAvatarTags = ref.currentAvatarTags;
-        }
-        if (generalSettingsStore.logEmptyAvatars || ref.currentAvatarImageUrl) {
-            let avatarInfo = {
-                ownerId: '',
-                avatarName: ''
-            };
-            try {
-                avatarInfo = await getAvatarName(currentAvatarImageUrl);
-            } catch (err) {
-                console.log(err);
-            }
+        if (avatarInfo.ownerId) {
             let previousAvatarInfo = {
                 ownerId: '',
                 avatarName: ''
             };
             try {
-                previousAvatarInfo = await getAvatarName(
-                    previousCurrentAvatarImageUrl
-                );
+                previousAvatarInfo = await getAvatarName(previousIconUrl);
             } catch (err) {
                 console.log(err);
             }
@@ -252,12 +180,10 @@ export async function runHandleUserUpdateFlow(
                 previousOwnerId: previousAvatarInfo.ownerId,
                 avatarName: avatarInfo.avatarName,
                 previousAvatarName: previousAvatarInfo.avatarName,
-                currentAvatarImageUrl,
-                currentAvatarThumbnailImageUrl,
-                previousCurrentAvatarImageUrl,
-                previousCurrentAvatarThumbnailImageUrl,
-                currentAvatarTags,
-                previousCurrentAvatarTags
+                currentAvatarImageUrl: avatarInfo.ownerId ? currentIconUrl : '',
+                currentAvatarThumbnailImageUrl: avatarInfo.ownerId ? currentIconUrl : '',
+                previousCurrentAvatarImageUrl: previousAvatarInfo.ownerId ? previousIconUrl : '',
+                previousCurrentAvatarThumbnailImageUrl: previousAvatarInfo.ownerId ? previousIconUrl : ''
             };
             if (!isWatchedNonFriend) {
                 notificationStore.queueFeedNoty(feed);
@@ -269,9 +195,7 @@ export async function runHandleUserUpdateFlow(
     }
     // if status is offline, ignore status and statusDescription
     if (
-        (props.status &&
-            props.status[0] !== 'offline' &&
-            props.status[1] !== 'offline') ||
+        (props.status && props.status[0] !== 'offline' && props.status[1] !== 'offline') ||
         (!props.status && props.statusDescription)
     ) {
         let status = '';
@@ -341,11 +265,7 @@ export async function runHandleUserUpdateFlow(
         feedStore.addFeedEntry(feed);
         database.addBioToDatabase(feed);
     }
-    if (
-        props.note &&
-        props.note[0] !== null &&
-        props.note[0] !== props.note[1]
-    ) {
+    if (props.note && props.note[0] !== null && props.note[0] !== props.note[1]) {
         checkNote(ref.id, props.note[0]);
     }
 }

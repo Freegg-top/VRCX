@@ -1,9 +1,4 @@
-import {
-    getGroupName,
-    getWorldName,
-    isRealInstance,
-    parseLocation
-} from '../shared/utils';
+import { getGroupName, getWorldName, isRealInstance, parseLocation } from '../shared/utils';
 import { database } from '../services/database';
 import { useAdvancedSettingsStore } from '../stores/settings/advanced';
 import { useGameLogStore } from '../stores/gameLog';
@@ -67,16 +62,11 @@ export function runUpdateCurrentUserLocationFlow() {
     } else {
         ref.$location_at = locationStore.lastLocation.date;
         ref.$travelingToTime = locationStore.lastLocationDestinationTime;
-        userStore.setCurrentUserTravelingToTime(
-            locationStore.lastLocationDestinationTime
-        );
+        userStore.setCurrentUserTravelingToTime(locationStore.lastLocationDestinationTime);
     }
 }
 
-export async function runSetCurrentUserLocationFlow(
-    location,
-    travelingToLocation
-) {
+export async function runSetCurrentUserLocationFlow(location, travelingToLocation) {
     const userStore = useUserStore();
     const instanceStore = useInstanceStore();
     const notificationStore = useNotificationStore();
@@ -97,13 +87,8 @@ export async function runSetCurrentUserLocationFlow(
         // with the current state of things, lets not run this if we don't need to
         return;
     }
-    const lastLocationArray = await database.lookupGameLogDatabase(
-        ['Location'],
-        [],
-        1
-    );
-    const lastLocationTemp =
-        lastLocationArray.length > 0 ? lastLocationArray[0].location : '';
+    const lastLocationArray = await database.lookupGameLogDatabase(['Location'], [], 1);
+    const lastLocationTemp = lastLocationArray.length > 0 ? lastLocationArray[0].location : '';
     if (lastLocationTemp === location) {
         return;
     }
@@ -160,9 +145,7 @@ export function runLastLocationResetFlow(gameLogDate) {
     }
     const dateTimeStamp = Date.parse(dateTime);
     photonStore.resetLocationPhotonState();
-    const playerList = Array.from(
-        locationStore.lastLocation.playerList.values()
-    );
+    const playerList = Array.from(locationStore.lastLocation.playerList.values());
     const dataBaseEntries = [];
     for (const ref of playerList) {
         const entry = {
@@ -177,10 +160,7 @@ export function runLastLocationResetFlow(gameLogDate) {
         gameLogStore.addGameLog(entry);
     }
     database.addGamelogJoinLeaveBulk(dataBaseEntries);
-    if (
-        locationStore.lastLocation.date !== null &&
-        locationStore.lastLocation.date > 0
-    ) {
+    if (locationStore.lastLocation.date !== null && locationStore.lastLocation.date > 0) {
         const update = {
             time: dateTimeStamp - locationStore.lastLocation.date,
             created_at: new Date(locationStore.lastLocation.date).toJSON()
