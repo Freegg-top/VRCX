@@ -13,16 +13,19 @@ const VRChatCameraResolutions = [
     { name: '7680x4320 (8K)', width: 7680, height: 4320 }
 ];
 
+// 自定义分发: 更新检查走自己的服务器 (改为你的服务器地址后生效)
+// 服务器需提供 latest.json (GitHub releases/latest 同形状) 和更新包 zip
+const CUSTOM_UPDATE_BASE = 'http://127.0.0.1:8080/vrcx';
 const branches = {
     Stable: {
         name: 'Stable',
-        urlReleases: 'https://api0.vrcx.app/releases/stable',
-        urlLatest: 'https://api0.vrcx.app/releases/stable/latest'
+        urlReleases: `${CUSTOM_UPDATE_BASE}/releases.json`,
+        urlLatest: `${CUSTOM_UPDATE_BASE}/latest.json`
     },
     Nightly: {
         name: 'Nightly',
-        urlReleases: 'https://api0.vrcx.app/releases/nightly',
-        urlLatest: 'https://api0.vrcx.app/releases/nightly/latest'
+        urlReleases: `${CUSTOM_UPDATE_BASE}/releases.json`,
+        urlLatest: `${CUSTOM_UPDATE_BASE}/latest.json`
     }
     // LinuxTest: {
     //     name: 'LinuxTest',

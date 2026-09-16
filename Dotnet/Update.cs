@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -60,12 +61,53 @@ namespace VRCX
                 InstallUpdate();
         }
 
+        private static bool IsZipFile(string path)
+        {
+            try
+            {
+                using var stream = File.OpenRead(path);
+                var magic = new byte[2];
+                if (stream.Read(magic, 0, 2) != 2)
+                    return false;
+                return magic[0] == 0x50 && magic[1] == 0x4B;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // 自定义分发: 便携 zip 更新包直接解压覆盖安装目录
+        private static void ExtractZipOverInstallDirectory(string zipPath)
+        {
+            var installDirectory = Program.BaseDirectory;
+            using var archive = System.IO.Compression.ZipFile.OpenRead(zipPath);
+            foreach (var entry in archive.Entries)
+            {
+                var destinationPath = Path.Join(installDirectory, entry.FullName);
+                var directory = Path.GetDirectoryName(destinationPath);
+                if (!string.IsNullOrEmpty(directory))
+                    Directory.CreateDirectory(directory);
+                if (string.IsNullOrEmpty(entry.Name))
+                    continue;
+                entry.ExtractToFile(destinationPath, true);
+            }
+            File.Delete(zipPath);
+            logger.Info("Custom zip update extracted over the install directory");
+        }
+
         private static void InstallUpdate()
         {
             var setupArguments = string.Empty;
 
             try
             {
+                if (IsZipFile(UpdateExecutable))
+                {
+                    ExtractZipOverInstallDirectory(UpdateExecutable);
+                    return;
+                }
+
                 if (File.Exists(VrcxSetupExecutable))
                     File.Delete(VrcxSetupExecutable);
                 File.Move(UpdateExecutable, VrcxSetupExecutable);

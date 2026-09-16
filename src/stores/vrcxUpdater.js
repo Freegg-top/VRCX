@@ -244,6 +244,20 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                 break;
             }
             if (
+                WINDOWS &&
+                asset.name.endsWith('.zip') &&
+                (asset.content_type === 'application/zip' ||
+                    asset.content_type === 'application/octet-stream')
+            ) {
+                // 自定义分发: 便携 zip 更新包, 由 C# 在重启时解压到安装目录
+                downloadUrl = asset.browser_download_url;
+                if (asset.digest && asset.digest.startsWith('sha256:')) {
+                    hashString = asset.digest.replace('sha256:', '');
+                }
+                size = asset.size;
+                break;
+            }
+            if (
                 LINUX &&
                 asset.name.endsWith(`${arch.value}.AppImage`) &&
                 asset.content_type === 'application/octet-stream'
