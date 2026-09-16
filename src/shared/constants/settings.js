@@ -15,7 +15,7 @@ const VRChatCameraResolutions = [
 
 // 自定义分发: 更新检查走自己的服务器 (改为你的服务器地址后生效)
 // 服务器需提供 latest.json (GitHub releases/latest 同形状) 和更新包 zip
-const CUSTOM_UPDATE_BASE = 'http://127.0.0.1:8080/vrcx';
+const CUSTOM_UPDATE_BASE = 'https://s3.freegg.top/vrcx';
 const branches = {
     Stable: {
         name: 'Stable',
