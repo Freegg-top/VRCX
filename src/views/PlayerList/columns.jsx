@@ -4,6 +4,7 @@ import { TooltipWrapper } from '../../components/ui/tooltip';
 import {
     Apple,
     ArrowUpDown,
+    Flag,
     IdCard,
     User,
     Monitor,
@@ -48,6 +49,8 @@ const getInstanceIconWeight = (item) => {
     if (item.isMaster) value += 1000;
     if (item.isModerator) value += 500;
     if (item.isFriend) value += 200;
+    if (item?.ref?.$mutualCount > 0) value += 50;
+    if (item?.ref?.$mutualGroupCount > 0) value += 25;
     if (item.isBlocked) value -= 100;
     if (item.isMuted) value -= 50;
     if (item.isAvatarInteractionDisabled) value -= 20;
@@ -276,6 +279,27 @@ export const createColumns = ({
                         {r?.isFriend ? (
                             <TooltipWrapper side="left" content="Friend">
                                 <span>💚</span>
+                            </TooltipWrapper>
+                        ) : null}
+                        {r?.ref?.$mutualCount > 0 ? (
+                            <TooltipWrapper
+                                side="left"
+                                content={t('table.playerList.mutual_friends', {
+                                    count: r.ref.$mutualCount
+                                })}>
+                                <span>👥{r.ref.$mutualCount}</span>
+                            </TooltipWrapper>
+                        ) : null}
+                        {r?.ref?.$mutualGroupCount > 0 ? (
+                            <TooltipWrapper
+                                side="left"
+                                content={t('table.playerList.mutual_groups', {
+                                    count: r.ref.$mutualGroupCount
+                                })}>
+                                <span class="inline-flex items-center gap-0.5">
+                                    <Flag class="h-3.5 w-3.5" />
+                                    {r.ref.$mutualGroupCount}
+                                </span>
                             </TooltipWrapper>
                         ) : null}
                         {r?.isBlocked ? (

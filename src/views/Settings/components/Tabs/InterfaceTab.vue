@@ -414,6 +414,17 @@
             </SettingsItem>
         </SettingsGroup>
 
+        <SettingsGroup :title="t('view.settings.appearance.player_list.header')">
+            <SettingsItem
+                :label="t('view.settings.appearance.player_list.mutual_friends_badge')"
+                :description="t('view.settings.appearance.player_list.mutual_friends_badge_description')">
+                <Switch
+                    :model-value="showMutualFriendsBadge"
+                    :ariaLabel="t('view.settings.appearance.player_list.mutual_friends_badge')"
+                    @update:modelValue="setShowMutualFriendsBadge" />
+            </SettingsItem>
+        </SettingsGroup>
+
         <SettingsGroup :title="t('view.settings.appearance.user_colors.header')">
             <SettingsItem
                 :label="t('view.settings.appearance.user_colors.random_colors_from_user_id')"
@@ -513,6 +524,7 @@
         isAgeGatedInstancesVisible,
         sortFavorites,
         instanceUsersSortAlphabetical,
+        showMutualFriendsBadge,
         dtHour12,
         dtIsoFormat,
         weekStartsOn,
@@ -540,6 +552,7 @@
         setShowInstanceIdInLocation,
         setIsAgeGatedInstancesVisible,
         setInstanceUsersSortAlphabetical,
+        setShowMutualFriendsBadge,
         setDtHour12,
         setDtIsoFormat,
         setWeekStartsOn,

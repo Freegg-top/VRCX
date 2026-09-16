@@ -41,13 +41,18 @@ export function runUpdateCurrentUserLocationFlow() {
         !advancedSettingsStore.gameLogDisabled &&
         locationStore.lastLocation.location !== ''
     ) {
-        // use gameLog instead of API when game is running
+        // use gameLog instead of API when game is running; also keep the
+        // API state fields in sync so stale API locations (e.g. VRCX
+        // started after the game) never leak into the UI
         currentLocation = locationStore.lastLocation.location;
         if (locationStore.lastLocation.location === 'traveling') {
             currentLocation = locationStore.lastLocationDestination;
         }
         ref.location = locationStore.lastLocation.location;
         ref.travelingToLocation = locationStore.lastLocationDestination;
+        userStore.currentUser.$locationTag = locationStore.lastLocation.location;
+        userStore.currentUser.$travelingToLocation =
+            locationStore.lastLocationDestination;
     }
 
     ref.$online_for = userStore.currentUser.$online_for;
@@ -79,6 +84,11 @@ export async function runSetCurrentUserLocationFlow(
     const gameLogStore = useGameLogStore();
     const locationStore = useLocationStore();
 
+    if (gameStore.isGameRunning) {
+        // the game log is the source of truth while the game is running;
+        // the API location can be stale (e.g. VRCX started after the game)
+        return;
+    }
     userStore.setCurrentUserLocationState(location, travelingToLocation);
     runUpdateCurrentUserLocationFlow();
 

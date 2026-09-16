@@ -79,7 +79,8 @@
         "help_support": "Help & Support",
         "expand_menu": "Expand Menu",
         "collapse_menu": "Collapse Menu",
-        "toggle_theme": "Toggle Theme"
+        "toggle_theme": "Toggle Theme",
+        "friend_network": "Friends' Friends"
     },
     "nav_menu": {
         "resources": "RESOURCES",
@@ -266,9 +267,14 @@
                 "Offline": "Offline",
                 "Status": "Status",
                 "Avatar": "Avatar",
-                "Bio": "Bio"
+                "Bio": "Bio",
+                "GroupChange": "Group changes"
             },
-            "photon_event_logging": "Photon Event Logging"
+            "photon_event_logging": "Photon Event Logging",
+            "watched_users": "Watched",
+            "watched_users_tooltip": "Watched non-friend players",
+            "group_change_joined": "Joined group {name}",
+            "group_change_left": "Left group {name}"
         },
         "friends_locations": {
             "online": "Online",
@@ -1018,6 +1024,11 @@
                 "friend_log": {
                     "header": "Friend Log",
                     "hide_unfriends": "Hide Unfriend Events"
+                },
+                "player_list": {
+                    "header": "Player List",
+                    "mutual_friends_badge": "Show mutual friends badge",
+                    "mutual_friends_badge_description": "Show how many mutual friends and mutual groups you share with players in the current instance. Fetching starts when players join and is rate-limited."
                 }
             },
             "notifications": {
@@ -1321,6 +1332,30 @@
                     }
                 }
             }
+        },
+        "friend_network": {
+            "header": "Friends' Friends",
+            "description": "Load the players you have met from your game log, then pick a friend to see which of their friends you have met in person.",
+            "search_friend": "Search friends...",
+            "clear": "Clear",
+            "no_matches": "No matching friends",
+            "querying": "Querying...",
+            "select_hint": "Pick a friend above to see which of their friends you have met.",
+            "instances_together": "Met · {count} instances",
+            "last_met": "Last met: {time}",
+            "met_header": "Players you have met",
+            "met_description": "Reads players from your game log that you shared an instance with but are not friends with, then looks up which of your friends they are friends with. The analysis runs in the background until the whole pool is covered, results are saved to the database, and players met while playing are recorded automatically.",
+            "met_load": "Load met players",
+            "met_lookup_progress": "Looking up mutual friends... {done}/{total}",
+            "met_empty": "No met players found in the game log.",
+            "met_instances": "Instances together: {count}",
+            "met_pool_count": "{count} players met",
+            "met_analyzed": "Analyzed {done}/{total}",
+            "met_need_pool": "Load met players first, then pick a friend.",
+            "metfof_summary": "Friends of {name} that you have met: {total}",
+            "metfof_empty": "No results analyzed yet. The analysis progresses over time, please check back in a moment.",
+            "page_size": "Per page",
+            "page_info": "Page {page} / {total}"
         }
     },
     "dialog": {
@@ -1396,7 +1431,11 @@
                 "logout": "Logout",
                 "edit_note_memo": "Edit Note and Memo",
                 "reset_home": "Reset Home",
-                "edit_profile": "Edit Profile"
+                "edit_profile": "Edit Profile",
+                "watch_user": "Watch User",
+                "unwatch_user": "Unwatch User",
+                "watch_added": "Now watching this player. Changes will appear in the Feed.",
+                "watch_removed": "Stopped watching this player."
             },
             "info": {
                 "header": "Info",
@@ -2656,6 +2695,11 @@
             "select_image": "Select Image",
             "sending": "Sending...",
             "send": "Send Announcement"
+        },
+        "watched_users": {
+            "header": "Watched Players",
+            "empty": "No watched players yet. Open a player profile and choose \"Watch User\" to see their avatar, status and bio changes in the Feed.",
+            "remove": "Remove"
         }
     },
     "confirm": {
@@ -3138,7 +3182,9 @@
             "date": "Date",
             "user": "User",
             "type": "Type",
-            "detail": "Detail"
+            "detail": "Detail",
+            "mutual_friends": "{count} mutual friends",
+            "mutual_groups": "{count} mutual groups"
         },
         "friendLog": {
             "date": "Date",

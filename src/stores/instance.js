@@ -34,6 +34,7 @@ import {
     instanceContentSettings
 } from '../shared/constants';
 import { database } from '../services/database';
+import { fetchMutualCountsForPlayers } from '../coordinators/mutualCoordinator';
 import { resolveRef } from '../shared/utils/resolveRef';
 import { useAppearanceSettingsStore } from './settings/appearance';
 import { useFriendStore } from './friend';
@@ -1420,6 +1421,7 @@ export const useInstanceStore = defineStore('Instance', () => {
             }
         }
         currentInstanceUsersData.value = users;
+        fetchMutualCountsForPlayers(users);
     }
 
     // $app.methods.instanceQueueClear = function () {

@@ -3,6 +3,8 @@ import { avatarFavorites } from './avatarFavorites.js';
 import { avatarTags } from './avatarTags.js';
 import { feed } from './feed.js';
 import { friendFavorites } from './friendFavorites.js';
+import { friendGroups } from './friendGroups.js';
+import { friendNetwork } from './friendNetwork.js';
 import { friendLogCurrent } from './friendLogCurrent.js';
 import { friendLogHistory } from './friendLogHistory.js';
 import { gameLog } from './gameLog.js';
@@ -15,6 +17,7 @@ import { tableFixes } from './tableFixes.js';
 import { tableSize } from './tableSize.js';
 import { worldFavorites } from './worldFavorites.js';
 import { printFavorites } from './printFavorites.js';
+import { watchedUsers } from './watchedUsers.js';
 
 import sqliteService from '../sqlite.js';
 
@@ -43,6 +46,9 @@ const database = {
     ...tableFixes,
     ...tableSize,
     ...mutualGraph,
+    ...friendNetwork,
+    ...friendGroups,
+    ...watchedUsers,
 
     setMaxTableSize(limit) {
         dbVars.maxTableSize = limit;
@@ -59,6 +65,9 @@ const database = {
         if (dbVars.userPrefix.match(/^\d/)) {
             dbVars.userPrefix = '_' + dbVars.userPrefix;
         }
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT PRIMARY KEY, display_name TEXT, created_at TEXT)`
+        );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_gps (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, location TEXT, world_name TEXT, previous_location TEXT, time INTEGER, group_name TEXT)`
         );
@@ -152,6 +161,15 @@ const database = {
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)`
         );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_network_user (user_id TEXT PRIMARY KEY, mutual_ids TEXT NOT NULL DEFAULT '[]', last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_group_snapshot (user_id TEXT PRIMARY KEY, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`
+        );
     },
 
     async initTables() {
@@ -220,6 +238,18 @@ const database = {
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS avatar_tags (avatar_id TEXT NOT NULL, tag TEXT NOT NULL, color TEXT, PRIMARY KEY (avatar_id, tag))`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT PRIMARY KEY, display_name TEXT, created_at TEXT)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_network_user (user_id TEXT PRIMARY KEY, mutual_ids TEXT NOT NULL DEFAULT '[]', last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_group_snapshot (user_id TEXT PRIMARY KEY, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`
         );
     },
 

@@ -18,6 +18,7 @@ import { initWebsocket } from '../services/websocket';
 import { request } from '../services/request';
 import { runHandleAutoLoginFlow } from '../coordinators/authAutoLoginCoordinator';
 import { getCurrentUser } from '../coordinators/userCoordinator';
+import { initWatchedUsers } from '../coordinators/watchedCoordinator';
 import { useAdvancedSettingsStore } from './settings/advanced';
 import { useGeneralSettingsStore } from './settings/general';
 import { useModalStore } from './modal';
@@ -1016,6 +1017,7 @@ export const useAuthStore = defineStore('Auth', () => {
             return;
         }
         await database.initUserTables(userStore.currentUser.id);
+        initWatchedUsers().catch(console.error);
         advancedSettingsStore.runAvatarAutoCleanup(userStore.currentUser.id);
         watchState.isLoggedIn = true;
         AppApi.CheckGameRunning(); // restore state from hot-reload

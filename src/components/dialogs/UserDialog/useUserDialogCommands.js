@@ -11,6 +11,10 @@ import {
 import { copyToClipboard, parseLocation } from '../../../shared/utils';
 import { database } from '../../../services/database';
 import { recordRecentAction } from '../../../composables/useRecentActions';
+import {
+    addWatchedUser,
+    removeWatchedUser
+} from '../../../coordinators/watchedCoordinator';
 
 /**
  * Composable for UserDialog command dispatch.
@@ -370,6 +374,15 @@ export function useUserDialogCommands(
                 }
             },
             'Edit Note Memo': 'showEditNoteAndMemoDialog',
+            'Watch User': () => {
+                addWatchedUser(D().id, D().ref.displayName).then(() => {
+                    toast(t('dialog.user.actions.watch_added'));
+                });
+            },
+            'Unwatch User': () => {
+                removeWatchedUser(D().id);
+                toast(t('dialog.user.actions.watch_removed'));
+            },
 
             // --- Confirmed commands ---
             'Delete Favorite': {

@@ -10,6 +10,7 @@ import { useInstanceStore } from '../stores/instance';
 import { useNotificationStore } from '../stores/notification';
 import { useSharedFeedStore } from '../stores/sharedFeed';
 import { useUserStore } from '../stores/user';
+import { useWatchedStore } from '../stores/watched';
 import { useWorldStore } from '../stores/world';
 
 /**
@@ -35,6 +36,7 @@ export async function runHandleUserUpdateFlow(
     const notificationStore = useNotificationStore();
     const sharedFeedStore = useSharedFeedStore();
     const generalSettingsStore = useGeneralSettingsStore();
+    const watchedStore = useWatchedStore();
 
     const { state, userDialog, applyUserDialogLocation, checkNote } = userStore;
 
@@ -42,7 +44,10 @@ export async function runHandleUserUpdateFlow(
     let newLocation;
     let previousLocation;
     const friend = friendStore.friends.get(ref.id);
-    if (typeof friend === 'undefined') {
+    // watched non-friends generate feed entries but skip desktop notifications
+    const isWatchedNonFriend =
+        typeof friend === 'undefined' && watchedStore.isWatched(ref.id);
+    if (typeof friend === 'undefined' && !isWatchedNonFriend) {
         return;
     }
     if (props.location) {
@@ -142,7 +147,9 @@ export async function runHandleUserUpdateFlow(
                 previousLocation,
                 time
             };
-            notificationStore.queueFeedNoty(feed);
+            if (!isWatchedNonFriend) {
+                notificationStore.queueFeedNoty(feed);
+            }
             sharedFeedStore.addEntry(feed);
             feedStore.addFeedEntry(feed);
             database.addGPSToDatabase(feed);
@@ -252,7 +259,9 @@ export async function runHandleUserUpdateFlow(
                 currentAvatarTags,
                 previousCurrentAvatarTags
             };
-            notificationStore.queueFeedNoty(feed);
+            if (!isWatchedNonFriend) {
+                notificationStore.queueFeedNoty(feed);
+            }
             sharedFeedStore.addEntry(feed);
             feedStore.addFeedEntry(feed);
             database.addAvatarToDatabase(feed);
@@ -301,7 +310,9 @@ export async function runHandleUserUpdateFlow(
             previousStatus,
             previousStatusDescription
         };
-        notificationStore.queueFeedNoty(feed);
+        if (!isWatchedNonFriend) {
+            notificationStore.queueFeedNoty(feed);
+        }
         sharedFeedStore.addEntry(feed);
         feedStore.addFeedEntry(feed);
         database.addStatusToDatabase(feed);
@@ -323,7 +334,9 @@ export async function runHandleUserUpdateFlow(
             bio,
             previousBio
         };
-        notificationStore.queueFeedNoty(feed);
+        if (!isWatchedNonFriend) {
+            notificationStore.queueFeedNoty(feed);
+        }
         sharedFeedStore.addEntry(feed);
         feedStore.addFeedEntry(feed);
         database.addBioToDatabase(feed);

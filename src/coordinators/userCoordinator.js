@@ -59,6 +59,7 @@ import { removeAvatarFromCache } from './avatarCoordinator';
 import { useSharedFeedStore } from '../stores/sharedFeed';
 import { useUiStore } from '../stores/ui';
 import { useUserStore } from '../stores/user';
+import { useWatchedStore } from '../stores/watched';
 
 const getRobotUrl = () =>
     `${AppDebug.endpointDomain}/file/file_0e8c4e32-7444-44ea-ade4-313c010d4bae/1/file`;
@@ -118,7 +119,9 @@ export function applyUser(json) {
         const { deletedCount } = evictMapCache(
             cachedUsers,
             friendStore.friends.size + 300,
-            (_value, key) => friendStore.friends.has(key),
+            (_value, key) =>
+                friendStore.friends.has(key) ||
+                useWatchedStore().isWatched(key),
             { logLabel: 'User cache cleanup' }
         );
         if (deletedCount > 0) {

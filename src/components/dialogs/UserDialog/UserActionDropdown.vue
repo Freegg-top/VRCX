@@ -160,6 +160,16 @@
                         <Pencil class="size-4" />
                         {{ t('dialog.user.actions.edit_note_memo') }}
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                        v-if="!watchedStore.isWatched(userDialog.id)"
+                        @click="onCommand('Watch User')">
+                        <Eye class="size-4" />
+                        {{ t('dialog.user.actions.watch_user') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem v-else @click="onCommand('Unwatch User')">
+                        <EyeOff class="size-4" />
+                        {{ t('dialog.user.actions.unwatch_user') }}
+                    </DropdownMenuItem>
                     <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
                             <XCircle class="size-4 mr-2" />
@@ -275,31 +285,33 @@
 </template>
 
 <script setup>
-    import {
-        Check,
-        CheckCircle,
-        Clock,
-        Copy,
-        Flag,
-        LineChart,
-        Mail,
-        MessageCircle,
-        MessageSquare,
-        Mic,
-        MoreHorizontal,
-        Hand,
-        Pencil,
-        Plus,
-        RefreshCw,
-        Settings,
-        Share2,
-        Star,
-        Trash2,
-        User,
-        VolumeX,
-        X,
-        XCircle
-    } from 'lucide-vue-next';
+import {
+    Check,
+    CheckCircle,
+    Clock,
+    Copy,
+    Eye,
+    EyeOff,
+    Flag,
+    LineChart,
+    Mail,
+    MessageCircle,
+    MessageSquare,
+    Mic,
+    MoreHorizontal,
+    Hand,
+    Pencil,
+    Plus,
+    RefreshCw,
+    Settings,
+    Share2,
+    Star,
+    Trash2,
+    User,
+    VolumeX,
+    X,
+    XCircle
+} from 'lucide-vue-next';
     import { Button } from '@/components/ui/button';
     import { computed } from 'vue';
     import { storeToRefs } from 'pinia';
@@ -316,7 +328,7 @@
         DropdownMenuShortcut,
         DropdownMenuTrigger
     } from '../../ui/dropdown-menu';
-    import { useGameStore, useLocationStore, useUserStore } from '../../../stores';
+    import { useGameStore, useLocationStore, useUserStore, useWatchedStore } from '../../../stores';
     import { useInviteChecks } from '../../../composables/useInviteChecks';
     import { isActionRecent } from '../../../composables/useRecentActions';
     import { invertHexColor } from '@/shared/utils';
@@ -333,6 +345,7 @@
     const { userDialog, currentUser } = storeToRefs(useUserStore());
     const { isGameRunning } = storeToRefs(useGameStore());
     const { lastLocation } = storeToRefs(useLocationStore());
+    const watchedStore = useWatchedStore();
     const { checkCanInvite } = useInviteChecks();
 
     const hasRequest = computed(() => userDialog.value.incomingRequest || userDialog.value.outgoingRequest);

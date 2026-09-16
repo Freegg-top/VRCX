@@ -35,6 +35,7 @@ import { useUiStore } from './ui';
 import { useToolsStore } from './tools';
 import { useUpdateLoopStore } from './updateLoop';
 import { useUserStore } from './user';
+import { useWatchedStore } from './watched';
 import { useVRCXUpdaterStore } from './vrcxUpdater';
 import { useVrStore } from './vr';
 import { useVrcStatusStore } from './vrcStatus';
@@ -159,7 +160,8 @@ export function createGlobalStores() {
         charts: useChartsStore(),
         dashboard: useDashboardStore(),
         modal: useModalStore(),
-        quickSearch: useQuickSearchStore()
+        quickSearch: useQuickSearchStore(),
+        watched: useWatchedStore()
     };
 }
 
@@ -203,5 +205,6 @@ export {
     useUpdateLoopStore,
     useVrcStatusStore,
     useModalStore,
-    useQuickSearchStore
+    useQuickSearchStore,
+    useWatchedStore
 };

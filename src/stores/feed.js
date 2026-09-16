@@ -124,6 +124,14 @@ export const useFeedStore = defineStore('Feed', () => {
                     return true;
                 }
                 return false;
+            case 'GroupChange':
+                if (String(row.displayName).toUpperCase().includes(value)) {
+                    return true;
+                }
+                if (String(row.groupName).toUpperCase().includes(value)) {
+                    return true;
+                }
+                return false;
         }
         return true;
     }

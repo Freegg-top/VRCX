@@ -17,12 +17,14 @@ vi.mock('../../../../stores', () => ({
             isMuteChat: false,
             isInteractOff: false,
             isHideAvatar: false,
-            isShowAvatar: false
+            isShowAvatar: false,
+            theme: { buttonColor: '', iconColor: '' }
         }),
         currentUser: ref({ id: 'usr_1', isBoopingEnabled: true })
     }),
     useGameStore: () => ({ isGameRunning: ref(false) }),
-    useLocationStore: () => ({ lastLocation: ref({ location: 'wrld_1:1' }) })
+    useLocationStore: () => ({ lastLocation: ref({ location: 'wrld_1:1' }) }),
+    useWatchedStore: () => ({ isWatched: () => false })
 }));
 vi.mock('../../../../composables/useInviteChecks', () => ({
     useInviteChecks: () => ({ checkCanInvite: () => true })
@@ -35,6 +37,9 @@ vi.mock('../../../ui/dropdown-menu', () => ({
     DropdownMenuTrigger: { template: '<div><slot /></div>' },
     DropdownMenuContent: { template: '<div><slot /></div>' },
     DropdownMenuSeparator: { template: '<hr />' },
+    DropdownMenuSub: { template: '<div><slot /></div>' },
+    DropdownMenuSubTrigger: { template: '<div><slot /></div>' },
+    DropdownMenuSubContent: { template: '<div><slot /></div>' },
     DropdownMenuShortcut: { template: '<span><slot /></span>' },
     DropdownMenuItem: {
         emits: ['click'],
@@ -56,7 +61,11 @@ vi.mock('lucide-vue-next', () => ({
     Check: { template: '<i />' },
     CheckCircle: { template: '<i />' },
     Clock: { template: '<i />' },
+    Copy: { template: '<i />' },
+    Eye: { template: '<i />' },
+    EyeOff: { template: '<i />' },
     Flag: { template: '<i />' },
+    Hand: { template: '<i />' },
     LineChart: { template: '<i />' },
     Mail: { template: '<i />' },
     MessageCircle: { template: '<i />' },

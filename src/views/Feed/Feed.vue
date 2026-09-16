@@ -58,6 +58,17 @@
                                 </Toggle>
                             </div>
                         </TooltipWrapper>
+                        <TooltipWrapper side="bottom" :content="t('view.feed.watched_users_tooltip')">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                class="ml-2"
+                                :ariaLabel="t('view.feed.watched_users_tooltip')"
+                                @click="watchedUsersDialogVisible = true">
+                                <Eye class="size-4" />
+                                {{ t('view.feed.watched_users') }}
+                            </Button>
+                        </TooltipWrapper>
                     </div>
                     <ToggleGroup
                         type="multiple"
@@ -85,12 +96,13 @@
                 </div>
             </template>
         </DataTableLayout>
+        <WatchedUsersDialog v-model:open="watchedUsersDialogVisible" />
     </div>
 </template>
 
 <script setup>
     import { computed, ref } from 'vue';
-    import { ListFilter, Star } from 'lucide-vue-next';
+    import { Eye, ListFilter, Star } from 'lucide-vue-next';
     import { getLocalTimeZone, today } from '@internationalized/date';
     import { storeToRefs } from 'pinia';
     import { useI18n } from 'vue-i18n';
@@ -108,6 +120,7 @@
     import { Toggle } from '../../components/ui/toggle';
     import { columns as baseColumns } from './columns.jsx';
     import { useVrcxVueTable } from '../../lib/table/useVrcxVueTable';
+    import WatchedUsersDialog from './dialogs/WatchedUsersDialog.vue';
 
     const { feedTable, feedTableData } = storeToRefs(useFeedStore());
     const { feedTableLookup } = useFeedStore();
@@ -116,9 +129,18 @@
     const vrcxStore = useVrcxStore();
 
     const { t, locale } = useI18n();
-    const feedFilterTypes = ['GPS', 'Online', 'Offline', 'Status', 'Avatar', 'Bio'];
+    const feedFilterTypes = [
+        'GPS',
+        'Online',
+        'Offline',
+        'Status',
+        'Avatar',
+        'Bio',
+        'GroupChange'
+    ];
 
     const popoverOpen = ref(false);
+    const watchedUsersDialogVisible = ref(false);
     const todayDate = today(getLocalTimeZone());
     const dateRange = ref(undefined);
     const hasDateFilter = computed(() => !!(feedTable.value.dateFrom || feedTable.value.dateTo));

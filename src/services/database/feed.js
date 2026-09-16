@@ -103,6 +103,20 @@ const feed = {
         );
     },
 
+    addGroupChangeToDatabase(entry) {
+        sqliteService.executeNonQuery(
+            `INSERT INTO ${dbVars.userPrefix}_feed_group (created_at, user_id, display_name, group_id, group_name, change_type) VALUES (@created_at, @user_id, @display_name, @group_id, @group_name, @change_type)`,
+            {
+                '@created_at': entry.created_at,
+                '@user_id': entry.userId,
+                '@display_name': entry.displayName,
+                '@group_id': entry.groupId,
+                '@group_name': entry.groupName,
+                '@change_type': entry.location
+            }
+        );
+    },
+
     async searchFeedDatabase(
         search,
         filters,
@@ -138,6 +152,7 @@ const feed = {
         let avatar = true;
         let online = true;
         let offline = true;
+        let group = true;
         const aviPublic = search.includes('public');
         const aviPrivate = search.includes('private');
         if (filters.length > 0) {
@@ -147,6 +162,7 @@ const feed = {
             avatar = false;
             online = false;
             offline = false;
+            group = false;
             filters.forEach((filter) => {
                 switch (filter) {
                     case 'GPS':
@@ -166,6 +182,9 @@ const feed = {
                         break;
                     case 'Offline':
                         offline = true;
+                        break;
+                    case 'GroupChange':
+                        group = true;
                         break;
                 }
             });
@@ -234,6 +253,10 @@ const feed = {
             selects.push(
                 `SELECT * FROM (SELECT id, created_at, user_id, display_name, type, location, world_name, NULL AS previous_location, time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_online_offline WHERE (display_name LIKE @searchLike OR world_name LIKE @searchLike OR group_name LIKE @searchLike) ${query} ${dateQuery} ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`
             );
+        if (group) {
+            selects.push(
+                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, NULL AS previous_location, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE (display_name LIKE @searchLike OR group_name LIKE @searchLike) ${dateQuery} ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`)
+        }
         }
         if (selects.length === 0) {
             return [];
@@ -287,6 +310,10 @@ const feed = {
                         row.previousCurrentAvatarImageUrl = dbRow[20];
                         row.previousCurrentAvatarThumbnailImageUrl = dbRow[21];
                         break;
+                    case 'GroupChange':
+                        row.location = dbRow[5];
+                        row.groupName = dbRow[9];
+                        break;
                     case 'Online':
                     case 'Offline':
                         row.location = dbRow[5];
@@ -325,6 +352,7 @@ const feed = {
         let avatar = true;
         let online = true;
         let offline = true;
+        let group = true;
         if (filters.length > 0) {
             gps = false;
             status = false;
@@ -332,6 +360,7 @@ const feed = {
             avatar = false;
             online = false;
             offline = false;
+            group = false;
             filters.forEach((filter) => {
                 switch (filter) {
                     case 'GPS':
@@ -351,6 +380,9 @@ const feed = {
                         break;
                     case 'Offline':
                         offline = true;
+                        break;
+                    case 'GroupChange':
+                        group = true;
                         break;
                 }
             });
@@ -412,6 +444,10 @@ const feed = {
             selects.push(
                 `SELECT * FROM (SELECT id, created_at, user_id, display_name, type, location, world_name, NULL AS previous_location, time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_online_offline WHERE 1=1 ${query} ${vipQuery} ORDER BY id DESC LIMIT @perTable)`
             );
+        if (group) {
+            selects.push(
+                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, NULL AS previous_location, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE 1=1 ${vipQuery} ORDER BY id DESC LIMIT @perTable)`)
+        }
         }
         if (selects.length === 0) {
             return [];
@@ -458,6 +494,10 @@ const feed = {
                         row.previousCurrentAvatarImageUrl = dbRow[20];
                         row.previousCurrentAvatarThumbnailImageUrl = dbRow[21];
                         break;
+                    case 'GroupChange':
+                        row.location = dbRow[5];
+                        row.groupName = dbRow[9];
+                        break;
                     case 'Online':
                     case 'Offline':
                         row.location = dbRow[5];
@@ -489,10 +529,12 @@ const feed = {
         let gps = true;
         let online = true;
         let offline = true;
+        let group = true;
         if (filters.length > 0) {
             gps = false;
             online = false;
             offline = false;
+            group = false;
             filters.forEach((filter) => {
                 switch (filter) {
                     case 'GPS':
@@ -503,6 +545,9 @@ const feed = {
                         break;
                     case 'Offline':
                         offline = true;
+                        break;
+                    case 'GroupChange':
+                        group = true;
                         break;
                 }
             });
@@ -549,6 +594,10 @@ const feed = {
             selects.push(
                 `SELECT * FROM (SELECT id, created_at, user_id, display_name, type, location, world_name, NULL AS previous_location, time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_online_offline WHERE location LIKE @instanceLike ${query} ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`
             );
+        if (group) {
+            selects.push(
+                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, NULL AS previous_location, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE group_id = @instanceLike ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`)
+        }
         }
         if (selects.length === 0) {
             return [];

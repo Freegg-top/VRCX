@@ -414,6 +414,20 @@ export const columns = [
                 );
             }
 
+            if (type === 'GroupChange') {
+                return (
+                    <span class="block w-full min-w-0 truncate">
+                        {original.location === 'joined'
+                            ? t('view.feed.group_change_joined', {
+                                  name: original.groupName
+                              })
+                            : t('view.feed.group_change_left', {
+                                  name: original.groupName
+                              })}
+                    </span>
+                );
+            }
+
             return null;
         }
     }

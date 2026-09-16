@@ -7,6 +7,8 @@ import { runRefreshFriendsListFlow } from '../coordinators/friendSyncCoordinator
 import { runUpdateIsGameRunningFlow } from '../coordinators/gameCoordinator';
 import { addGameLogEvent } from '../coordinators/gameLogCoordinator';
 import { runRefreshPlayerModerationsFlow } from '../coordinators/moderationCoordinator';
+import { refreshWatchedUsers } from '../coordinators/watchedCoordinator';
+import { runGroupChangePoll } from '../coordinators/groupChangeCoordinator';
 import { clearVRCXCache } from '../coordinators/vrcxCoordinator';
 import { useAuthStore } from './auth';
 import { useDiscordPresenceSettingsStore } from './settings/discordPresence';
@@ -43,6 +45,8 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
         nextAutoStateChange: 0,
         nextGetLogCheck: 0,
         nextGameRunningCheck: 0,
+        nextWatchedRefresh: 60,
+        nextGroupChangePoll: 300,
         nextDatabaseOptimize: 3600
     };
 
@@ -139,6 +143,14 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
                         await AppApi.IsSteamVRRunning()
                     );
                     vrStore.vrInit(); // TODO: make this event based
+                }
+                if (--state.nextWatchedRefresh <= 0) {
+                    state.nextWatchedRefresh = 60; // 1min
+                    refreshWatchedUsers();
+                }
+                if (--state.nextGroupChangePoll <= 0) {
+                    state.nextGroupChangePoll = 300; // 5min
+                    runGroupChangePoll();
                 }
                 if (--state.nextDatabaseOptimize <= 0) {
                     state.nextDatabaseOptimize = 86400; // 1 day

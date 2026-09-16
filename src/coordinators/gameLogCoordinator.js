@@ -65,70 +65,107 @@ export async function tryLoadPlayerList() {
     if (data.length === 0) {
         return;
     }
-    let length = 0;
-    for (i = data.length - 1; i > -1; i--) {
+    // take the NEWEST location entry by timestamp (the current map). Do not
+    // rely on array order: the query result ordering has been observed to
+    // vary, and scanning the head/tail could pick a stale entry (e.g. one
+    // recorded while the system clock was wrong).
+    let pickedLocation = null;
+    for (i = 0; i < data.length; i++) {
         ctx = data[i];
-        if (ctx.type === 'Location') {
-            locationStore.setLastLocation({
-                date: Date.parse(ctx.created_at),
-                location: ctx.location,
-                name: ctx.worldName,
-                playerList: new Map(),
-                friendList: new Map()
-            });
-            length = i;
-            break;
+        if (ctx.type !== 'Location') {
+            continue;
+        }
+        if (
+            pickedLocation === null ||
+            Date.parse(ctx.created_at) > Date.parse(pickedLocation.created_at)
+        ) {
+            pickedLocation = ctx;
         }
     }
-    if (length > 0) {
-        for (i = length + 1; i < data.length; i++) {
-            ctx = data[i];
-            if (ctx.type === 'OnPlayerJoined') {
-                if (!ctx.userId) {
-                    ctx.userId =
-                        findUserByDisplayName(
-                            userStore.cachedUsers,
-                            ctx.displayName,
-                            userStore.cachedUserIdsByDisplayName
-                        )?.id ?? '';
-                }
-                const userMap = {
-                    displayName: ctx.displayName,
-                    userId: ctx.userId,
-                    joinTime: Date.parse(ctx.created_at),
-                    lastAvatar: ''
-                };
-                locationStore.lastLocation.playerList.set(ctx.userId, userMap);
-                if (friendStore.friends.has(ctx.userId)) {
-                    locationStore.lastLocation.friendList.set(
-                        ctx.userId,
-                        userMap
-                    );
-                }
+    if (pickedLocation === null) {
+        return;
+    }
+    locationStore.setLastLocation({
+        date: Date.parse(pickedLocation.created_at),
+        location: pickedLocation.location,
+        name: pickedLocation.worldName,
+        playerList: new Map(),
+        friendList: new Map()
+    });
+    console.log(
+        '[gameLog] tryLoadPlayerList:',
+        'entries=',
+        data.length,
+        'picked=',
+        pickedLocation.worldName,
+        pickedLocation.created_at,
+        pickedLocation.location
+    );
+    const locationDate = Date.parse(pickedLocation.created_at);
+    // skip entries dated more than 1h into the future (compensates for the
+    // system clock having been changed while playing)
+    const maxDate = Date.now() + 61 * 60 * 1000;
+    const joinEvents = [];
+    for (i = 0; i < data.length; i++) {
+        ctx = data[i];
+        if (
+            (ctx.type === 'OnPlayerJoined' || ctx.type === 'OnPlayerLeft') &&
+            Date.parse(ctx.created_at) > locationDate &&
+            Date.parse(ctx.created_at) < maxDate
+        ) {
+            joinEvents.push(ctx);
+        }
+    }
+    joinEvents.sort(
+        (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)
+    );
+    for (i = 0; i < joinEvents.length; i++) {
+        ctx = joinEvents[i];
+        if (ctx.type === 'OnPlayerJoined') {
+            if (!ctx.userId) {
+                ctx.userId =
+                    findUserByDisplayName(
+                        userStore.cachedUsers,
+                        ctx.displayName,
+                        userStore.cachedUserIdsByDisplayName
+                    )?.id ?? '';
             }
-            if (ctx.type === 'OnPlayerLeft') {
-                locationStore.lastLocation.playerList.delete(ctx.userId);
-                locationStore.lastLocation.friendList.delete(ctx.userId);
+            const userMap = {
+                displayName: ctx.displayName,
+                userId: ctx.userId,
+                joinTime: Date.parse(ctx.created_at),
+                lastAvatar: ''
+            };
+            locationStore.lastLocation.playerList.set(ctx.userId, userMap);
+            if (friendStore.friends.has(ctx.userId)) {
+                locationStore.lastLocation.friendList.set(
+                    ctx.userId,
+                    userMap
+                );
             }
         }
-        locationStore.lastLocation.playerList.forEach((ref1) => {
-            if (
-                ref1.userId &&
-                typeof ref1.userId === 'string' &&
-                !userStore.cachedUsers.has(ref1.userId)
-            ) {
-                userRequest.getUser({ userId: ref1.userId });
-            }
-        });
+        if (ctx.type === 'OnPlayerLeft') {
+            locationStore.lastLocation.playerList.delete(ctx.userId);
+            locationStore.lastLocation.friendList.delete(ctx.userId);
+        }
+    }
+    locationStore.lastLocation.playerList.forEach((ref1) => {
+        if (
+            ref1.userId &&
+            typeof ref1.userId === 'string' &&
+            !userStore.cachedUsers.has(ref1.userId)
+        ) {
+            userRequest.getUser({ userId: ref1.userId });
+        }
+    });
 
-        runUpdateCurrentUserLocationFlow();
-        instanceStore.updateCurrentInstanceWorld();
-        vrStore.updateVRLastLocation();
-        instanceStore.getCurrentInstanceUserList();
-        userStore.applyUserDialogLocation();
-        instanceStore.applyWorldDialogInstances();
-        instanceStore.applyGroupDialogInstances();
-    }
+    runUpdateCurrentUserLocationFlow();
+    instanceStore.updateCurrentInstanceWorld();
+    vrStore.updateVRLastLocation();
+    instanceStore.getCurrentInstanceUserList();
+    userStore.applyUserDialogLocation();
+    instanceStore.applyWorldDialogInstances();
+    instanceStore.applyGroupDialogInstances();
 }
 
 /**

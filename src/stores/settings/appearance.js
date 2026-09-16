@@ -70,6 +70,7 @@ export const useAppearanceSettingsStore = defineStore(
         const isAgeGatedInstancesVisible = ref(false);
         const sortFavorites = ref(true);
         const instanceUsersSortAlphabetical = ref(false);
+        const showMutualFriendsBadge = ref(true);
         const tablePageSize = ref(15);
         const tablePageSizes = ref([...DEFAULT_TABLE_PAGE_SIZES]);
         const dtHour12 = ref(false);
@@ -163,6 +164,7 @@ export const useAppearanceSettingsStore = defineStore(
                 isAgeGatedInstancesVisibleConfig,
                 sortFavoritesConfig,
                 instanceUsersSortAlphabeticalConfig,
+                showMutualFriendsBadgeConfig,
                 tablePageSizeConfig,
                 tablePageSizesConfig,
                 dtHour12Config,
@@ -220,6 +222,7 @@ export const useAppearanceSettingsStore = defineStore(
                     'VRCX_instanceUsersSortAlphabetical',
                     false
                 ),
+                configRepository.getBool('VRCX_showMutualFriendsBadge', true),
                 configRepository.getInt('VRCX_tablePageSize', 20),
                 configRepository.getString(
                     'VRCX_tablePageSizes',
@@ -334,6 +337,7 @@ export const useAppearanceSettingsStore = defineStore(
             sortFavorites.value = sortFavoritesConfig;
             instanceUsersSortAlphabetical.value =
                 instanceUsersSortAlphabeticalConfig;
+            showMutualFriendsBadge.value = showMutualFriendsBadgeConfig;
 
             tablePageSizes.value = normalizeTablePageSizes(
                 JSON.parse(tablePageSizesConfig)
@@ -733,6 +737,17 @@ export const useAppearanceSettingsStore = defineStore(
             configRepository.setBool(
                 'VRCX_instanceUsersSortAlphabetical',
                 instanceUsersSortAlphabetical.value
+            );
+        }
+
+        /**
+         *
+         */
+        function setShowMutualFriendsBadge() {
+            showMutualFriendsBadge.value = !showMutualFriendsBadge.value;
+            configRepository.setBool(
+                'VRCX_showMutualFriendsBadge',
+                showMutualFriendsBadge.value
             );
         }
 
@@ -1253,6 +1268,7 @@ export const useAppearanceSettingsStore = defineStore(
             isAgeGatedInstancesVisible,
             sortFavorites,
             instanceUsersSortAlphabetical,
+            showMutualFriendsBadge,
             tablePageSize,
             tablePageSizes,
             dtHour12,
@@ -1300,6 +1316,7 @@ export const useAppearanceSettingsStore = defineStore(
             setIsAgeGatedInstancesVisible,
             setSortFavorites,
             setInstanceUsersSortAlphabetical,
+            setShowMutualFriendsBadge,
             setTablePageSize,
             setTablePageSizes,
             setDtHour12,

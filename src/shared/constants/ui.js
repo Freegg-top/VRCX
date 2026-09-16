@@ -30,6 +30,13 @@ const navDefinitions = [
         routeName: 'player-list'
     },
     {
+        key: 'friend-network',
+        icon: 'ri-node-tree',
+        tooltip: 'nav_tooltip.friend_network',
+        labelKey: 'nav_tooltip.friend_network',
+        routeName: 'friend-network'
+    },
+    {
         key: 'search',
         icon: 'ri-search-line',
         tooltip: 'nav_tooltip.search',

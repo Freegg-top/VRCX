@@ -546,6 +546,38 @@ const gameLog = {
         return data;
     },
 
+    async getMetUsers() {
+        var data = [];
+        await sqliteService.execute(
+            (dbRow) => {
+                data.push({
+                    userId: dbRow[0],
+                    displayName: dbRow[1],
+                    joinCount: dbRow[2],
+                    lastSeen: dbRow[3]
+                });
+            },
+            `SELECT
+                user_id,
+                display_name,
+                COUNT(DISTINCT location) AS joinCount,
+                MAX(created_at) AS lastSeen
+            FROM
+                gamelog_join_leave
+            WHERE
+                type = 'OnPlayerJoined'
+                AND user_id != ''
+                AND user_id != '${dbVars.userId}'
+            GROUP BY
+                user_id,
+                display_name
+            ORDER BY
+                lastSeen DESC
+            `
+        );
+        return data;
+    },
+
     async getGameLogByLocation(instanceId, filters, vipList = []) {
         let vipQuery = '';
         const vipArgs = {};
