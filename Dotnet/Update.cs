@@ -47,6 +47,53 @@ namespace VRCX
             logger.Info($"AppImagePath: {AppImagePath}");
         }
 
+        private static System.Windows.Forms.Form progressForm;
+        private static System.Windows.Forms.Label progressLabel;
+
+        private static void ShowProgress(string text)
+        {
+            try
+            {
+                if (progressForm == null)
+                {
+                    progressForm = new System.Windows.Forms.Form
+                    {
+                        Text = "VRCX 拓展版 更新",
+                        Size = new System.Drawing.Size(380, 110),
+                        StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+                        TopMost = true,
+                        FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
+                        ControlBox = false,
+                        ShowInTaskbar = false
+                    };
+                    progressLabel = new System.Windows.Forms.Label
+                    {
+                        Dock = System.Windows.Forms.DockStyle.Fill,
+                        TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
+                        Text = text
+                    };
+                    progressForm.Controls.Add(progressLabel);
+                    progressForm.Show();
+                }
+                else
+                {
+                    progressLabel.Text = text;
+                }
+                System.Windows.Forms.Application.DoEvents();
+            }
+            catch
+            {
+                // 界面失败不影响安装本体
+            }
+        }
+
+        private static void CloseProgress()
+        {
+            try { progressForm?.Close(); } catch { }
+            progressForm = null;
+            progressLabel = null;
+        }
+
         public static void Check()
         {
             if (Process.GetProcessesByName("VRCX_Setup").Length > 0)
@@ -59,9 +106,12 @@ namespace VRCX
 
             if (File.Exists(UpdateExecutable))
             {
-                // 新写入的 update.exe 常被杀软实时扫描短暂占用（读取/搬移/删除都可能失败），
-                // 启动时整体重试后再报错——绝大多数情况下重试期内锁即释放
-                const int maxAttempts = 5;
+                // 新写入的 update.exe 常被杀软实时扫描占用较久（读取/搬移/删除都可能失败）：
+                // 弹出安装窗口并整体重试 12 次×5 秒；全部失败则静默顺延——
+                // update.exe 保留，下次启动自动重试安装，不打扰用户
+                ShowProgress("正在安装拓展版更新…");
+
+                const int maxAttempts = 12;
                 for (var attempt = 1; ; attempt++)
                 {
                     try
@@ -72,18 +122,18 @@ namespace VRCX
                     catch (Exception ex) when (attempt < maxAttempts)
                     {
                         logger.Info($"Update install retry {attempt}/{maxAttempts}: {ex.Message}");
-                        System.Threading.Thread.Sleep(2000);
+                        ShowProgress($"正在安装拓展版更新…（文件占用重试 {attempt}/{maxAttempts}）");
+                        System.Threading.Thread.Sleep(5000);
                     }
                     catch (Exception ex)
                     {
-                        var message = $"Failed to install the update: {ex.Message}";
-                        logger.Info(message);
-#if !LINUX
-                        MessageBox.Show(message, "Update failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-#endif
+                        // 全部重试失败：静默顺延，update.exe 保留待下次启动重试
+                        logger.Info($"Failed to install the update (deferred to next start): {ex.Message}");
                         break;
                     }
                 }
+
+                CloseProgress();
             }
         }
 
@@ -103,39 +153,11 @@ namespace VRCX
             }
         }
 
-        // 自定义分发: 便携 zip 更新包直接解压覆盖安装目录（带置顶安装弹窗，体验与官方安装器一致）
+        // 自定义分发: 便携 zip 更新包直接解压覆盖安装目录（复用 Check() 已弹出的安装窗口）
         private static void ExtractZipOverInstallDirectory(string zipPath)
         {
             var installDirectory = Program.BaseDirectory;
-            System.Windows.Forms.Form progressForm = null;
-            System.Windows.Forms.Label progressLabel = null;
-            try
-            {
-                progressForm = new System.Windows.Forms.Form
-                {
-                    Text = "VRCX 拓展版 更新",
-                    Size = new System.Drawing.Size(380, 110),
-                    StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
-                    TopMost = true,
-                    FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
-                    ControlBox = false,
-                    ShowInTaskbar = false
-                };
-                progressLabel = new System.Windows.Forms.Label
-                {
-                    Dock = System.Windows.Forms.DockStyle.Fill,
-                    TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
-                    Text = "正在安装拓展版更新…"
-                };
-                progressForm.Controls.Add(progressLabel);
-                progressForm.Show();
-                System.Windows.Forms.Application.DoEvents();
-            }
-            catch
-            {
-                // 界面创建失败不影响安装本体
-            }
-
+            ShowProgress("正在安装拓展版更新…");
             using var archive = System.IO.Compression.ZipFile.OpenRead(zipPath);
             var entryTotal = archive.Entries.Count;
             var entryDone = 0;
@@ -151,21 +173,11 @@ namespace VRCX
                 entryDone++;
                 if (progressLabel != null && entryDone % 20 == 0)
                 {
-                    progressLabel.Text = $"正在安装拓展版更新… {entryDone}/{entryTotal}";
-                    System.Windows.Forms.Application.DoEvents();
+                    ShowProgress($"正在安装拓展版更新… {entryDone}/{entryTotal}");
                 }
             }
-            // 完成提示停留片刻，让用户看到安装窗
-            if (progressLabel != null)
-            {
-                progressLabel.Text = "安装完成，正在启动…";
-                System.Windows.Forms.Application.DoEvents();
-                System.Threading.Thread.Sleep(1200);
-            }
-            if (progressForm != null)
-            {
-                try { progressForm.Close(); } catch { }
-            }
+            ShowProgress("安装完成，正在启动…");
+            System.Threading.Thread.Sleep(1200);
             // 清理失败不应让已成功的更新报"安装失败"：杀软/残留句柄常短暂占用，重试后再顺延
             for (var attempt = 1; ; attempt++)
             {
