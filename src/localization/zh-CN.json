@@ -2540,7 +2540,10 @@
             "release": "版本",
             "download": "下载",
             "install": "安装",
-            "cancel": "取消"
+            "cancel": "取消",
+            "branch_custom": "拓展版",
+            "custom_title": "freegg 增强版",
+            "custom_notice": "freegg 发布的自定义增强分支：发现新版本时仅提示，由你确认后才下载安装；可在下方列表选择任意历史版本。"
         },
         "change_log": {
             "header": "更新日志",

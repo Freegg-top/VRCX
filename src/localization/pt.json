@@ -2299,7 +2299,10 @@
             "release": "Lançamento",
             "download": "Baixar",
             "install": "Instalar",
-            "cancel": "Cancelar"
+            "cancel": "Cancelar",
+            "branch_custom": "Custom",
+            "custom_title": "freegg enhanced build",
+            "custom_notice": "Custom enhanced branch published by freegg: new versions are announced only — download and install after you confirm."
         },
         "change_log": {
             "header": "Log de Alterações",

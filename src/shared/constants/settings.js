@@ -26,6 +26,12 @@ const branches = {
         name: 'Nightly',
         urlReleases: `${CUSTOM_UPDATE_BASE}/releases.json`,
         urlLatest: `${CUSTOM_UPDATE_BASE}/latest.json`
+    },
+    // 拓展版: freegg 自定义分发分支，更新始终手动确认（不静默下载）
+    Custom: {
+        name: 'Custom',
+        urlReleases: `${CUSTOM_UPDATE_BASE}/releases.json`,
+        urlLatest: `${CUSTOM_UPDATE_BASE}/latest.json`
     }
     // LinuxTest: {
     //     name: 'LinuxTest',

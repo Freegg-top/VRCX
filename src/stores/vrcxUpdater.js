@@ -133,6 +133,8 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         }
         if (currentVersion.value.includes('VRCX Nightly')) {
             branch.value = 'Nightly';
+        } else if (branch.value === 'Custom') {
+            // 拓展版（自定义分发）：保留用户选择的分支，不按版本串重置
         } else {
             branch.value = 'Stable';
         }
@@ -347,9 +349,12 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                         }
                     });
                 }
-                if (autoUpdateVRCX.value === 'Notify') {
+                // 拓展版（自定义分发）始终与官方默认一致：只提示，由用户决定是否下载安装
+                const effectiveMode =
+                    branch.value === 'Custom' ? 'Notify' : autoUpdateVRCX.value;
+                if (effectiveMode === 'Notify') {
                     // this.showVRCXUpdateDialog();
-                } else if (autoUpdateVRCX.value === 'Auto Download') {
+                } else if (effectiveMode === 'Auto Download') {
                     await downloadVRCXUpdate(downloadUrl, hashString, size, releaseName);
                 }
             }
