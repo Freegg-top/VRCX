@@ -2430,7 +2430,9 @@
             "cancel": "取消",
             "branch_custom": "拓展版",
             "custom_title": "freegg 增強版",
-            "custom_notice": "freegg 發布的自定義增強分支：發現新版本時僅提示，由你確認後才下載安裝；可在下方列表選擇任意歷史版本。"
+            "custom_notice": "freegg 發布的自定義增強分支：發現新版本時僅提示，由你確認後才下載安裝；可在下方列表選擇任意歷史版本。",
+            "official_title": "官方版本",
+            "official_notice": "這裡列出的是官方 VRCX 版本。安裝官方版本會替換本 freegg 增強版，自研功能將丟失。"
         },
         "change_log": {
             "header": "更新日誌",

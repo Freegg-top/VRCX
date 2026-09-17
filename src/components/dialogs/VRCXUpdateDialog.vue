@@ -22,6 +22,15 @@
                             <TabsTrigger value="Nightly">{{ t('dialog.vrcx_updater.branch_nightly') }}</TabsTrigger>
                             <TabsTrigger value="Custom">{{ t('dialog.vrcx_updater.branch_custom') }}</TabsTrigger>
                         </TabsList>
+                        <TabsContent value="Stable">
+                            <Alert variant="destructive">
+                                <AlertCircle class="text-muted-foreground" />
+                                <AlertTitle>{{ t('dialog.vrcx_updater.official_title') }}</AlertTitle>
+                                <AlertDescription>
+                                    {{ t('dialog.vrcx_updater.official_notice') }}
+                                </AlertDescription>
+                            </Alert>
+                        </TabsContent>
                         <TabsContent value="Nightly">
                             <Alert variant="destructive">
                                 <AlertCircle class="text-muted-foreground" />

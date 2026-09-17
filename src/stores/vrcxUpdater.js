@@ -291,7 +291,12 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             // handle invalid branch
             setBranch('Stable');
         }
-        const url = branches[branch.value].urlLatest;
+        // 自动检查路由：增强版用户（版本串带 -custom）固定检查 freegg 拓展版服务器
+        // （国内直连稳定、无 GitHub 速率限制）；官方版安装用户按当前分支走 GitHub。
+        // 手动打开更新对话框切换分支浏览不受影响。
+        const isCustomInstall = currentVersion.value.includes('-custom');
+        const autoCheckBranch = isCustomInstall ? 'Custom' : branch.value;
+        const url = branches[autoCheckBranch].urlLatest;
         checkingForVRCXUpdate.value = true;
         let response;
         let json;
@@ -349,9 +354,10 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                         }
                     });
                 }
-                // 拓展版（自定义分发）始终与官方默认一致：只提示，由用户决定是否下载安装
+                // 自动检查指向拓展版服务器时（增强版用户），始终与官方默认一致：
+                // 只提示，由用户决定是否下载安装——绝不静默下载官方包覆盖增强版
                 const effectiveMode =
-                    branch.value === 'Custom' ? 'Notify' : autoUpdateVRCX.value;
+                    autoCheckBranch === 'Custom' ? 'Notify' : autoUpdateVRCX.value;
                 if (effectiveMode === 'Notify') {
                     // this.showVRCXUpdateDialog();
                 } else if (effectiveMode === 'Auto Download') {
