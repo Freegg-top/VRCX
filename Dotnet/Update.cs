@@ -94,7 +94,8 @@ namespace VRCX
             progressLabel = null;
         }
 
-        public static void Check()
+        // 返回值: 本次启动是否安装了待装更新（调用方据以刷新版本号显示）
+        public static bool Check()
         {
             if (Process.GetProcessesByName("VRCX_Setup").Length > 0)
                 Environment.Exit(0);
@@ -104,37 +105,40 @@ namespace VRCX
             if (File.Exists(VrcxSetupExecutable))
                 File.Delete(VrcxSetupExecutable);
 
-            if (File.Exists(UpdateExecutable))
+            if (!File.Exists(UpdateExecutable))
+                return false;
+
+            // 新写入的 update.exe 常被杀软实时扫描占用较久（读取/搬移/删除都可能失败）：
+            // 弹出安装窗口并整体重试 12 次×5 秒；全部失败则静默顺延——
+            // update.exe 保留，下次启动自动重试安装，不打扰用户
+            ShowProgress("正在安装拓展版更新…");
+
+            var installed = false;
+            const int maxAttempts = 12;
+            for (var attempt = 1; ; attempt++)
             {
-                // 新写入的 update.exe 常被杀软实时扫描占用较久（读取/搬移/删除都可能失败）：
-                // 弹出安装窗口并整体重试 12 次×5 秒；全部失败则静默顺延——
-                // update.exe 保留，下次启动自动重试安装，不打扰用户
-                ShowProgress("正在安装拓展版更新…");
-
-                const int maxAttempts = 12;
-                for (var attempt = 1; ; attempt++)
+                try
                 {
-                    try
-                    {
-                        InstallUpdate();
-                        break;
-                    }
-                    catch (Exception ex) when (attempt < maxAttempts)
-                    {
-                        logger.Info($"Update install retry {attempt}/{maxAttempts}: {ex.Message}");
-                        ShowProgress($"正在安装拓展版更新…（文件占用重试 {attempt}/{maxAttempts}）");
-                        System.Threading.Thread.Sleep(5000);
-                    }
-                    catch (Exception ex)
-                    {
-                        // 全部重试失败：静默顺延，update.exe 保留待下次启动重试
-                        logger.Info($"Failed to install the update (deferred to next start): {ex.Message}");
-                        break;
-                    }
+                    InstallUpdate();
+                    installed = true;
+                    break;
                 }
-
-                CloseProgress();
+                catch (Exception ex) when (attempt < maxAttempts)
+                {
+                    logger.Info($"Update install retry {attempt}/{maxAttempts}: {ex.Message}");
+                    ShowProgress($"正在安装拓展版更新…（文件占用重试 {attempt}/{maxAttempts}）");
+                    System.Threading.Thread.Sleep(5000);
+                }
+                catch (Exception ex)
+                {
+                    // 全部重试失败：静默顺延，update.exe 保留待下次启动重试
+                    logger.Info($"Failed to install the update (deferred to next start): {ex.Message}");
+                    break;
+                }
             }
+
+            CloseProgress();
+            return installed;
         }
 
         private static bool IsZipFile(string path)
