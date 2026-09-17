@@ -92,14 +92,24 @@ namespace VRCX
                     continue;
                 entry.ExtractToFile(destinationPath, true);
             }
-            // 清理失败不应让已成功的更新报"安装失败"：文件被杀软/残留句柄短暂占用时留给下次启动清理
-            try
+            // 清理失败不应让已成功的更新报"安装失败"：杀软/残留句柄常短暂占用，重试后再顺延
+            for (var attempt = 1; ; attempt++)
             {
-                File.Delete(zipPath);
-            }
-            catch (Exception ex)
-            {
-                logger.Info($"Custom zip update extracted; cleanup of {zipPath} deferred: {ex.Message}");
+                try
+                {
+                    File.Delete(zipPath);
+                    break;
+                }
+                catch (Exception ex) when (attempt < 5)
+                {
+                    logger.Info($"Custom zip update extracted; cleanup retry {attempt}: {ex.Message}");
+                    System.Threading.Thread.Sleep(2000);
+                }
+                catch (Exception ex)
+                {
+                    logger.Info($"Custom zip update extracted; cleanup of {zipPath} deferred: {ex.Message}");
+                    break;
+                }
             }
             logger.Info("Custom zip update extracted over the install directory");
         }
