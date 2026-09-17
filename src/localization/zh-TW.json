@@ -2428,11 +2428,12 @@
             "download": "下載",
             "install": "安裝",
             "cancel": "取消",
-            "branch_custom": "拓展版",
-            "custom_title": "freegg 增強版",
-            "custom_notice": "freegg 發布的自定義增強分支：發現新版本時僅提示，由你確認後才下載安裝；可在下方列表選擇任意歷史版本。",
             "official_title": "官方版本",
-            "official_notice": "這裡列出的是官方 VRCX 版本。安裝官方版本會替換本 freegg 增強版，自研功能將丟失。"
+            "official_notice": "這裡列出的是官方 VRCX 版本。安裝官方版本會替換本 freegg 增強版，自研功能將丟失。",
+            "official_overwrite_notice": "此處為官方 VRCX 版本。下載安裝將以官方版本覆蓋本拓展版，自研功能將丟失，請確認後再繼續。",
+            "official_latest": "官方正式版最新: {name}（拓展版不受影響）",
+            "dlc_title": "拓展版更新",
+            "dlc_notice": "拓展版更新：升級到發布者提交的最新版本（僅提供比當前新的版本，不支援回退）。"
         },
         "change_log": {
             "header": "更新日誌",

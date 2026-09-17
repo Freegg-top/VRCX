@@ -69,11 +69,15 @@ namespace VRCX
             {
                 var versionFile = File.ReadAllText(Path.Join(BaseDirectory, "Version")).Trim();
 
+                // 自定义拓展版: 文件内容含 "-dlc." 标记
+                if (versionFile.Contains("-dlc.", StringComparison.OrdinalIgnoreCase))
+                    Version = $"VRCX DLC {versionFile}";
+
                 // look for trailing git hash "-22bcd96" to indicate nightly build
                 var version = versionFile.Split('-');
                 if (version.Length > 0 && version[^1].Length == 7)
                     Version = $"VRCX Nightly {versionFile}";
-                else
+                else if (!versionFile.Contains("-dlc.", StringComparison.OrdinalIgnoreCase))
                     Version = $"VRCX {versionFile}";
             }
             catch (Exception ex)

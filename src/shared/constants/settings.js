@@ -13,27 +13,36 @@ const VRChatCameraResolutions = [
     { name: '7680x4320 (8K)', width: 7680, height: 4320 }
 ];
 
-// 官方分支: 稳定版/测试版展示并安装官方 VRCX 版本（GitHub）
-const OFFICIAL_RELEASES_URL = 'https://api.github.com/repos/rs189/VRCX/releases';
-const OFFICIAL_LATEST_URL = 'https://api.github.com/repos/rs189/VRCX/releases/latest';
-// 拓展版: freegg 自定义分发分支，更新始终手动确认（不静默下载）
-const CUSTOM_UPDATE_BASE = 'https://s3.freegg.top/vrcx';
+// 拓展版 (DLC) 更新源: 改为你网站的实际地址后生效
+// 服务器需提供 releases.json (历史版本数组, GitHub releases 同形状)
+// 与 latest.json (最新版本检查)
+const DLC_UPDATE_BASE = 'https://s3.freegg.top/vrcx';
+
 const branches = {
     Stable: {
         name: 'Stable',
-        urlReleases: OFFICIAL_RELEASES_URL,
-        urlLatest: OFFICIAL_LATEST_URL
+        urlReleases: 'https://api0.vrcx.app/releases/stable',
+        urlLatest: 'https://api0.vrcx.app/releases/stable/latest',
+        dlc: false
     },
     Nightly: {
         name: 'Nightly',
-        urlReleases: OFFICIAL_RELEASES_URL,
-        urlLatest: OFFICIAL_LATEST_URL
+        urlReleases: 'https://api0.vrcx.app/releases/nightly',
+        urlLatest: 'https://api0.vrcx.app/releases/nightly/latest',
+        dlc: false
     },
-    Custom: {
-        name: 'Custom',
-        urlReleases: `${CUSTOM_UPDATE_BASE}/releases.json`,
-        urlLatest: `${CUSTOM_UPDATE_BASE}/latest.json`
+    DLC: {
+        name: 'DLC',
+        urlReleases: `${DLC_UPDATE_BASE}/releases.json`,
+        urlLatest: `${DLC_UPDATE_BASE}/latest.json`,
+        dlc: true
     }
+    // LinuxTest: {
+    //     name: 'LinuxTest',
+    //     urlReleases: 'https://api.github.com/repos/rs189/VRCX/releases',
+    //     urlLatest:
+    //         'https://api.github.com/repos/rs189/VRCX/releases/latest'
+    // }
 };
 
 const TABLE_MAX_SIZE_MIN = 100;

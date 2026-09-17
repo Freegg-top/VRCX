@@ -2541,11 +2541,13 @@
             "download": "下载",
             "install": "安装",
             "cancel": "取消",
-            "branch_custom": "拓展版",
-            "custom_title": "freegg 增强版",
-            "custom_notice": "freegg 发布的自定义增强分支：发现新版本时仅提示，由你确认后才下载安装；可在下方列表选择任意历史版本。",
             "official_title": "官方版本",
-            "official_notice": "这里列出的是官方 VRCX 版本。安装官方版本会替换本 freegg 增强版，自研功能（关注非好友等）将丢失，且日后不会收到拓展版更新提示。"
+            "official_notice": "这里列出的是官方 VRCX 版本。安装官方版本会替换本 freegg 增强版，自研功能（关注非好友等）将丢失，且日后不会收到拓展版更新提示。",
+            "branch_dlc": "DLC",
+            "dlc_title": "拓展版更新",
+            "dlc_notice": "拓展版更新：升级到发布者提交的最新版本（仅提供比当前新的版本，不支持回退）。",
+            "official_latest": "官方正式版最新: {name}（拓展版不受影响）",
+            "official_overwrite_notice": "此处为官方 VRCX 版本。下载安装将以官方版本覆盖本拓展版，自研功能将丢失，且应用内不再提供拓展版安装入口，请确认后再继续。"
         },
         "change_log": {
             "header": "更新日志",

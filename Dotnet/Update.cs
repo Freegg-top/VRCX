@@ -153,7 +153,7 @@ namespace VRCX
             }
         }
 
-        // 自定义分发: 便携 zip 更新包直接解压覆盖安装目录（复用 Check() 已弹出的安装窗口）
+        // 拓展版分发: 便携 zip 更新包解压覆盖安装目录（复用 Check() 已弹出的安装窗口）
         private static void ExtractZipOverInstallDirectory(string zipPath)
         {
             var installDirectory = Program.BaseDirectory;
@@ -188,23 +188,23 @@ namespace VRCX
                 }
                 catch (Exception ex) when (attempt < 5)
                 {
-                    logger.Info($"Custom zip update extracted; cleanup retry {attempt}: {ex.Message}");
+                    logger.Info($"DLC zip cleanup retry {attempt}: {ex.Message}");
                     System.Threading.Thread.Sleep(2000);
                 }
                 catch (Exception ex)
                 {
-                    logger.Info($"Custom zip update extracted; cleanup of {zipPath} deferred: {ex.Message}");
+                    logger.Info($"DLC zip cleanup deferred: {ex.Message}");
                     break;
                 }
             }
-            logger.Info("Custom zip update extracted over the install directory");
+            logger.Info("DLC zip update extracted over the install directory");
         }
 
         private static void InstallUpdate()
         {
             var setupArguments = string.Empty;
 
-            // 异常向上抛给 Check() 的重试循环；全部重试失败才弹窗
+            // 异常向上抛给 Check() 的重试循环；全部重试失败才提示
             if (IsZipFile(UpdateExecutable))
             {
                 ExtractZipOverInstallDirectory(UpdateExecutable);

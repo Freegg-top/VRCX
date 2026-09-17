@@ -102,6 +102,10 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
     }
 
     const currentVersion = computed(() => appVersion.value.replace(' (Linux)', ''));
+    // 拓展版 (DLC) 构建: 版本标签含 "VRCX DLC"
+    const isDlcBuild = computed(() => currentVersion.value.includes('VRCX DLC'));
+    // 官方正式版最新版本号 (拓展版环境下仅展示, 不提供安装)
+    const officialLatestVersion = ref('');
 
     /**
      * @param {string} value
@@ -131,10 +135,10 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         if (!appVersion.value) {
             return;
         }
-        if (currentVersion.value.includes('VRCX Nightly')) {
+        if (isDlcBuild.value) {
+            branch.value = 'DLC';
+        } else if (currentVersion.value.includes('VRCX Nightly')) {
             branch.value = 'Nightly';
-        } else if (branch.value === 'Custom') {
-            // 拓展版（自定义分发）：保留用户选择的分支，不按版本串重置
         } else {
             branch.value = 'Stable';
         }
@@ -251,7 +255,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                 (asset.content_type === 'application/zip' ||
                     asset.content_type === 'application/octet-stream')
             ) {
-                // 自定义分发: 便携 zip 更新包, 由 C# 在重启时解压到安装目录
+                // 拓展版分发: 便携 zip 更新包, C# 在重启时解压覆盖安装目录
                 downloadUrl = asset.browser_download_url;
                 if (asset.digest && asset.digest.startsWith('sha256:')) {
                     hashString = asset.digest.replace('sha256:', '');
@@ -283,20 +287,20 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             // ignore custom builds
             return false;
         }
+        if (isDlcBuild.value) {
+            // 拓展版: 检查自己的服务器
+            branch.value = 'DLC';
+        }
         if (branch.value === 'Beta') {
             // move Beta users to stable
             setBranch('Stable');
         }
         if (typeof branches[branch.value] === 'undefined') {
             // handle invalid branch
-            setBranch('Stable');
+            setBranch(isDlcBuild.value ? 'DLC' : 'Stable');
         }
-        // 自动检查路由：增强版用户（版本串带 -custom）固定检查 freegg 拓展版服务器
-        // （国内直连稳定、无 GitHub 速率限制）；官方版安装用户按当前分支走 GitHub。
-        // 手动打开更新对话框切换分支浏览不受影响。
-        const isCustomInstall = currentVersion.value.includes('-custom');
-        const autoCheckBranch = isCustomInstall ? 'Custom' : branch.value;
-        const url = branches[autoCheckBranch].urlLatest;
+        const checkBranch = isDlcBuild.value ? 'DLC' : branch.value;
+        const url = branches[checkBranch].urlLatest;
         checkingForVRCXUpdate.value = true;
         let response;
         let json;
@@ -334,6 +338,24 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             if (autoUpdateVRCX.value === 'Off') {
                 return true;
             }
+            if (isDlcBuild.value) {
+                // 拓展版环境: 顺带获取官方正式版最新版本号, 仅展示不安装
+                try {
+                    const official = await webApiService.execute({
+                        url: branches.Stable.urlLatest,
+                        method: 'GET',
+                        headers: {
+                            'VRCX-ID': vrcxId.value
+                        }
+                    });
+                    const officialJson = JSON.parse(official.data);
+                    if (officialJson && officialJson.name) {
+                        officialLatestVersion.value = officialJson.name;
+                    }
+                } catch (e) {
+                    officialLatestVersion.value = '';
+                }
+            }
             if (releaseName === pendingVRCXInstall.value) {
                 // update already downloaded
                 VRCXUpdateDialog.value.updatePendingIsLatest = true;
@@ -354,10 +376,8 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                         }
                     });
                 }
-                // 自动检查指向拓展版服务器时（增强版用户），始终与官方默认一致：
-                // 只提示，由用户决定是否下载安装——绝不静默下载官方包覆盖增强版
-                const effectiveMode =
-                    autoCheckBranch === 'Custom' ? 'Notify' : autoUpdateVRCX.value;
+                // 拓展版: 关闭自动静默下载——发现新版本仅提示，由用户确认后在对话框中下载安装
+                const effectiveMode = isDlcBuild.value ? 'Notify' : autoUpdateVRCX.value;
                 if (effectiveMode === 'Notify') {
                     // this.showVRCXUpdateDialog();
                 } else if (effectiveMode === 'Auto Download') {
@@ -381,63 +401,51 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
 
     async function loadBranchVersions() {
         const D = VRCXUpdateDialog.value;
-        const baseUrl = branches[branch.value].urlReleases;
+        const url = branches[branch.value].urlReleases;
         checkingForVRCXUpdate.value = true;
-        let merged;
+        let response;
+        let json;
         try {
-            // GitHub releases 分页拉全（每页 100，最多 5 页）；自建静态 json 忽略查询参数不受影响
-            let page = 1;
-            merged = [];
-            while (page <= 5) {
-                const url = `${baseUrl}?per_page=100&page=${page}`;
-                const response = await webApiService.execute({
-                    url,
-                    method: 'GET',
-                    headers: {
-                        'VRCX-ID': vrcxId.value
-                    }
-                });
-                if (response.status !== 200) {
-                    toast.error(
-                        t('message.vrcx_updater.failed', {
-                            message: `${response.status} ${response.data}`
-                        })
-                    );
-                    return;
+            response = await webApiService.execute({
+                url,
+                method: 'GET',
+                headers: {
+                    'VRCX-ID': vrcxId.value
                 }
-                const pageJson = JSON.parse(response.data);
-                if (typeof pageJson !== 'object' || pageJson.message) {
-                    toast.error(
-                        t('message.vrcx_updater.failed', {
-                            message: pageJson.message
-                        })
-                    );
-                    return;
-                }
-                logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, pageJson);
-                merged = merged.concat(pageJson);
-                if (!Array.isArray(pageJson) || pageJson.length < 100) {
-                    break;
-                }
-                page++;
-            }
+            });
+            json = JSON.parse(response.data);
         } catch (error) {
             console.error('Failed to check for VRCX update', error);
             return;
         } finally {
             checkingForVRCXUpdate.value = false;
         }
-        // 分支过滤（与官方 app 行为一致）：测试版=官方 Nightly 构建；稳定版=官方正式版本；拓展版=全部
-        const isNightlyBranch = branch.value === 'Nightly';
+        if (response.status !== 200) {
+            toast.error(
+                t('message.vrcx_updater.failed', {
+                    message: `${response.status} ${response.data}`
+                })
+            );
+            return;
+        }
+        logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, json);
+        // 版本令牌: 剥掉名称前缀后按字典序比较新旧 (DLC/官方格式均以日期开头, 直接可比)
+        function versionToken(name) {
+            return String(name || '')
+                .replace(/^VRCX DLC\s+/i, '')
+                .replace(/^VRCX Nightly\s+/i, '')
+                .replace(/^VRCX\s+/i, '')
+                .replace(/^v/i, '')
+                .replace(/-/g, '.');
+        }
+        const currentToken = versionToken(currentVersion.value);
         const releases = [];
-        for (const release of merged) {
+        for (const release of json) {
             if (release.prerelease) {
                 continue;
             }
-            if (isNightlyBranch && !/Nightly/i.test(release.name || '')) {
-                continue;
-            }
-            if (branch.value === 'Stable' && /Nightly/i.test(release.name || '')) {
+            // 不提供版本回退: 早于当前版本的条目不显示、不可安装
+            if (versionToken(release.name) < currentToken) {
                 continue;
             }
             assetLoop: for (const asset of release.assets) {
@@ -448,7 +456,10 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             }
         }
         D.releases = releases;
-        D.release = releases.length ? releases[0].name : '';
+        if (releases.length === 0) {
+            return;
+        }
+        D.release = releases[0].name;
         VRCXUpdateDialog.value.updatePendingIsLatest = false;
         if (D.release === pendingVRCXInstall.value) {
             // update already downloaded and latest version
@@ -550,6 +561,8 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         whatsNewDialog,
         pendingVRCXUpdate,
         pendingVRCXInstall,
+        isDlcBuild,
+        officialLatestVersion,
         updateInProgress,
         updateProgress,
         noUpdater,

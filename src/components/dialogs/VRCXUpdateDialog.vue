@@ -20,16 +20,19 @@
                         <TabsList class="grid w-full grid-cols-3">
                             <TabsTrigger value="Stable">{{ t('dialog.vrcx_updater.branch_stable') }}</TabsTrigger>
                             <TabsTrigger value="Nightly">{{ t('dialog.vrcx_updater.branch_nightly') }}</TabsTrigger>
-                            <TabsTrigger value="Custom">{{ t('dialog.vrcx_updater.branch_custom') }}</TabsTrigger>
+                            <TabsTrigger value="DLC">{{ t('dialog.vrcx_updater.branch_dlc') }}</TabsTrigger>
                         </TabsList>
                         <TabsContent value="Stable">
                             <Alert variant="destructive">
                                 <AlertCircle class="text-muted-foreground" />
                                 <AlertTitle>{{ t('dialog.vrcx_updater.official_title') }}</AlertTitle>
                                 <AlertDescription>
-                                    {{ t('dialog.vrcx_updater.official_notice') }}
+                                    {{ t('dialog.vrcx_updater.official_overwrite_notice') }}
                                 </AlertDescription>
                             </Alert>
+                            <div v-if="isDlcBuild && officialLatestVersion" class="mt-2 text-xs text-muted-foreground">
+                                {{ t('dialog.vrcx_updater.official_latest', { name: officialLatestVersion }) }}
+                            </div>
                         </TabsContent>
                         <TabsContent value="Nightly">
                             <Alert variant="destructive">
@@ -40,12 +43,11 @@
                                 </AlertDescription>
                             </Alert>
                         </TabsContent>
-                        <TabsContent value="Custom">
+                        <TabsContent value="DLC">
                             <Alert>
-                                <AlertCircle class="text-muted-foreground" />
-                                <AlertTitle>{{ t('dialog.vrcx_updater.custom_title') }}</AlertTitle>
+                                <AlertTitle>{{ t('dialog.vrcx_updater.dlc_title') }}</AlertTitle>
                                 <AlertDescription>
-                                    {{ t('dialog.vrcx_updater.custom_notice') }}
+                                    {{ t('dialog.vrcx_updater.dlc_notice') }}
                                 </AlertDescription>
                             </Alert>
                         </TabsContent>
@@ -122,7 +124,9 @@
         VRCXUpdateDialog,
         pendingVRCXInstall,
         updateInProgress,
-        updateProgress
+        updateProgress,
+        isDlcBuild,
+        officialLatestVersion
     } = storeToRefs(VRCXUpdaterStore);
     const { installVRCXUpdate, loadBranchVersions, restartVRCX, updateProgressText, cancelUpdate } = VRCXUpdaterStore;
 

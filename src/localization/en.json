@@ -2634,11 +2634,13 @@
             "download": "Download",
             "install": "Install",
             "cancel": "Cancel",
-            "branch_custom": "Custom",
-            "custom_title": "freegg enhanced build",
-            "custom_notice": "Custom enhanced branch published by freegg: new versions are announced only — download and install after you confirm. Pick any historical version from the list below.",
             "official_title": "Official builds",
-            "official_notice": "These are official VRCX releases. Installing one replaces this freegg enhanced build — custom features will be lost and extended-branch update prompts will stop."
+            "official_notice": "These are official VRCX releases. Installing one replaces this freegg enhanced build — custom features will be lost and extended-branch update prompts will stop.",
+            "branch_dlc": "拓展版",
+            "dlc_title": "Extended update",
+            "dlc_notice": "Extended-build updates: upgrade to the latest published build (only versions newer than the installed one are offered; no rollback).",
+            "official_latest": "Latest official stable: {name} (extended build unaffected)",
+            "official_overwrite_notice": "These are official VRCX releases. Downloading and installing one overwrites this extended build — custom features will be lost and the in-app extended installer will be gone. Continue only if you are sure."
         },
         "change_log": {
             "header": "Change Log",

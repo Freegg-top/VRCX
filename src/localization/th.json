@@ -2173,11 +2173,12 @@
             "nightly_title": "เวอร์ชันทดสอบ (Nightly)",
             "nightly_notice": "เวอร์ชันทดสอบ (Nightly) มีไว้สำหรับการทดสอบเท่านั้น หากต้องการความเสถียร กรุณาใช้เวอร์ชันเสถียร (Stable)",
             "release": "รุ่นจำหน่าย (Release)",
-            "branch_custom": "Custom",
-            "custom_title": "freegg enhanced build",
-            "custom_notice": "Custom enhanced branch published by freegg: new versions are announced only — download and install after you confirm.",
             "official_title": "Official builds",
-            "official_notice": "These are official VRCX releases. Installing one replaces this freegg enhanced build — custom features will be lost."
+            "official_notice": "These are official VRCX releases. Installing one replaces this freegg enhanced build — custom features will be lost.",
+            "official_overwrite_notice": "These are official VRCX releases. Downloading and installing one overwrites this extended build — custom features will be lost. Continue only if you are sure.",
+            "official_latest": "Latest official stable: {name} (extended build unaffected)",
+            "dlc_title": "Extended update",
+            "dlc_notice": "Extended-build updates: upgrade to the latest published build (only versions newer than the installed one are offered; no rollback)."
         },
         "change_log": {
             "header": "บันทึกการเปลี่ยนแปลง",
