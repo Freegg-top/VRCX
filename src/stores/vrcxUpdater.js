@@ -381,45 +381,63 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
 
     async function loadBranchVersions() {
         const D = VRCXUpdateDialog.value;
-        const url = branches[branch.value].urlReleases;
+        const baseUrl = branches[branch.value].urlReleases;
         checkingForVRCXUpdate.value = true;
-        let response;
-        let json;
+        let merged;
         try {
-            response = await webApiService.execute({
-                url,
-                method: 'GET',
-                headers: {
-                    'VRCX-ID': vrcxId.value
+            // GitHub releases 分页拉全（每页 100，最多 5 页）；自建静态 json 忽略查询参数不受影响
+            let page = 1;
+            merged = [];
+            while (page <= 5) {
+                const url = `${baseUrl}?per_page=100&page=${page}`;
+                const response = await webApiService.execute({
+                    url,
+                    method: 'GET',
+                    headers: {
+                        'VRCX-ID': vrcxId.value
+                    }
+                });
+                if (response.status !== 200) {
+                    toast.error(
+                        t('message.vrcx_updater.failed', {
+                            message: `${response.status} ${response.data}`
+                        })
+                    );
+                    return;
                 }
-            });
-            json = JSON.parse(response.data);
+                const pageJson = JSON.parse(response.data);
+                if (typeof pageJson !== 'object' || pageJson.message) {
+                    toast.error(
+                        t('message.vrcx_updater.failed', {
+                            message: pageJson.message
+                        })
+                    );
+                    return;
+                }
+                logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, pageJson);
+                merged = merged.concat(pageJson);
+                if (!Array.isArray(pageJson) || pageJson.length < 100) {
+                    break;
+                }
+                page++;
+            }
         } catch (error) {
             console.error('Failed to check for VRCX update', error);
             return;
         } finally {
             checkingForVRCXUpdate.value = false;
         }
-        if (response.status !== 200) {
-            toast.error(
-                t('message.vrcx_updater.failed', {
-                    message: `${response.status} ${response.data}`
-                })
-            );
-            return;
-        }
-        logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, json);
+        // 分支过滤（与官方 app 行为一致）：测试版=官方 Nightly 构建；稳定版=官方正式版本；拓展版=全部
+        const isNightlyBranch = branch.value === 'Nightly';
         const releases = [];
-        if (typeof json !== 'object' || json.message) {
-            toast.error(
-                t('message.vrcx_updater.failed', {
-                    message: json.message
-                })
-            );
-            return;
-        }
-        for (const release of json) {
+        for (const release of merged) {
             if (release.prerelease) {
+                continue;
+            }
+            if (isNightlyBranch && !/Nightly/i.test(release.name || '')) {
+                continue;
+            }
+            if (branch.value === 'Stable' && /Nightly/i.test(release.name || '')) {
                 continue;
             }
             assetLoop: for (const asset of release.assets) {
@@ -430,7 +448,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             }
         }
         D.releases = releases;
-        D.release = json[0].name;
+        D.release = releases.length ? releases[0].name : '';
         VRCXUpdateDialog.value.updatePendingIsLatest = false;
         if (D.release === pendingVRCXInstall.value) {
             // update already downloaded and latest version

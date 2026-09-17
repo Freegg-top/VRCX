@@ -103,11 +103,42 @@ namespace VRCX
             }
         }
 
-        // 自定义分发: 便携 zip 更新包直接解压覆盖安装目录
+        // 自定义分发: 便携 zip 更新包直接解压覆盖安装目录（带置顶安装弹窗，体验与官方安装器一致）
         private static void ExtractZipOverInstallDirectory(string zipPath)
         {
             var installDirectory = Program.BaseDirectory;
+            System.Windows.Forms.Form progressForm = null;
+            System.Windows.Forms.Label progressLabel = null;
+            try
+            {
+                progressForm = new System.Windows.Forms.Form
+                {
+                    Text = "VRCX 拓展版 更新",
+                    Size = new System.Drawing.Size(380, 110),
+                    StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+                    TopMost = true,
+                    FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
+                    ControlBox = false,
+                    ShowInTaskbar = false
+                };
+                progressLabel = new System.Windows.Forms.Label
+                {
+                    Dock = System.Windows.Forms.DockStyle.Fill,
+                    TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
+                    Text = "正在安装拓展版更新…"
+                };
+                progressForm.Controls.Add(progressLabel);
+                progressForm.Show();
+                System.Windows.Forms.Application.DoEvents();
+            }
+            catch
+            {
+                // 界面创建失败不影响安装本体
+            }
+
             using var archive = System.IO.Compression.ZipFile.OpenRead(zipPath);
+            var entryTotal = archive.Entries.Count;
+            var entryDone = 0;
             foreach (var entry in archive.Entries)
             {
                 var destinationPath = Path.Join(installDirectory, entry.FullName);
@@ -117,6 +148,23 @@ namespace VRCX
                 if (string.IsNullOrEmpty(entry.Name))
                     continue;
                 entry.ExtractToFile(destinationPath, true);
+                entryDone++;
+                if (progressLabel != null && entryDone % 20 == 0)
+                {
+                    progressLabel.Text = $"正在安装拓展版更新… {entryDone}/{entryTotal}";
+                    System.Windows.Forms.Application.DoEvents();
+                }
+            }
+            // 完成提示停留片刻，让用户看到安装窗
+            if (progressLabel != null)
+            {
+                progressLabel.Text = "安装完成，正在启动…";
+                System.Windows.Forms.Application.DoEvents();
+                System.Threading.Thread.Sleep(1200);
+            }
+            if (progressForm != null)
+            {
+                try { progressForm.Close(); } catch { }
             }
             // 清理失败不应让已成功的更新报"安装失败"：杀软/残留句柄常短暂占用，重试后再顺延
             for (var attempt = 1; ; attempt++)
