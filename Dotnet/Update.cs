@@ -92,7 +92,15 @@ namespace VRCX
                     continue;
                 entry.ExtractToFile(destinationPath, true);
             }
-            File.Delete(zipPath);
+            // 清理失败不应让已成功的更新报"安装失败"：文件被杀软/残留句柄短暂占用时留给下次启动清理
+            try
+            {
+                File.Delete(zipPath);
+            }
+            catch (Exception ex)
+            {
+                logger.Info($"Custom zip update extracted; cleanup of {zipPath} deferred: {ex.Message}");
+            }
             logger.Info("Custom zip update extracted over the install directory");
         }
 
