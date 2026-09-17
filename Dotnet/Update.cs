@@ -58,7 +58,33 @@ namespace VRCX
                 File.Delete(VrcxSetupExecutable);
 
             if (File.Exists(UpdateExecutable))
-                InstallUpdate();
+            {
+                // 新写入的 update.exe 常被杀软实时扫描短暂占用（读取/搬移/删除都可能失败），
+                // 启动时整体重试后再报错——绝大多数情况下重试期内锁即释放
+                const int maxAttempts = 5;
+                for (var attempt = 1; ; attempt++)
+                {
+                    try
+                    {
+                        InstallUpdate();
+                        break;
+                    }
+                    catch (Exception ex) when (attempt < maxAttempts)
+                    {
+                        logger.Info($"Update install retry {attempt}/{maxAttempts}: {ex.Message}");
+                        System.Threading.Thread.Sleep(2000);
+                    }
+                    catch (Exception ex)
+                    {
+                        var message = $"Failed to install the update: {ex.Message}";
+                        logger.Info(message);
+#if !LINUX
+                        MessageBox.Show(message, "Update failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+#endif
+                        break;
+                    }
+                }
+            }
         }
 
         private static bool IsZipFile(string path)
@@ -118,38 +144,28 @@ namespace VRCX
         {
             var setupArguments = string.Empty;
 
-            try
+            // 异常向上抛给 Check() 的重试循环；全部重试失败才弹窗
+            if (IsZipFile(UpdateExecutable))
             {
-                if (IsZipFile(UpdateExecutable))
-                {
-                    ExtractZipOverInstallDirectory(UpdateExecutable);
-                    return;
-                }
+                ExtractZipOverInstallDirectory(UpdateExecutable);
+                return;
+            }
 
-                if (File.Exists(VrcxSetupExecutable))
-                    File.Delete(VrcxSetupExecutable);
-                File.Move(UpdateExecutable, VrcxSetupExecutable);
-                var vrcxProcess = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = VrcxSetupExecutable,
-                        Arguments = setupArguments,
-                        UseShellExecute = true,
-                        WorkingDirectory = Program.AppDataDirectory
-                    }
-                };
-                vrcxProcess.Start();
-                Environment.Exit(0);
-            }
-            catch (Exception e)
+            if (File.Exists(VrcxSetupExecutable))
+                File.Delete(VrcxSetupExecutable);
+            File.Move(UpdateExecutable, VrcxSetupExecutable);
+            var vrcxProcess = new Process
             {
-                var message = $"Failed to install the update: {e.Message}";
-                logger.Info(message);
-#if !LINUX
-                MessageBox.Show(message, "Update failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-#endif
-            }
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = VrcxSetupExecutable,
+                    Arguments = setupArguments,
+                    UseShellExecute = true,
+                    WorkingDirectory = Program.AppDataDirectory
+                }
+            };
+            vrcxProcess.Start();
+            Environment.Exit(0);
         }
 
         public static async Task DownloadInstallRedist()
