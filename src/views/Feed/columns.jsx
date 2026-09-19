@@ -345,7 +345,7 @@ export const columns = [
                 return (
                     <span class="block w-full min-w-0 truncate">
                         {changeLabel + ' '}
-                        {original.groupId ? (
+                        {original.groupId?.startsWith('grp_') ? (
                             <span
                                 class="cursor-pointer hover:underline"
                                 title={original.groupName}

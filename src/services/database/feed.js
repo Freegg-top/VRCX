@@ -253,7 +253,7 @@ const feed = {
         }
         if (group) {
             selects.push(
-                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, group_id, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE (display_name LIKE @searchLike OR group_name LIKE @searchLike) ${dateQuery} ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`)
+                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, group_id AS previous_location, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE (display_name LIKE @searchLike OR group_name LIKE @searchLike) ${dateQuery} ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`)
         }
         if (selects.length === 0) {
             return [];
@@ -441,7 +441,7 @@ const feed = {
         }
         if (group) {
             selects.push(
-                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, group_id, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE 1=1 ${vipQuery} ORDER BY id DESC LIMIT @perTable)`)
+                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, group_id AS previous_location, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE 1=1 ${vipQuery} ORDER BY id DESC LIMIT @perTable)`)
         }
         if (selects.length === 0) {
             return [];
@@ -592,7 +592,7 @@ const feed = {
         }
         if (group) {
             selects.push(
-                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, group_id, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE group_id LIKE @instanceLike ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`)
+                `SELECT * FROM (SELECT id, created_at, user_id, display_name, 'GroupChange' AS type, change_type AS location, NULL AS world_name, group_id AS previous_location, NULL AS time, group_name, NULL AS status, NULL AS status_description, NULL AS previous_status, NULL AS previous_status_description, NULL AS bio, NULL AS previous_bio, NULL AS owner_id, NULL AS avatar_name, NULL AS current_avatar_image_url, NULL AS current_avatar_thumbnail_image_url, NULL AS previous_current_avatar_image_url, NULL AS previous_current_avatar_thumbnail_image_url FROM ${dbVars.userPrefix}_feed_group WHERE group_id LIKE @instanceLike ${vipQuery} ORDER BY created_at DESC, id DESC LIMIT @perTable)`)
         }
         if (selects.length === 0) {
             return [];

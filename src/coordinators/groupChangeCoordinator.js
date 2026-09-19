@@ -60,7 +60,11 @@ export async function runGroupChangePoll() {
                 continue;
             }
             const current = groups
-                .map((group) => ({ id: group.id, name: group.name }))
+                .map((group) => ({
+                    // users/{id}/groups 返回成员关系对象: 真正的群组 id 在 groupId 字段
+                    id: group.groupId || group.id,
+                    name: group.name
+                }))
                 .filter((group) => group.id)
                 .sort((a, b) => (a.id < b.id ? -1 : 1));
             const previous = snapshots.get(userId);
