@@ -273,8 +273,8 @@
             "photon_event_logging": "Photon 事件日志",
             "watched_users": "已关注",
             "watched_users_tooltip": "已关注的非好友玩家",
-            "group_change_joined": "加入了群组 {name}",
-            "group_change_left": "退出了群组 {name}"
+            "group_change_joined": "加入了群组",
+            "group_change_left": "退出了群组"
         },
         "friends_locations": {
             "online": "在线",
@@ -2547,7 +2547,8 @@
             "dlc_title": "拓展版更新",
             "dlc_notice": "拓展版更新：升级到发布者提交的最新版本（仅提供比当前新的版本，不支持回退）。",
             "official_latest": "官方正式版最新: {name}（拓展版不受影响）",
-            "official_overwrite_notice": "此处为官方 VRCX 版本。下载安装将以官方版本覆盖本拓展版，自研功能将丢失，且应用内不再提供拓展版安装入口，请确认后再继续。"
+            "official_overwrite_notice": "此处为官方 VRCX 版本。下载安装将以官方版本覆盖本拓展版，自研功能将丢失，且应用内不再提供拓展版安装入口，请确认后再继续。",
+            "local_up_to_date": "当前拓展版已是最新版本。"
         },
         "change_log": {
             "header": "更新日志",

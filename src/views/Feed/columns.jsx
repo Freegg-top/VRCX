@@ -8,6 +8,7 @@ import { formatDateFilter, statusClass, timeToText } from '../../shared/utils';
 import { i18n } from '../../plugins/i18n';
 import { useGalleryStore, useFriendStore } from '../../stores';
 import { showUserDialog } from '../../coordinators/userCoordinator';
+import { showGroupDialog } from '../../coordinators/groupCoordinator';
 import UserContextMenu from '../../components/UserContextMenu.vue';
 
 const { t } = i18n.global;
@@ -337,15 +338,26 @@ export const columns = [
             }
 
             if (type === 'GroupChange') {
+                const changeLabel =
+                    original.location === 'joined'
+                        ? t('view.feed.group_change_joined')
+                        : t('view.feed.group_change_left');
                 return (
                     <span class="block w-full min-w-0 truncate">
-                        {original.location === 'joined'
-                            ? t('view.feed.group_change_joined', {
-                                  name: original.groupName
-                              })
-                            : t('view.feed.group_change_left', {
-                                  name: original.groupName
-                              })}
+                        {changeLabel + ' '}
+                        {original.groupId ? (
+                            <span
+                                class="cursor-pointer hover:underline"
+                                title={original.groupName}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    showGroupDialog(original.groupId);
+                                }}>
+                                {original.groupName}
+                            </span>
+                        ) : (
+                            <span>{original.groupName}</span>
+                        )}
                     </span>
                 );
             }

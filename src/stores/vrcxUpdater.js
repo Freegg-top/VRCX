@@ -330,10 +330,20 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         pendingVRCXUpdate.value = false;
         logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, json);
         if (json === Object(json) && json.name && json.published_at) {
-            changeLogDialog.value.buildName = json.name;
-            changeLogDialog.value.changeLog = changeLogRemoveLinks(json.body);
             const releaseName = json.name;
-            setLatestAppVersion(releaseName);
+            if (releaseName > currentVersion.value) {
+                changeLogDialog.value.buildName = releaseName;
+                changeLogDialog.value.changeLog =
+                    changeLogRemoveLinks(json.body);
+                setLatestAppVersion(releaseName);
+            } else {
+                // 服务器最新版本不比本地新: 显示本地版本号, 不显示过期的服务器版本
+                changeLogDialog.value.buildName = currentVersion.value;
+                changeLogDialog.value.changeLog = t(
+                    'dialog.vrcx_updater.local_up_to_date'
+                );
+                setLatestAppVersion(currentVersion.value);
+            }
             VRCXUpdateDialog.value.updatePendingIsLatest = false;
             if (autoUpdateVRCX.value === 'Off') {
                 return true;

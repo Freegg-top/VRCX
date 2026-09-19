@@ -105,6 +105,9 @@ namespace VRCX
             if (File.Exists(VrcxSetupExecutable))
                 File.Delete(VrcxSetupExecutable);
 
+            if (File.Exists(UpdateExecutable + ".consumed"))
+                File.Delete(UpdateExecutable + ".consumed");
+
             if (!File.Exists(UpdateExecutable))
                 return false;
 
@@ -198,6 +201,18 @@ namespace VRCX
                 catch (Exception ex)
                 {
                     logger.Info($"DLC zip cleanup deferred: {ex.Message}");
+                    try
+                    {
+                        var consumed = zipPath + ".consumed";
+                        if (File.Exists(consumed))
+                            File.Delete(consumed);
+                        File.Move(zipPath, consumed);
+                        logger.Info("Update file locked, renamed for deferred cleanup");
+                    }
+                    catch (Exception moveEx)
+                    {
+                        logger.Warn($"Update file cleanup failed entirely: {moveEx.Message}");
+                    }
                     break;
                 }
             }

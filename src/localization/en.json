@@ -273,8 +273,8 @@
             "photon_event_logging": "Photon Event Logging",
             "watched_users": "Watched",
             "watched_users_tooltip": "Watched non-friend players",
-            "group_change_joined": "Joined group {name}",
-            "group_change_left": "Left group {name}"
+            "group_change_joined": "Joined group",
+            "group_change_left": "Left group"
         },
         "friends_locations": {
             "online": "Online",
@@ -2640,7 +2640,8 @@
             "dlc_title": "Extended update",
             "dlc_notice": "Extended-build updates: upgrade to the latest published build (only versions newer than the installed one are offered; no rollback).",
             "official_latest": "Latest official stable: {name} (extended build unaffected)",
-            "official_overwrite_notice": "These are official VRCX releases. Downloading and installing one overwrites this extended build — custom features will be lost and the in-app extended installer will be gone. Continue only if you are sure."
+            "official_overwrite_notice": "These are official VRCX releases. Downloading and installing one overwrites this extended build — custom features will be lost and the in-app extended installer will be gone. Continue only if you are sure.",
+            "local_up_to_date": "The current DLC edition is up to date."
         },
         "change_log": {
             "header": "Change Log",
