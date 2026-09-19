@@ -80,7 +80,8 @@
         "expand_menu": "Expand Menu",
         "collapse_menu": "Collapse Menu",
         "toggle_theme": "Toggle Theme",
-        "friend_network": "Friends' Friends"
+        "friend_network": "Friends' Friends",
+        "friend_groups": "Friends in Groups"
     },
     "nav_menu": {
         "resources": "RESOURCES",
@@ -1351,7 +1352,24 @@
             "metfof_summary": "Friends of {name} that you have met: {total}",
             "metfof_empty": "No results analyzed yet. The analysis progresses over time, please check back in a moment.",
             "page_size": "Per page",
-            "page_info": "Page {page} / {total}"
+            "page_info": "Page {page} / {total}",
+            "owner_signal": "Instance host"
+        },
+        "friend_groups": {
+            "header": "Friends in Groups",
+            "description": "Groups your friends have joined, ranked by head count to spot the popular ones.",
+            "include_fof": "Show groups joined by friends' friends",
+            "fof_progress": "Fetching friends' friends groups… {done}/{total}",
+            "search": "Search groups…",
+            "loading": "Loading…",
+            "empty": "No data yet, retry after a group-change poll cycle.",
+            "friends_count": "{count} friends",
+            "fof_count": "{count} friends' friends",
+            "members_total": "{count} members",
+            "friend_tag": "Friend",
+            "fof_tag": "Friend's friend",
+            "no_players": "No known members in this group",
+            "show_more": "Show more"
         }
     },
     "dialog": {

@@ -37,6 +37,13 @@ const navDefinitions = [
         routeName: 'friend-network'
     },
     {
+        key: 'friend-groups',
+        icon: 'ri-team-line',
+        tooltip: 'nav_tooltip.friend_groups',
+        labelKey: 'nav_tooltip.friend_groups',
+        routeName: 'friend-groups'
+    },
+    {
         key: 'search',
         icon: 'ri-search-line',
         tooltip: 'nav_tooltip.search',

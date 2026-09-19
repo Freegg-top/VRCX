@@ -1,4 +1,4 @@
-import { dbVars } from '../database';
+﻿import { dbVars } from '../database';
 
 import sqliteService from '../sqlite.js';
 
@@ -29,6 +29,37 @@ const friendNetwork = {
             });
         }, `SELECT user_id, mutual_ids, last_fetched_at, opted_out FROM ${dbVars.userPrefix}_friend_network_user`);
         return map;
+    },
+
+    async getOwnerCandidates() {
+        const rows = [];
+        if (!dbVars.userPrefix) {
+            return rows;
+        }
+        await sqliteService.execute((dbRow) => {
+            if (dbRow[0]) {
+                rows.push({
+                    userId: dbRow[0],
+                    displayName: dbRow[1] || '',
+                    lastSeen: dbRow[2] || ''
+                });
+            }
+        }, `SELECT owner_id, display_name, last_seen FROM ${dbVars.userPrefix}_friend_network_owner ORDER BY last_seen DESC`);
+        return rows;
+    },
+
+    async saveOwnerCandidate(ownerId, displayName) {
+        if (!dbVars.userPrefix || !ownerId) {
+            return;
+        }
+        await sqliteService.executeNonQuery(
+            `INSERT INTO ${dbVars.userPrefix}_friend_network_owner (owner_id, display_name, last_seen) VALUES (@owner_id, @display_name, @last_seen) ON CONFLICT(owner_id) DO UPDATE SET last_seen = @last_seen, display_name = CASE WHEN @display_name != '' THEN @display_name ELSE display_name END`,
+            {
+                '@owner_id': ownerId,
+                '@display_name': displayName || '',
+                '@last_seen': new Date().toJSON()
+            }
+        );
     },
 
     async saveAnalyzedUser(userId, friendIds, optedOut = false) {

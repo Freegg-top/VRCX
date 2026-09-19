@@ -9,6 +9,7 @@ import { addGameLogEvent } from '../coordinators/gameLogCoordinator';
 import { runRefreshPlayerModerationsFlow } from '../coordinators/moderationCoordinator';
 import { refreshWatchedUsers } from '../coordinators/watchedCoordinator';
 import { runGroupChangePoll } from '../coordinators/groupChangeCoordinator';
+import { refreshOwnerCandidates } from '../coordinators/friendNetworkCoordinator';
 import { clearVRCXCache } from '../coordinators/vrcxCoordinator';
 import { useAuthStore } from './auth';
 import { useDiscordPresenceSettingsStore } from './settings/discordPresence';
@@ -44,6 +45,7 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
         nextGameRunningCheck: 0,
         nextWatchedRefresh: 60,
         nextGroupChangePoll: 300,
+        nextOwnerRefresh: 1800,
         nextDatabaseOptimize: 3600
     };
 
@@ -136,6 +138,10 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
                 if (--state.nextGroupChangePoll <= 0) {
                     state.nextGroupChangePoll = 300; // 5min
                     runGroupChangePoll();
+                }
+                if (--state.nextOwnerRefresh <= 0) {
+                    state.nextOwnerRefresh = 1800; // 30min
+                    refreshOwnerCandidates();
                 }
                 if (--state.nextDatabaseOptimize <= 0) {
                     state.nextDatabaseOptimize = 86400; // 1 day

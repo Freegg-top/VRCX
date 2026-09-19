@@ -111,6 +111,14 @@ namespace VRCX
             if (!File.Exists(UpdateExecutable))
                 return false;
 
+            // 残留的更新包若不比当前版本新: 直接清理跳过安装, 不弹窗不重复解压（防降级）
+            if (IsZipFile(UpdateExecutable) && IsZipVersionNotNewer(UpdateExecutable))
+            {
+                logger.Info("DLC zip matches the current version, skipping install");
+                TryCleanUpdateFile(UpdateExecutable);
+                return false;
+            }
+
             // 新写入的 update.exe 常被杀软实时扫描占用较久（读取/搬移/删除都可能失败）：
             // 弹出安装窗口并整体重试 12 次×5 秒；全部失败则静默顺延——
             // update.exe 保留，下次启动自动重试安装，不打扰用户
@@ -160,38 +168,40 @@ namespace VRCX
             }
         }
 
-        // 拓展版分发: 便携 zip 更新包解压覆盖安装目录（复用 Check() 已弹出的安装窗口）
-        private static void ExtractZipOverInstallDirectory(string zipPath)
+        // 更新包内的 Version 不比本地新（相同或更旧）→ 跳过安装防降级, 仅清理
+        private static bool IsZipVersionNotNewer(string zipPath)
         {
-            var installDirectory = Program.BaseDirectory;
-            ShowProgress("正在安装拓展版更新…");
-            using var archive = System.IO.Compression.ZipFile.OpenRead(zipPath);
-            var entryTotal = archive.Entries.Count;
-            var entryDone = 0;
-            foreach (var entry in archive.Entries)
+            try
             {
-                var destinationPath = Path.Join(installDirectory, entry.FullName);
-                var directory = Path.GetDirectoryName(destinationPath);
-                if (!string.IsNullOrEmpty(directory))
-                    Directory.CreateDirectory(directory);
-                if (string.IsNullOrEmpty(entry.Name))
-                    continue;
-                entry.ExtractToFile(destinationPath, true);
-                entryDone++;
-                if (progressLabel != null && entryDone % 20 == 0)
+                var localVersion = File.ReadAllText(
+                    Path.Join(Program.BaseDirectory, "Version")
+                ).Trim();
+                using var archive = System.IO.Compression.ZipFile.OpenRead(zipPath);
+                foreach (var entry in archive.Entries)
                 {
-                    ShowProgress($"正在安装拓展版更新… {entryDone}/{entryTotal}");
+                    if (!string.Equals(entry.Name, "Version", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    using var reader = new StreamReader(entry.Open());
+                    var zipVersion = reader.ReadToEnd().Trim();
+                    return string.Compare(zipVersion, localVersion, StringComparison.Ordinal) >= 0;
                 }
+                return false;
             }
-            ShowProgress("安装完成，正在启动…");
-            System.Threading.Thread.Sleep(1200);
-            // 清理失败不应让已成功的更新报"安装失败"：杀软/残留句柄常短暂占用，重试后再顺延
+            catch
+            {
+                return false;
+            }
+        }
+
+        // 清理失败不应让已成功的更新报"安装失败"：句柄已释放后重试, 再失败改名延后到下次启动
+        private static void TryCleanUpdateFile(string zipPath)
+        {
             for (var attempt = 1; ; attempt++)
             {
                 try
                 {
                     File.Delete(zipPath);
-                    break;
+                    return;
                 }
                 catch (Exception ex) when (attempt < 5)
                 {
@@ -213,9 +223,40 @@ namespace VRCX
                     {
                         logger.Warn($"Update file cleanup failed entirely: {moveEx.Message}");
                     }
-                    break;
+                    return;
                 }
             }
+        }
+
+        // 拓展版分发: 便携 zip 更新包解压覆盖安装目录（复用 Check() 已弹出的安装窗口）
+        private static void ExtractZipOverInstallDirectory(string zipPath)
+        {
+            var installDirectory = Program.BaseDirectory;
+            ShowProgress("正在安装拓展版更新…");
+            using (var archive = System.IO.Compression.ZipFile.OpenRead(zipPath))
+            {
+                var entryTotal = archive.Entries.Count;
+                var entryDone = 0;
+                foreach (var entry in archive.Entries)
+                {
+                    var destinationPath = Path.Join(installDirectory, entry.FullName);
+                    var directory = Path.GetDirectoryName(destinationPath);
+                    if (!string.IsNullOrEmpty(directory))
+                        Directory.CreateDirectory(directory);
+                    if (string.IsNullOrEmpty(entry.Name))
+                        continue;
+                    entry.ExtractToFile(destinationPath, true);
+                    entryDone++;
+                    if (progressLabel != null && entryDone % 20 == 0)
+                    {
+                        ShowProgress($"正在安装拓展版更新… {entryDone}/{entryTotal}");
+                    }
+                }
+            } // zip 句柄在此释放, 之后才能删除/改名本文件
+
+            ShowProgress("安装完成，正在启动…");
+            System.Threading.Thread.Sleep(1200);
+            TryCleanUpdateFile(zipPath);
             logger.Info("DLC zip update extracted over the install directory");
         }
 

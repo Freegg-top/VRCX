@@ -1,5 +1,10 @@
 import { reactive } from 'vue';
 
+import { parseLocation } from '../shared/utils';
+import { useFriendStore } from '../stores/friend';
+import { useUserStore } from '../stores/user';
+import { userRequest } from '../api';
+import { createRateLimiter } from '../shared/utils/throttle';
 import { buildRequestInit } from '../services/request';
 import webApiService from '../services/webapi';
 import { database } from '../services/database';
@@ -96,6 +101,10 @@ async function fetchMutualFriendsForUser(userId) {
  * Loads previously analyzed reverse-lookup results from the database.
  * @returns {Promise<Map<string, {friendIds: Array, lastFetchedAt: string, optedOut: boolean}>>}
  */
+export function getOwnerCandidates() {
+    return database.getOwnerCandidates();
+}
+
 export function getPersistedAnalysis() {
     return database.getAnalyzedUsers();
 }
@@ -172,6 +181,75 @@ export async function startMetAnalysis(userIds) {
     }
     if (analysisQueue.length && !metAnalysis.running) {
         runAnalysisLoop();
+    }
+}
+
+// 实例房主信号: 好友所在 friends/friends+ 实例的房主, 经 mutuals 反查验证后
+// 计入好友的好友 (房间成员列表接口不可用, 房主是唯一可稳定获取的新信号)
+
+let ownerRefreshRunning = false;
+
+export async function refreshOwnerCandidates() {
+    if (ownerRefreshRunning) {
+        return;
+    }
+    ownerRefreshRunning = true;
+    try {
+        const friendStore = useFriendStore();
+        const userStore = useUserStore();
+        const me = userStore.currentUser.id;
+        const rateLimiter = createRateLimiter({
+            limitPerInterval: 1,
+            intervalMs: 1000
+        });
+        const candidates = new Set();
+        for (const ctx of friendStore.friends.values()) {
+            const ref = ctx?.ref;
+            if (!ref?.location || !ctx.id) {
+                continue;
+            }
+            const L = parseLocation(ref.location);
+            if (
+                (L.accessType !== 'friends' && L.accessType !== 'friends+') ||
+                !L.userId
+            ) {
+                continue;
+            }
+            const owner = L.userId;
+            if (
+                owner === me ||
+                owner === ctx.id ||
+                friendStore.friends.has(owner)
+            ) {
+                continue;
+            }
+            candidates.add(owner);
+        }
+        for (const owner of candidates) {
+            await rateLimiter.wait();
+            // 名称解析失败不影响入队分析
+            let displayName = '';
+            try {
+                const ref = userStore.cachedUsers.get(owner);
+                if (!ref) {
+                    const { json } = await userRequest.getUser({ userId: owner });
+                    displayName = json?.displayName || '';
+                } else {
+                    displayName = ref.displayName || '';
+                }
+            } catch (err) {
+                console.error(
+                    '[friend-network] owner fetch failed:',
+                    owner,
+                    err?.status
+                );
+            }
+            await database.saveOwnerCandidate(owner, displayName);
+            // 反查验证: 至少有一位好友认识该房主才算好友的好友 (结果为空即淘汰)
+            await queueFriendNetworkLookup(owner);
+        }
+    } finally {
+        ownerRefreshRunning = false;
     }
 }
 

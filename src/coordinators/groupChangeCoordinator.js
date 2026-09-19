@@ -14,6 +14,31 @@ let pollRunning = false;
  * going until everyone is covered, then the update loop schedules the
  * next cycle.
  */
+/**
+ * Normalizes the users/{id}/groups membership objects into {id, name}.
+ * (真正的群组 id 在 groupId 字段, id 是 gmem_ 成员关系 id)
+ * @param {Array} groups raw API array
+ * @returns {Array<{id: string, name: string}>}
+ */
+export function normalizeGroups(groups) {
+    return (Array.isArray(groups) ? groups : [])
+        .map((group) => ({
+            id: group.groupId || group.id,
+            name: group.name
+        }))
+        .filter((group) => group.id);
+}
+
+/**
+ * Fetches a user's groups as {id, name} entries.
+ * @param {string} userId
+ * @returns {Promise<Array<{id: string, name: string}>>}
+ */
+export async function fetchGroupsForUser(userId) {
+    const { json } = await groupRequest.getGroups({ userId });
+    return normalizeGroups(json);
+}
+
 export async function runGroupChangePoll() {
     if (pollRunning) {
         return;
@@ -59,15 +84,12 @@ export async function runGroupChangePoll() {
                 // previous snapshot untouched
                 continue;
             }
-            const current = groups
-                .map((group) => ({
-                    // users/{id}/groups 返回成员关系对象: 真正的群组 id 在 groupId 字段
-                    id: group.groupId || group.id,
-                    name: group.name
-                }))
-                .filter((group) => group.id)
-                .sort((a, b) => (a.id < b.id ? -1 : 1));
+            const current = normalizeGroups(groups).sort((a, b) => (a.id < b.id ? -1 : 1));
             const previous = snapshots.get(userId);
+            // 空响应保护: 合法空数组(临时隐藏/服务端部分失败)不应触发全员退群误报
+            if (!current.length && previous && previous.groups.length) {
+                continue;
+            }
             await database.saveFriendGroupSnapshot(userId, current);
             if (!previous) {
                 // first sighting: record only, no entries

@@ -9,6 +9,7 @@ import Feed from './../views/Feed/Feed.vue';
 import FriendList from './../views/FriendList/FriendList.vue';
 import FriendLog from './../views/FriendLog/FriendLog.vue';
 import FriendNetwork from './../views/FriendNetwork/FriendNetwork.vue';
+import FriendGroups from './../views/FriendGroups/FriendGroups.vue';
 import FriendsLocations from './../views/FriendsLocations/FriendsLocations.vue';
 import Dashboard from './../views/Dashboard/Dashboard.vue';
 import Gallery from './../views/Tools/Gallery.vue';
@@ -77,6 +78,11 @@ const routes = [
                 path: 'friend-network',
                 name: 'friend-network',
                 component: FriendNetwork
+            },
+            {
+                path: 'friend-groups',
+                name: 'friend-groups',
+                component: FriendGroups
             },
             {
                 path: 'social/moderation',

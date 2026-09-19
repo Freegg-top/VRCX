@@ -80,7 +80,8 @@
         "expand_menu": "展开菜单",
         "collapse_menu": "折叠菜单",
         "toggle_theme": "切换日/夜间模式",
-        "friend_network": "好友的好友"
+        "friend_network": "好友的好友",
+        "friend_groups": "群组中的好友"
     },
     "nav_menu": {
         "resources": "帮助资源",
@@ -1350,7 +1351,24 @@
             "metfof_summary": "{name} 的好友中你见过的共 {total} 位",
             "metfof_empty": "还没有分析到结果。分析会随时间推进，请稍后再试。",
             "page_size": "每页",
-            "page_info": "第 {page} / {total} 页"
+            "page_info": "第 {page} / {total} 页",
+            "owner_signal": "实例房主"
+        },
+        "friend_groups": {
+            "header": "群组中的好友",
+            "description": "统计你的好友加入的群组，按人数排序查看哪些群组比较热门。",
+            "include_fof": "显示好友的好友加入的群组",
+            "fof_progress": "获取好友的好友群组中… {done}/{total}",
+            "search": "搜索群组…",
+            "loading": "正在加载…",
+            "empty": "暂无数据，等群组变更轮询积累一轮后重试。",
+            "friends_count": "好友 {count}",
+            "fof_count": "好友的好友 {count}",
+            "members_total": "成员 {count}",
+            "friend_tag": "好友",
+            "fof_tag": "好友的好友",
+            "no_players": "该群组暂无已知成员",
+            "show_more": "显示更多"
         }
     },
     "dialog": {

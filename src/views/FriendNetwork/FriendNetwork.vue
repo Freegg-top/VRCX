@@ -264,6 +264,7 @@
     import { showUserDialog } from '../../coordinators/userCoordinator';
     import {
         getMetUsers,
+        getOwnerCandidates,
         getPersistedAnalysis,
         metAnalysis,
         startMetAnalysis,
@@ -416,6 +417,9 @@
      */
     function metSubLabel(user) {
         const parts = [];
+        if (user.isOwner) {
+            parts.push(t('view.friend_network.owner_signal'));
+        }
         if (user.lastSeen) {
             parts.push(
                 t('view.friend_network.last_met', {
@@ -437,14 +441,36 @@
         }
         metLoading.value = true;
         try {
-            const rows = await getMetUsers();
+            const logRows = await getMetUsers();
             const friendIds = new Set();
             for (const ctx of friends.value.values()) {
                 if (ctx?.id) {
                     friendIds.add(ctx.id);
                 }
             }
-            metList.value = rows
+            // 实例房主信号: 未在本地日志出现过的好友的好友候选
+            const ownerRows = (await getOwnerCandidates()).map((row) => ({
+                userId: row.userId,
+                displayName: row.displayName || row.userId,
+                joinCount: 0,
+                lastSeen: '',
+                isOwner: true
+            }));
+            const merged = new Map();
+            for (const row of ownerRows) {
+                merged.set(row.userId, row);
+            }
+            for (const row of logRows) {
+                const existing = merged.get(row.userId);
+                if (existing) {
+                    existing.isOwner = true;
+                    existing.joinCount = row.joinCount;
+                    existing.lastSeen = row.lastSeen;
+                } else {
+                    merged.set(row.userId, row);
+                }
+            }
+            metList.value = [...merged.values()]
                 .filter((row) => !friendIds.has(row.userId))
                 .sort((a, b) =>
                     String(b.lastSeen || '').localeCompare(
