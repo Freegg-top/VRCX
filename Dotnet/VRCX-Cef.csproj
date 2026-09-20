@@ -52,7 +52,10 @@
   </PropertyGroup>
   <PropertyGroup>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
-    <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
+    <!-- 分发风格与官方一致: 自带运行时, 用户机器无需安装 .NET。
+         注意: app 目录里的 hostfxr.dll 在 .NET 7+ 不会回退到系统全局运行时,
+         普通 build 若产出 framework-dependent 配置会与自带运行时组合出启动失败 -->
+    <SelfContained Condition="'$(SelfContained)' == ''">true</SelfContained>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>

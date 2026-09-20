@@ -230,11 +230,9 @@ namespace VRCX
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            // 更新安装需在 WinForms 初始化之后执行：安装进度窗是本进程第一个窗体，
-            // 若在 SetCompatibleTextRenderingDefault 之前创建会导致启动崩溃。
-            // 安装若发生（html/Version 已换新），立即刷新版本号显示，避免本次会话仍显示旧版本
-            if (Update.Check())
-                GetVersion();
+            // 更新采用官方式外进程安装: 发现待装包时本进程退出, 由外部进程解压覆盖后拉起新实例,
+            // 新实例启动时自然读取到新版本号。此处仅处理"无需安装"的日常情形
+            Update.Check();
 
             logger.Info("{0} Starting...", Version);
             logger.Info("Args: {0}", JsonSerializer.Serialize(StartupArgs.Args));
