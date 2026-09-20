@@ -58,7 +58,9 @@ export async function tryLoadPlayerList() {
     if (!gameStore.isGameRunning) {
         return;
     }
-    console.log('Loading player list from game log...');
+    if (AppDebug.debugGameLog) {
+        console.log('Loading player list from game log...');
+    }
     let ctx;
     let i;
     const data = await database.getGamelogDatabase();
@@ -92,15 +94,17 @@ export async function tryLoadPlayerList() {
         playerList: new Map(),
         friendList: new Map()
     });
-    console.log(
-        '[gameLog] tryLoadPlayerList:',
-        'entries=',
-        data.length,
-        'picked=',
-        pickedLocation.worldName,
-        pickedLocation.created_at,
-        pickedLocation.location
-    );
+    if (AppDebug.debugGameLog) {
+        console.log(
+            '[gameLog] tryLoadPlayerList:',
+            'entries=',
+            data.length,
+            'picked=',
+            pickedLocation.worldName,
+            pickedLocation.created_at,
+            pickedLocation.location
+        );
+    }
     const locationDate = Date.parse(pickedLocation.created_at);
     // skip entries dated more than 1h into the future (compensates for the
     // system clock having been changed while playing)

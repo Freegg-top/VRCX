@@ -102,6 +102,41 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
     }
 
     const currentVersion = computed(() => appVersion.value.replace(' (Linux)', ''));
+
+    /**
+     * 数值化版本比较: 剥前缀后按 . / - 分段, 数字段按数值比较 (修复 dlc.9 → dlc.10
+     * 的字典序进位问题), 非数字段按字符串比较。返回 >0 / 0 / <0。
+     * @param {string} a release 名称 (如 "VRCX DLC 2026.09.20-dlc.10")
+     * @param {string} b 当前版本名称
+     * @returns {number}
+     */
+    function compareVersionNames(a, b) {
+        const tokenize = (name) =>
+            String(name || '')
+                .replace(/^VRCX DLC\s+/i, '')
+                .replace(/^VRCX Nightly\s+/i, '')
+                .replace(/^VRCX\s+/i, '')
+                .replace(/^v/i, '')
+                .split(/[.-]/)
+                .filter((part) => part !== '');
+        const pa = tokenize(a);
+        const pb = tokenize(b);
+        const len = Math.max(pa.length, pb.length);
+        for (let i = 0; i < len; i++) {
+            const sa = pa[i];
+            const sb = pb[i];
+            if (sa === undefined) return -1;
+            if (sb === undefined) return 1;
+            const na = /^\d+$/.test(sa) ? parseInt(sa, 10) : null;
+            const nb = /^\d+$/.test(sb) ? parseInt(sb, 10) : null;
+            if (na !== null && nb !== null) {
+                if (na !== nb) return na - nb;
+            } else if (sa !== sb) {
+                return sa < sb ? -1 : 1;
+            }
+        }
+        return 0;
+    }
     // 拓展版 (DLC) 构建: 版本标签含 "VRCX DLC"
     const isDlcBuild = computed(() => currentVersion.value.includes('VRCX DLC'));
     // 官方正式版最新版本号 (拓展版环境下仅展示, 不提供安装)
@@ -251,11 +286,13 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             }
             if (
                 WINDOWS &&
+                isDlcBuild.value &&
                 asset.name.endsWith('.zip') &&
                 (asset.content_type === 'application/zip' ||
                     asset.content_type === 'application/octet-stream')
             ) {
                 // 拓展版分发: 便携 zip 更新包, C# 在重启时解压覆盖安装目录
+                // (仅拓展版启用: 官方源的便携 zip 不得劫持官方安装)
                 downloadUrl = asset.browser_download_url;
                 if (asset.digest && asset.digest.startsWith('sha256:')) {
                     hashString = asset.digest.replace('sha256:', '');
@@ -331,7 +368,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, json);
         if (json === Object(json) && json.name && json.published_at) {
             const releaseName = json.name;
-            if (releaseName > currentVersion.value) {
+            if (compareVersionNames(releaseName, currentVersion.value) > 0) {
                 changeLogDialog.value.buildName = releaseName;
                 changeLogDialog.value.changeLog =
                     changeLogRemoveLinks(json.body);
@@ -345,11 +382,13 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                 setLatestAppVersion(currentVersion.value);
             }
             VRCXUpdateDialog.value.updatePendingIsLatest = false;
-            if (autoUpdateVRCX.value === 'Off') {
-                return true;
+            if (releaseName === pendingVRCXInstall.value) {
+                // 已下载完成待安装: 在 Off 早退前也置位, 避免对话框重复显示下载按钮
+                VRCXUpdateDialog.value.updatePendingIsLatest = true;
             }
             if (isDlcBuild.value) {
                 // 拓展版环境: 顺带获取官方正式版最新版本号, 仅展示不安装
+                // (放在 Off 早退之前: 关闭自动更新的用户也能看到官方最新版本号)
                 try {
                     const official = await webApiService.execute({
                         url: branches.Stable.urlLatest,
@@ -358,18 +397,32 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                             'VRCX-ID': vrcxId.value
                         }
                     });
-                    const officialJson = JSON.parse(official.data);
-                    if (officialJson && officialJson.name) {
-                        officialLatestVersion.value = officialJson.name;
+                    if (official.status === 200) {
+                        const officialJson = JSON.parse(official.data);
+                        if (officialJson && officialJson.name) {
+                            officialLatestVersion.value = officialJson.name;
+                        }
+                    } else {
+                        console.warn(
+                            '[vrcx-updater] official latest fetch:',
+                            official.status
+                        );
+                        officialLatestVersion.value = '';
                     }
                 } catch (e) {
+                    console.warn('[vrcx-updater] official latest fetch failed:', e);
                     officialLatestVersion.value = '';
                 }
+            }
+            if (autoUpdateVRCX.value === 'Off') {
+                return true;
             }
             if (releaseName === pendingVRCXInstall.value) {
                 // update already downloaded
                 VRCXUpdateDialog.value.updatePendingIsLatest = true;
-            } else if (releaseName > currentVersion.value) {
+            } else if (
+                compareVersionNames(releaseName, currentVersion.value) > 0
+            ) {
                 const { downloadUrl, hashString, size } = getAssetOfInterest(json.assets);
                 if (!downloadUrl) {
                     return true;
@@ -439,23 +492,14 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             return;
         }
         logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, json);
-        // 版本令牌: 剥掉名称前缀后按字典序比较新旧 (DLC/官方格式均以日期开头, 直接可比)
-        function versionToken(name) {
-            return String(name || '')
-                .replace(/^VRCX DLC\s+/i, '')
-                .replace(/^VRCX Nightly\s+/i, '')
-                .replace(/^VRCX\s+/i, '')
-                .replace(/^v/i, '')
-                .replace(/-/g, '.');
-        }
-        const currentToken = versionToken(currentVersion.value);
+        const currentToken = currentVersion.value;
         const releases = [];
         for (const release of json) {
             if (release.prerelease) {
                 continue;
             }
             // 不提供版本回退: 早于当前版本的条目不显示、不可安装
-            if (versionToken(release.name) < currentToken) {
+            if (compareVersionNames(release.name, currentToken) < 0) {
                 continue;
             }
             assetLoop: for (const asset of release.assets) {

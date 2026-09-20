@@ -8,6 +8,7 @@ import { createRateLimiter } from '../shared/utils/throttle';
 import { buildRequestInit } from '../services/request';
 import webApiService from '../services/webapi';
 import { database } from '../services/database';
+import { watchState } from '../services/watchState';
 
 const PAGE_SIZE = 100;
 const MUTUAL_LIST_TTL = 30 * 60 * 1000;
@@ -109,6 +110,24 @@ export function getPersistedAnalysis() {
     return database.getAnalyzedUsers();
 }
 
+/**
+ * 登出/切换账号时清空模块级单例状态, 防止旧账号数据污染新账号
+ * (metAnalysis.results 残留的 friendIds 会经 FriendGroups 展示、
+ *  队列继续消费后写入新账号的按账号前缀隔离的表)。
+ */
+export function resetFriendNetworkState() {
+    analysisQueue.length = 0;
+    analysisQueuedIds.clear();
+    metAnalysis.results.clear();
+    metAnalysis.running = false;
+    metAnalysis.done = 0;
+    metAnalysis.total = 0;
+    mutualFriendsCache.clear();
+    mutualFriendsPending.clear();
+    persistedFreshIds = new Set();
+    persistedLoadPromise = null;
+}
+
 // analysis engine (module singleton; survives page navigation) ------------
 
 export const metAnalysis = reactive({
@@ -120,14 +139,21 @@ export const metAnalysis = reactive({
 });
 
 const analysisQueue = [];
+const analysisQueuedIds = new Set();
 
 function pushAnalysisTarget(userId) {
+    const cached = mutualFriendsCache.get(userId);
+    if (cached && Date.now() - cached.fetchedAt >= MUTUAL_LIST_TTL) {
+        // 缓存过期: 视为未分析, 允许本轮重新拉取 (修复 TTL 重扫死代码)
+        mutualFriendsCache.delete(userId);
+    }
     if (metAnalysis.results.has(userId) || mutualFriendsCache.has(userId)) {
         return false;
     }
-    if (analysisQueue.includes(userId)) {
+    if (analysisQueuedIds.has(userId)) {
         return false;
     }
+    analysisQueuedIds.add(userId);
     analysisQueue.push(userId);
     metAnalysis.total = metAnalysis.done + analysisQueue.length;
     return true;
@@ -136,7 +162,14 @@ function pushAnalysisTarget(userId) {
 async function runAnalysisLoop() {
     metAnalysis.running = true;
     while (analysisQueue.length) {
+        if (!watchState.isLoggedIn) {
+            // 登出: 清空队列, 防止旧账号数据继续拉取/写入
+            analysisQueue.length = 0;
+            analysisQueuedIds.clear();
+            break;
+        }
         const userId = analysisQueue.shift();
+        analysisQueuedIds.delete(userId);
         try {
             const list = await fetchMutualFriendsForUser(userId);
             metAnalysis.results.set(userId, {
@@ -197,6 +230,10 @@ export async function refreshOwnerCandidates() {
     try {
         const friendStore = useFriendStore();
         const userStore = useUserStore();
+        if (!watchState.isLoggedIn || !watchState.isFriendsLoaded) {
+            // 好友列表未同步完成: 此时候选集不完整, 空跑无意义
+            return;
+        }
         const me = userStore.currentUser.id;
         const rateLimiter = createRateLimiter({
             limitPerInterval: 1,
@@ -227,26 +264,43 @@ export async function refreshOwnerCandidates() {
         }
         for (const owner of candidates) {
             await rateLimiter.wait();
-            // 名称解析失败不影响入队分析
-            let displayName = '';
+            if (!watchState.isLoggedIn) {
+                break;
+            }
             try {
-                const ref = userStore.cachedUsers.get(owner);
-                if (!ref) {
-                    const { json } = await userRequest.getUser({ userId: owner });
-                    displayName = json?.displayName || '';
-                } else {
-                    displayName = ref.displayName || '';
+                // 仅首次发现写入 (last_seen 语义 = 首次见到, 不随周期刷新)
+                const known = await database.isOwnerCandidateKnown(owner);
+                if (!known) {
+                    let displayName = '';
+                    try {
+                        const ref = userStore.cachedUsers.get(owner);
+                        if (!ref) {
+                            const { json } = await userRequest.getUser({
+                                userId: owner
+                            });
+                            displayName = json?.displayName || '';
+                        } else {
+                            displayName = ref.displayName || '';
+                        }
+                    } catch (err) {
+                        console.error(
+                            '[friend-network] owner fetch failed:',
+                            owner,
+                            err?.status
+                        );
+                    }
+                    await database.saveOwnerCandidate(owner, displayName);
                 }
+                // 反查验证: 至少有一位好友认识该房主才算好友的好友
+                // (结果为空的 owner 不会进 metAnalysis.results, 展示层自然淘汰)
+                await queueFriendNetworkLookup(owner);
             } catch (err) {
                 console.error(
-                    '[friend-network] owner fetch failed:',
+                    '[friend-network] owner candidate failed:',
                     owner,
-                    err?.status
+                    err
                 );
             }
-            await database.saveOwnerCandidate(owner, displayName);
-            // 反查验证: 至少有一位好友认识该房主才算好友的好友 (结果为空即淘汰)
-            await queueFriendNetworkLookup(owner);
         }
     } finally {
         ownerRefreshRunning = false;
@@ -321,6 +375,13 @@ export function syncFriendNetworkForMutualCounts(
     if (friendsCount > 0) {
         queueFriendNetworkLookup(userId);
     } else {
+        // 零计数即最终答案: 同时写入内存, 避免后续 startMetAnalysis 重复请求
+        if (!metAnalysis.results.has(userId)) {
+            metAnalysis.results.set(userId, {
+                state: 'none',
+                friendIds: new Set()
+            });
+        }
         database.saveAnalyzedUser(userId, [], false).catch(() => {});
     }
 }

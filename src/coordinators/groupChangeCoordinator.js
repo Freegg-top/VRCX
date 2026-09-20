@@ -1,9 +1,34 @@
-import { groupRequest } from '../api';
 import { createRateLimiter } from '../shared/utils/throttle';
 import { database } from '../services/database';
 import { useFriendStore } from '../stores/friend';
 import { useWatchedStore } from '../stores/watched';
 import { useFeedStore } from '../stores/feed';
+import { watchState } from '../services/watchState';
+import { buildRequestInit } from '../services/request';
+import webApiService from '../services/webapi';
+
+// users/{id}/groups 403/404 常见 (隐藏群组/已删号), request() 层会 toast 且
+// 写入 15 分钟 bail 名单——这里改走 webApi 直连, 错误交由调用方静默处理
+async function fetchGroupsRaw(userId) {
+    const init = buildRequestInit(`users/${userId}/groups`, {
+        method: 'GET'
+    });
+    const { status, data } = await webApiService.execute(init);
+    let body = null;
+    if (data) {
+        try {
+            body = JSON.parse(data);
+        } catch {
+            body = null;
+        }
+    }
+    if (status !== 200) {
+        const err = new Error(`users/${userId}/groups failed with ${status}`);
+        err.status = status;
+        throw err;
+    }
+    return Array.isArray(body) ? body : [];
+}
 
 let pollRunning = false;
 
@@ -35,7 +60,7 @@ export function normalizeGroups(groups) {
  * @returns {Promise<Array<{id: string, name: string}>>}
  */
 export async function fetchGroupsForUser(userId) {
-    const { json } = await groupRequest.getGroups({ userId });
+    const json = await fetchGroupsRaw(userId);
     return normalizeGroups(json);
 }
 
@@ -72,57 +97,65 @@ export async function runGroupChangePoll() {
 
         for (const [userId, displayName] of targets) {
             await rateLimiter.wait();
-            let groups;
+            if (!watchState.isLoggedIn) {
+                // 登出: 中止本轮, 避免继续打 API
+                break;
+            }
             try {
-                const { json } = await groupRequest.getGroups({ userId });
-                if (!Array.isArray(json)) {
+                const groups = await fetchGroupsRaw(userId);
+                const current = normalizeGroups(groups).sort(
+                    (a, b) => (a.id < b.id ? -1 : 1)
+                );
+                const previous = snapshots.get(userId);
+                // 空响应保护: 合法空数组(临时隐藏/服务端部分失败)不应触发全员退群误报
+                if (!current.length && previous && previous.groups.length) {
                     continue;
                 }
-                groups = json;
+                if (!previous) {
+                    // first sighting: 先记录快照, 不发动态
+                    await database.saveFriendGroupSnapshot(userId, current);
+                    continue;
+                }
+                const previousIds = new Set(previous.groups.map((g) => g.id));
+                const currentIds = new Set(current.map((group) => group.id));
+                const createdAt = new Date().toJSON();
+                // 先写动态落库, 再更新快照 (防崩溃窗口丢报)
+                for (const group of current) {
+                    if (!previousIds.has(group.id)) {
+                        await emitGroupChange(
+                            feedStore,
+                            createdAt,
+                            userId,
+                            displayName,
+                            group,
+                            'joined'
+                        );
+                    }
+                }
+                for (const group of previous.groups) {
+                    if (!currentIds.has(group.id)) {
+                        await emitGroupChange(
+                            feedStore,
+                            createdAt,
+                            userId,
+                            displayName,
+                            group,
+                            'left'
+                        );
+                    }
+                }
+                await database.saveFriendGroupSnapshot(userId, current);
             } catch (err) {
-                // user hides their groups or a transient error: keep the
-                // previous snapshot untouched
-                continue;
-            }
-            const current = normalizeGroups(groups).sort((a, b) => (a.id < b.id ? -1 : 1));
-            const previous = snapshots.get(userId);
-            // 空响应保护: 合法空数组(临时隐藏/服务端部分失败)不应触发全员退群误报
-            if (!current.length && previous && previous.groups.length) {
-                continue;
-            }
-            await database.saveFriendGroupSnapshot(userId, current);
-            if (!previous) {
-                // first sighting: record only, no entries
-                continue;
-            }
-            const previousIds = new Set(previous.groups.map((g) => g.id));
-            const currentIds = new Set(current.map((group) => group.id));
-            const createdAt = new Date().toJSON();
-            for (const group of current) {
-                if (!previousIds.has(group.id)) {
-                    emitGroupChange(
-                        feedStore,
-                        createdAt,
-                        userId,
-                        displayName,
-                        group,
-                        'joined'
-                    );
-                }
-            }
-            for (const group of previous.groups) {
-                if (!currentIds.has(group.id)) {
-                    emitGroupChange(
-                        feedStore,
-                        createdAt,
-                        userId,
-                        displayName,
-                        group,
-                        'left'
-                    );
-                }
+                // 单个用户失败(隐藏群组/瞬态错误/DB 忙): 保留旧快照, 不中断整轮
+                console.error(
+                    '[group-change] poll target failed:',
+                    userId,
+                    err?.status || err?.message
+                );
             }
         }
+    } catch (err) {
+        console.error('[group-change] poll failed:', err);
     } finally {
         pollRunning = false;
     }
@@ -136,8 +169,18 @@ export async function runGroupChangePoll() {
  * @param {{id: string, name: string}} group
  * @param {'joined' | 'left'} change
  */
-function emitGroupChange(feedStore, createdAt, userId, displayName, group, change) {
+let groupChangeSeq = 0;
+
+async function emitGroupChange(
+    feedStore,
+    createdAt,
+    userId,
+    displayName,
+    group,
+    change
+) {
     const feed = {
+        uid: `gc-${Date.now()}-${groupChangeSeq++}`,
         created_at: createdAt,
         type: 'GroupChange',
         userId,
@@ -146,6 +189,8 @@ function emitGroupChange(feedStore, createdAt, userId, displayName, group, chang
         groupName: group.name,
         location: change
     };
-    database.addGroupChangeToDatabase(feed);
+    await database
+        .addGroupChangeToDatabase(feed)
+        .catch((e) => console.error('[group-change] failed to save:', e));
     feedStore.addFeedEntry(feed);
 }

@@ -19,7 +19,10 @@
                         {{ t('view.friend_network.met_description') }}
                     </p>
                 </div>
-                <Button :disabled="metLoading" @click="loadMetUsers">
+                <Button
+                    :disabled="metLoading || !isFriendsLoaded"
+                    @click="loadMetUsers"
+                >
                     {{
                         metLoading
                             ? t('view.friend_network.querying')
@@ -262,6 +265,7 @@
     import { VirtualCombobox } from '../../components/ui/virtual-combobox';
     import { useAppearanceSettingsStore, useFriendStore, useUserStore } from '../../stores';
     import { showUserDialog } from '../../coordinators/userCoordinator';
+    import { watchState } from '../../services/watchState';
     import {
         getMetUsers,
         getOwnerCandidates,
@@ -278,6 +282,7 @@
     const { t } = useI18n();
 
     const { friends } = storeToRefs(useFriendStore());
+    const isFriendsLoaded = computed(() => watchState.isFriendsLoaded);
     const appearanceSettingsStore = useAppearanceSettingsStore();
     const userStore = useUserStore();
     const { randomUserColours } = storeToRefs(appearanceSettingsStore);
@@ -466,6 +471,12 @@
                     existing.isOwner = true;
                     existing.joinCount = row.joinCount;
                     existing.lastSeen = row.lastSeen;
+                    if (
+                        !existing.displayName ||
+                        existing.displayName === existing.userId
+                    ) {
+                        existing.displayName = row.displayName;
+                    }
                 } else {
                     merged.set(row.userId, row);
                 }
@@ -486,6 +497,16 @@
             metLoading.value = false;
         }
     }
+
+    // 好友列表同步完成后重建 metList (修复好友未载入时被误判为陌生人)
+    watch(
+        () => watchState.isFriendsLoaded,
+        (loaded) => {
+            if (loaded && metLoaded.value) {
+                loadMetUsers();
+            }
+        }
+    );
 
     async function seedPersistedAnalysis() {
         let persisted;

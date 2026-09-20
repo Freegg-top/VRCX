@@ -4,6 +4,7 @@ import { createRateLimiter } from '../shared/utils/throttle';
 import { database } from '../services/database';
 import { watchState } from '../services/watchState';
 import { useWatchedStore } from '../stores/watched';
+import { useFriendStore } from '../stores/friend';
 
 const REFRESH_RATE_PER_SECOND = 1;
 const MAX_RETRY = 3;
@@ -35,7 +36,11 @@ export async function addWatchedUser(userId, displayName) {
         displayName,
         created_at: new Date().toJSON()
     };
-    database.addWatchedUser(userId, displayName);
+    try {
+        database.addWatchedUser(userId, displayName);
+    } catch (err) {
+        console.error('Failed to persist watched user:', userId, err);
+    }
     watchedStore.setWatchedUser(user);
     // fetch immediately so the next change is diffed against fresh data
     try {
@@ -65,6 +70,7 @@ export async function refreshWatchedUsers() {
         return;
     }
     const watchedStore = useWatchedStore();
+    const friendStore = useFriendStore();
     if (watchedStore.watchedUsers.size === 0) {
         return;
     }
@@ -74,9 +80,14 @@ export async function refreshWatchedUsers() {
             limitPerInterval: REFRESH_RATE_PER_SECOND,
             intervalMs: 1000
         });
-        const userIds = Array.from(watchedStore.watchedUsers.keys());
+        const userIds = Array.from(watchedStore.watchedUsers.keys()).filter(
+            (userId) => !friendStore.friends.has(userId)
+        );
         for (const userId of userIds) {
             await rateLimiter.wait();
+            if (!watchState.isLoggedIn) {
+                break;
+            }
             try {
                 await executeWithBackoff(
                     () => userRequest.getUser({ userId }),

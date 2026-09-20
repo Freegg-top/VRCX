@@ -187,8 +187,9 @@
         const userId = row?.userId ?? row?.senderUserId ?? '';
         const location = row?.location ?? row?.details?.location ?? '';
         const message = row?.message ?? '';
+        if (row?.uid) return `uid:${row.uid}`;
 
-        return `${type}:${createdAt}:${userId}:${location}:${message}:${Date.now()}`;
+        return `${type}:${createdAt}:${userId}:${location}:${message}`;
     }
 
     const { table, pagination } = useVrcxVueTable({
@@ -199,7 +200,10 @@
         columns: baseColumns,
         getRowId: getFeedRowId,
         enableExpanded: true,
-        getRowCanExpand: () => true,
+        getRowCanExpand: ({ row }) =>
+            ['GPS', 'Online', 'Offline', 'Avatar', 'Status', 'Bio'].includes(
+                row?.original?.type
+            ),
         initialSorting: [],
         initialExpanded: {},
         initialPagination: {

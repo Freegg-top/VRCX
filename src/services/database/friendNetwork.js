@@ -48,6 +48,21 @@ const friendNetwork = {
         return rows;
     },
 
+    async isOwnerCandidateKnown(ownerId) {
+        if (!dbVars.userPrefix || !ownerId) {
+            return false;
+        }
+        let count = 0;
+        await sqliteService.execute(
+            (dbRow) => {
+                count++;
+            },
+            `SELECT owner_id FROM ${dbVars.userPrefix}_friend_network_owner WHERE owner_id = @owner_id`,
+            { '@owner_id': ownerId }
+        );
+        return count > 0;
+    },
+
     async saveOwnerCandidate(ownerId, displayName) {
         if (!dbVars.userPrefix || !ownerId) {
             return;

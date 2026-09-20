@@ -121,7 +121,7 @@
 </template>
 
 <script setup>
-    import { computed, onMounted, reactive, ref, watch } from 'vue';
+    import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
     import { storeToRefs } from 'pinia';
     import { useI18n } from 'vue-i18n';
 
@@ -132,6 +132,7 @@
     import { Input } from '../../components/ui/input';
     import { Switch } from '../../components/ui/switch';
     import { database } from '../../services/database';
+    import { watchState } from '../../services/watchState';
     import { groupRequest, userRequest } from '../../api';
     import { useFriendStore, useUserStore } from '../../stores';
     import { showUserDialog } from '../../coordinators/userCoordinator';
@@ -149,6 +150,9 @@
 
     const loading = ref(true);
     const search = ref('');
+    watch(search, () => {
+        visibleCount.value = 100;
+    });
     const includeFof = ref(false);
     const fofFetchDone = ref(0);
     const fofFetchTotal = ref(0);
@@ -160,6 +164,20 @@
     const groupsById = reactive(new Map());
 
     onMounted(load);
+
+    // 好友列表同步完成后重跑 (刚启动就打开本页时快照成员才能对上名字)
+    watch(
+        () => watchState.isFriendsLoaded,
+        (loaded) => {
+            if (loaded) {
+                load();
+            }
+        }
+    );
+
+    onUnmounted(() => {
+        fofFetchCancelled = true;
+    });
 
     async function load() {
         loading.value = true;
@@ -211,7 +229,13 @@
         return ids;
     });
 
+    let fofFetchRunning = false;
+
     async function fetchFofGroups() {
+        if (fofFetchRunning) {
+            return;
+        }
+        fofFetchRunning = true;
         const targets = fofUserIds.value;
         fofFetchTotal.value = targets.length;
         fofFetchDone.value = 0;
@@ -243,6 +267,12 @@
                         };
                         groupsById.set(group.id, entry);
                     }
+                    if (
+                        entry.friends.some((p) => p.userId === userId) ||
+                        entry.fof.some((p) => p.userId === userId)
+                    ) {
+                        continue;
+                    }
                     entry.fof.push({ userId, displayName });
                 }
             } catch (err) {
@@ -253,14 +283,42 @@
                 );
             }
             fofFetchDone.value++;
+            if (fofFetchCancelled) {
+                break;
+            }
             await new Promise((resolve) => setTimeout(resolve, 1000));
         }
+        fofFetchRunning = false;
     }
 
     // 好友的好友用户名: 展示时懒取
     watch(includeFof, async (value) => {
         if (!value) {
             return;
+        }
+        // G1: 先把持久化分析灌入 metAnalysis.results (独立打开本页时结果为空)
+        try {
+            const persisted = await getPersistedAnalysis();
+            const now = Date.now();
+            for (const [userId, entry] of persisted) {
+                if (metAnalysis.results.has(userId)) {
+                    continue;
+                }
+                const age = now - Date.parse(entry.lastFetchedAt || '');
+                if (Number.isFinite(age) && age < 14 * 24 * 60 * 60 * 1000) {
+                    metAnalysis.results.set(
+                        userId,
+                        entry.optedOut || !entry.friendIds.length
+                            ? { state: 'none', friendIds: new Set() }
+                            : {
+                                  state: 'some',
+                                  friendIds: new Set(entry.friendIds)
+                              }
+                    );
+                }
+            }
+        } catch (err) {
+            console.error('[friend-groups] seed failed:', err);
         }
         if (fofFetchTotal.value === 0 || fofFetchDone.value < fofFetchTotal.value) {
             await fetchFofGroups();

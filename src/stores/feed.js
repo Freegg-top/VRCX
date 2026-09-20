@@ -58,7 +58,8 @@ export const useFeedStore = defineStore('Feed', () => {
         }
         if (
             (value.startsWith('wrld_') || value.startsWith('grp_')) &&
-            String(row.location).toUpperCase().includes(value)
+            (String(row.location).toUpperCase().includes(value) ||
+                String(row.groupId).toUpperCase().includes(value))
         ) {
             return true;
         }
@@ -129,7 +130,10 @@ export const useFeedStore = defineStore('Feed', () => {
         return true;
     }
 
+    let feedLookupSeq = 0;
+
     async function feedTableLookup() {
+        const lookupSeq = ++feedLookupSeq;
         await configRepository.setString('VRCX_feedTableFilters', JSON.stringify(feedTable.value.filter));
         await configRepository.setBool('VRCX_feedTableVIPFilter', feedTable.value.vip);
         feedTable.value.loading = true;
@@ -151,10 +155,16 @@ export const useFeedStore = defineStore('Feed', () => {
                           dateTo
                       )
                     : await database.lookupFeedDatabase(feedTable.value.filter, vipList);
+            if (lookupSeq !== feedLookupSeq) {
+                // 已有更新的查询完成: 丢弃本次过期结果 (防止先发后至覆盖新数据)
+                return;
+            }
             feedTableData.value = [];
             feedTableData.value = [...feedTableData.value, ...rows];
         } finally {
-            feedTable.value.loading = false;
+            if (lookupSeq === feedLookupSeq) {
+                feedTable.value.loading = false;
+            }
         }
     }
 

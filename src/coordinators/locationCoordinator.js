@@ -45,7 +45,11 @@ export function runUpdateCurrentUserLocationFlow() {
         }
         ref.location = locationStore.lastLocation.location;
         ref.travelingToLocation = locationStore.lastLocationDestination;
-        userStore.currentUser.$locationTag = locationStore.lastLocation.location;
+        if (locationStore.lastLocation.location !== 'traveling') {
+            // traveling 状态不写回: 防止退出游戏时显示从未进入的目的地
+            userStore.currentUser.$locationTag =
+                locationStore.lastLocation.location;
+        }
         userStore.currentUser.$travelingToLocation =
             locationStore.lastLocationDestination;
     }
@@ -73,10 +77,12 @@ export async function runSetCurrentUserLocationFlow(location, travelingToLocatio
     const gameStore = useGameStore();
     const gameLogStore = useGameLogStore();
     const locationStore = useLocationStore();
+    const advancedSettingsStore = useAdvancedSettingsStore();
 
-    if (gameStore.isGameRunning) {
+    if (gameStore.isGameRunning && !advancedSettingsStore.gameLogDisabled) {
         // the game log is the source of truth while the game is running;
-        // the API location can be stale (e.g. VRCX started after the game)
+        // the API location can be stale (e.g. VRCX started after the game).
+        // gameLogDisabled 时保留 API 事件, 避免两个数据源同时失效
         return;
     }
     userStore.setCurrentUserLocationState(location, travelingToLocation);

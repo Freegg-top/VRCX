@@ -12,6 +12,11 @@ const MUTUAL_RATE_PER_SECOND = 5;
 // userId -> { friends, groups, optedOut, fetchedAt }
 const mutualCountsCache = new Map();
 const pendingMutualRequests = new Set();
+// 模块级共享限速器: 防止并发调用各自持 limiter 叠加超 5/s
+const mutualRateLimiter = createRateLimiter({
+    limitPerInterval: MUTUAL_RATE_PER_SECOND,
+    intervalMs: 1000
+});
 
 /**
  * Fetches mutual friend/group counts for players in the current instance
@@ -21,9 +26,6 @@ const pendingMutualRequests = new Set();
  */
 export async function fetchMutualCountsForPlayers(users) {
     const appearanceSettingsStore = useAppearanceSettingsStore();
-    if (!appearanceSettingsStore.showMutualFriendsBadge) {
-        return;
-    }
     const userStore = useUserStore();
     const friendStore = useFriendStore();
 
@@ -59,21 +61,12 @@ export async function fetchMutualCountsForPlayers(users) {
     if (userIdsToFetch.length === 0) {
         return;
     }
-    console.log(
-        '[mutual] fetching counts for',
-        userIdsToFetch.length,
-        'players'
-    );
     userIdsToFetch.forEach((id) => pendingMutualRequests.add(id));
 
-    const rateLimiter = createRateLimiter({
-        limitPerInterval: MUTUAL_RATE_PER_SECOND,
-        intervalMs: 1000
-    });
     let updated = false;
     try {
         for (const userId of userIdsToFetch) {
-            await rateLimiter.wait();
+            await mutualRateLimiter.wait();
             try {
                 const { json } = await userRequest.getMutualCounts({ userId });
                 mutualCountsCache.set(userId, {
@@ -90,12 +83,14 @@ export async function fetchMutualCountsForPlayers(users) {
                     json?.friends ?? 0,
                     friendStore.friends.has(userId)
                 );
-                const ref = userStore.cachedUsers.get(userId);
-                if (typeof ref !== 'undefined') {
-                    ref.$mutualCount = json?.friends ?? 0;
-                    ref.$mutualGroupCount = json?.groups ?? 0;
-                    ref.$mutualFetched = true;
-                    updated = true;
+                if (appearanceSettingsStore.showMutualFriendsBadge) {
+                    const ref = userStore.cachedUsers.get(userId);
+                    if (typeof ref !== 'undefined') {
+                        ref.$mutualCount = json?.friends ?? 0;
+                        ref.$mutualGroupCount = json?.groups ?? 0;
+                        ref.$mutualFetched = true;
+                        updated = true;
+                    }
                 }
             } catch (err) {
                 if (err?.status === 403 || err?.status === 404) {
@@ -111,10 +106,18 @@ export async function fetchMutualCountsForPlayers(users) {
                         ref.$mutualOptedOut = true;
                     }
                 } else {
-                    console.error(
-                        '[mutual] failed to fetch counts:',
+                    // 瞬态失败: 短负缓存避免每轮玩家列表刷新都重试
+                    mutualCountsCache.set(userId, {
+                        friends: 0,
+                        groups: 0,
+                        optedOut: false,
+                        fetchedAt:
+                            Date.now() - MUTUAL_CACHE_TTL + 5 * 60 * 1000
+                    });
+                    console.warn(
+                        '[mutual] counts fetch failed:',
                         userId,
-                        err
+                        err?.status
                     );
                 }
             } finally {

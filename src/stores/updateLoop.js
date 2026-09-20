@@ -55,6 +55,7 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
             state.nextCurrentUserRefresh = 300;
             state.nextFriendsRefresh = 3600;
             state.nextGroupInstanceRefresh = 0;
+            state.nextOwnerRefresh = 1800;
         },
         { flush: 'sync' }
     );
@@ -141,7 +142,7 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
                 }
                 if (--state.nextOwnerRefresh <= 0) {
                     state.nextOwnerRefresh = 1800; // 30min
-                    refreshOwnerCandidates();
+                    refreshOwnerCandidates().catch(console.error);
                 }
                 if (--state.nextDatabaseOptimize <= 0) {
                     state.nextDatabaseOptimize = 86400; // 1 day

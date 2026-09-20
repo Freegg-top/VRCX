@@ -169,6 +169,41 @@ namespace VRCX
         }
 
         // 更新包内的 Version 不比本地新（相同或更旧）→ 跳过安装防降级, 仅清理
+        private static string[] VersionTokens(string name)
+        {
+            return System.Text.RegularExpressions.Regex
+                .Replace(name ?? string.Empty, "^VRCX (DLC|Nightly)?\\s*", string.Empty,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                .Replace('-', '.')
+                .Split('.', StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private static int CompareVersionTokens(string a, string b)
+        {
+            var pa = VersionTokens(a);
+            var pb = VersionTokens(b);
+            var len = Math.Max(pa.Length, pb.Length);
+            for (var i = 0; i < len; i++)
+            {
+                var sa = i < pa.Length ? pa[i] : null;
+                var sb = i < pb.Length ? pb[i] : null;
+                if (sa == null)
+                    return -1;
+                if (sb == null)
+                    return 1;
+                if (int.TryParse(sa, out var na) && int.TryParse(sb, out var nb))
+                {
+                    if (na != nb)
+                        return na.CompareTo(nb);
+                }
+                else if (!string.Equals(sa, sb, StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.Compare(sa, sb, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            return 0;
+        }
+
         private static bool IsZipVersionNotNewer(string zipPath)
         {
             try
@@ -183,7 +218,7 @@ namespace VRCX
                         continue;
                     using var reader = new StreamReader(entry.Open());
                     var zipVersion = reader.ReadToEnd().Trim();
-                    return string.Compare(zipVersion, localVersion, StringComparison.Ordinal) >= 0;
+                    return CompareVersionTokens(zipVersion, localVersion) >= 0;
                 }
                 return false;
             }
@@ -239,7 +274,12 @@ namespace VRCX
                 var entryDone = 0;
                 foreach (var entry in archive.Entries)
                 {
-                    var destinationPath = Path.Join(installDirectory, entry.FullName);
+                    var destinationPath = Path.GetFullPath(Path.Join(installDirectory, entry.FullName));
+                    if (!destinationPath.StartsWith(installDirectory, StringComparison.OrdinalIgnoreCase))
+                    {
+                        logger.Warn($"Skipped zip entry outside install directory: {entry.FullName}");
+                        continue;
+                    }
                     var directory = Path.GetDirectoryName(destinationPath);
                     if (!string.IsNullOrEmpty(directory))
                         Directory.CreateDirectory(directory);

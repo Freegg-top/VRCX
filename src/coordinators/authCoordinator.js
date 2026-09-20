@@ -1,4 +1,5 @@
 import { i18n } from '../plugins/i18n';
+import { resetFriendNetworkState } from './friendNetworkCoordinator';
 
 import Noty from 'noty';
 
@@ -19,6 +20,7 @@ import webApiService from '../services/webapi';
  * Runs the shared logout side effects (including goodbye notification).
  */
 export async function runLogoutFlow() {
+    resetFriendNetworkState();
     const authStore = useAuthStore();
     const userStore = useUserStore();
     const notificationStore = useNotificationStore();
