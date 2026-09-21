@@ -230,6 +230,9 @@
     });
 
     let fofFetchRunning = false;
+    // 注意: 必须用 let 声明。ESM 严格模式下给未声明变量赋值/读取会抛 ReferenceError,
+    // 之前漏声明导致 fetchFofGroups 在第一次自增后读取它时中断, 进度永久卡在 1/N
+    let fofFetchCancelled = false;
 
     async function fetchFofGroups() {
         if (fofFetchRunning) {
