@@ -173,6 +173,22 @@ const database = {
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`
         );
+        // 老库升级: 清掉历史残留的空 group_id 行(旧版本 gmem->grp 迁移期的坏数据)
+        await sqliteService.executeNonQuery(
+            `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE group_id = '' OR group_id IS NULL`
+        );
+        // 防重复索引: 对已存在的老表也生效(建表语句只对新库起作用)。
+        // 老数据里可能有同键重复行, 先去重再建唯一索引, 失败不阻塞启动
+        try {
+            await sqliteService.executeNonQuery(
+                `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE id NOT IN (SELECT MAX(id) FROM ${dbVars.userPrefix}_feed_group GROUP BY created_at, user_id, group_id, change_type)`
+            );
+            await sqliteService.executeNonQuery(
+                `CREATE UNIQUE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_group_dedup ON ${dbVars.userPrefix}_feed_group (created_at, user_id, group_id, change_type)`
+            );
+        } catch (e) {
+            console.error('[db] feed_group dedup index setup failed:', e);
+        }
     },
 
     async initTables() {
@@ -257,6 +273,22 @@ const database = {
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`
         );
+        // 老库升级: 清掉历史残留的空 group_id 行(旧版本 gmem->grp 迁移期的坏数据)
+        await sqliteService.executeNonQuery(
+            `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE group_id = '' OR group_id IS NULL`
+        );
+        // 防重复索引: 对已存在的老表也生效(建表语句只对新库起作用)。
+        // 老数据里可能有同键重复行, 先去重再建唯一索引, 失败不阻塞启动
+        try {
+            await sqliteService.executeNonQuery(
+                `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE id NOT IN (SELECT MAX(id) FROM ${dbVars.userPrefix}_feed_group GROUP BY created_at, user_id, group_id, change_type)`
+            );
+            await sqliteService.executeNonQuery(
+                `CREATE UNIQUE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_group_dedup ON ${dbVars.userPrefix}_feed_group (created_at, user_id, group_id, change_type)`
+            );
+        } catch (e) {
+            console.error('[db] feed_group dedup index setup failed:', e);
+        }
     },
 
     begin() {

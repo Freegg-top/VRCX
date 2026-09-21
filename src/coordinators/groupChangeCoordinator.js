@@ -179,6 +179,20 @@ async function emitGroupChange(
     group,
     change
 ) {
+    // 防重复护栏: 24 小时内同一(用户, 群组, 变更)只发一次。
+    // 若快照保存异常导致轮询反复发现同一变更, 此检查阻止重复刷屏
+    try {
+        const recent = await database.hasRecentGroupChange(
+            userId,
+            group.id,
+            change
+        );
+        if (recent) {
+            return;
+        }
+    } catch {
+        // 检查失败不阻塞正常发射
+    }
     const feed = {
         uid: `gc-${Date.now()}-${groupChangeSeq++}`,
         created_at: createdAt,

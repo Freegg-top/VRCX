@@ -200,7 +200,7 @@
         columns: baseColumns,
         getRowId: getFeedRowId,
         enableExpanded: true,
-        getRowCanExpand: ({ row }) =>
+        getRowCanExpand: (row) =>
             ['GPS', 'Online', 'Offline', 'Avatar', 'Status', 'Bio'].includes(
                 row?.original?.type
             ),

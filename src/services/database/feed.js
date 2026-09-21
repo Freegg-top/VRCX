@@ -100,8 +100,8 @@ const feed = {
         );
     },
 
-    addGroupChangeToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGroupChangeToDatabase(entry) {
+        await sqliteService.executeNonQuery(
             `INSERT INTO ${dbVars.userPrefix}_feed_group (created_at, user_id, display_name, group_id, group_name, change_type) VALUES (@created_at, @user_id, @display_name, @group_id, @group_name, @change_type)`,
             {
                 '@created_at': entry.created_at,
@@ -112,6 +112,29 @@ const feed = {
                 '@change_type': entry.location
             }
         );
+    },
+
+    // 24 小时内同一(用户, 群组, 变更类型)是否已写过动态。
+    // 防护栏: 快照保存一旦异常, 轮询会每轮重新发现同一变更, 此检查阻止重复刷屏
+    async hasRecentGroupChange(userId, groupId, changeType) {
+        if (!dbVars.userPrefix) {
+            return false;
+        }
+        let found = false;
+        await sqliteService.execute(
+            (dbRow) => {
+                if (dbRow && dbRow[0]) {
+                    found = true;
+                }
+            },
+            `SELECT 1 FROM ${dbVars.userPrefix}_feed_group WHERE user_id = @user_id AND group_id = @group_id AND change_type = @change_type AND julianday(created_at) > julianday('now') - 1 LIMIT 1`,
+            {
+                '@user_id': userId,
+                '@group_id': groupId,
+                '@change_type': changeType
+            }
+        );
+        return found;
     },
 
     async searchFeedDatabase(
