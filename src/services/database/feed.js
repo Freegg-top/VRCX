@@ -65,6 +65,35 @@ const feed = {
     },
 
     /**
+     * 按好友聚合其被观察到的模型历史 (好友的模型页数据源):
+     * 同一 (user_id, owner_id, avatar_name) 合并为一条, 附首次/最近使用时间。
+     * 注意: 仅含 VRCX 运行期间观察到的换装, 历史无法回溯。
+     * @returns {Promise<Array<{userId, displayName, ownerId, avatarName, thumbnail, firstSeen, lastSeen, count}>>}
+     */
+    async getFriendAvatarHistory() {
+        if (!dbVars.userPrefix) {
+            return [];
+        }
+        const rows = [];
+        await sqliteService.execute(
+            (dbRow) => {
+                rows.push({
+                    userId: dbRow[0],
+                    displayName: dbRow[1],
+                    ownerId: dbRow[2],
+                    avatarName: dbRow[3],
+                    thumbnail: dbRow[4],
+                    firstSeen: dbRow[5],
+                    lastSeen: dbRow[6],
+                    count: dbRow[7]
+                });
+            },
+            `SELECT user_id, MAX(display_name), owner_id, avatar_name, MAX(current_avatar_thumbnail_image_url), MIN(created_at), MAX(created_at), COUNT(*) FROM ${dbVars.userPrefix}_feed_avatar WHERE avatar_name IS NOT NULL AND avatar_name != '' GROUP BY user_id, owner_id, avatar_name`
+        );
+        return rows;
+    },
+
+    /**
      * Purges avatar feed data from the database.
      * !!!!
      *
@@ -98,6 +127,38 @@ const feed = {
                 '@group_name': entry.groupName
             }
         );
+    },
+
+    /**
+     * 好友当天在动态中可见的世界轨迹: GPS 位置变动 + Online 上线事件
+     * (两表 UNION), 用于"好友活动记录"页: 不局限于与你同框的实例。
+     * @param {string} userId
+     * @param {string} startDate ISO
+     * @param {string} endDate ISO
+     * @returns {Promise<Array<{created_at: string, location: string, worldName: string, groupName: string}>>}
+     */
+    async getFriendWorldActivity(userId, startDate, endDate) {
+        if (!dbVars.userPrefix || !userId) {
+            return [];
+        }
+        const rows = [];
+        await sqliteService.execute(
+            (dbRow) => {
+                rows.push({
+                    created_at: dbRow[0],
+                    location: dbRow[1] || '',
+                    worldName: dbRow[2] || '',
+                    groupName: dbRow[3] || ''
+                });
+            },
+            `SELECT created_at, location, world_name, group_name FROM (SELECT created_at, location, world_name, group_name FROM ${dbVars.userPrefix}_feed_gps WHERE user_id = @user_id AND created_at >= @start AND created_at <= @end UNION ALL SELECT created_at, location, world_name, group_name FROM ${dbVars.userPrefix}_feed_online_offline WHERE user_id = @user_id AND type = 'Online' AND created_at >= @start AND created_at <= @end) ORDER BY created_at DESC`,
+            {
+                '@user_id': userId,
+                '@start': startDate,
+                '@end': endDate
+            }
+        );
+        return rows;
     },
 
     async addGroupChangeToDatabase(entry) {

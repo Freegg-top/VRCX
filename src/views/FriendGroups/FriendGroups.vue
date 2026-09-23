@@ -10,17 +10,41 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <label class="flex items-center gap-2 text-sm">
-                <Switch v-model="includeFof" />
-                {{ t('view.friend_groups.include_fof') }}
-            </label>
+            <div class="flex items-center gap-2">
+                <Button
+                    size="sm"
+                    :disabled="loading"
+                    @click="handleLoad">
+                    {{ t('view.friend_groups.load') }}
+                </Button>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    :disabled="refreshing"
+                    @click="handleRefresh">
+                    {{ refreshing ? t('view.friend_groups.refreshing') : t('view.friend_groups.refresh') }}
+                </Button>
+            </div>
+            <Select v-model="sortByModel">
+                <SelectTrigger size="sm" class="w-44">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="friends">
+                        {{ t('view.friend_groups.sort_friends') }}
+                    </SelectItem>
+                    <SelectItem value="total">
+                        {{ t('view.friend_groups.sort_total') }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
             <span
-                v-if="fofFetchTotal > 0"
+                v-if="friendGroups.fofFetchTotal > 0"
                 class="text-muted-foreground text-xs">
                 {{
                     t('view.friend_groups.fof_progress', {
-                        done: fofFetchDone,
-                        total: fofFetchTotal
+                        done: friendGroups.fofFetchDone,
+                        total: friendGroups.fofFetchTotal
                     })
                 }}
             </span>
@@ -53,11 +77,11 @@
                         {{ group.name }}
                     </span>
                     <span
-                        v-if="memberCounts.get(group.id)"
+                        v-if="friendGroups.memberCounts.get(group.id)"
                         class="text-muted-foreground flex-none text-xs">
                         {{
                             t('view.friend_groups.members_total', {
-                                count: memberCounts.get(group.id)
+                                count: friendGroups.memberCounts.get(group.id)
                             })
                         }}
                     </span>
@@ -90,18 +114,16 @@
                             {{ t('view.friend_groups.friend_tag') }}
                         </span>
                     </div>
-                    <template v-if="includeFof">
-                        <div
-                            v-for="player in group.fof"
-                            :key="player.userId"
-                            class="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm"
-                            @click="openUser(player.userId)">
-                            <span class="truncate">{{ player.displayName }}</span>
-                            <span class="text-muted-foreground flex-none text-xs">
-                                {{ t('view.friend_groups.fof_tag') }}
-                            </span>
-                        </div>
-                    </template>
+                    <div
+                        v-for="player in group.fof"
+                        :key="player.userId"
+                        class="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm"
+                        @click="openUser(player.userId)">
+                        <span class="truncate">{{ player.displayName }}</span>
+                        <span class="text-muted-foreground flex-none text-xs">
+                            {{ t('view.friend_groups.fof_tag') }}
+                        </span>
+                    </div>
                     <div
                         v-if="group.friends.length + group.fof.length === 0"
                         class="text-muted-foreground px-2 py-1 text-xs">
@@ -121,8 +143,7 @@
 </template>
 
 <script setup>
-    import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
-    import { storeToRefs } from 'pinia';
+    import { computed, onMounted, reactive, ref, watch } from 'vue';
     import { useI18n } from 'vue-i18n';
 
     import { ChevronRight } from 'lucide-vue-next';
@@ -130,221 +151,125 @@
     import { Badge } from '../../components/ui/badge';
     import { Button } from '../../components/ui/button';
     import { Input } from '../../components/ui/input';
-    import { Switch } from '../../components/ui/switch';
-    import { database } from '../../services/database';
+    import {
+        Select,
+        SelectContent,
+        SelectItem,
+        SelectTrigger,
+        SelectValue
+    } from '../../components/ui/select';
     import { watchState } from '../../services/watchState';
-    import { groupRequest, userRequest } from '../../api';
-    import { useFriendStore, useUserStore } from '../../stores';
+    import { useModalStore } from '../../stores/modal';
     import { showUserDialog } from '../../coordinators/userCoordinator';
     import { showGroupDialog } from '../../coordinators/groupCoordinator';
     import {
-        getPersistedAnalysis,
-        metAnalysis
-    } from '../../coordinators/friendNetworkCoordinator';
-    import { fetchGroupsForUser } from '../../coordinators/groupChangeCoordinator';
+        enableFofGroups,
+        ensureMemberCounts,
+        friendGroups,
+        getFofEstimate,
+        loadFriendGroups,
+        refreshFriendGroups
+    } from '../../coordinators/friendGroupsCoordinator';
 
     const { t } = useI18n();
 
-    const friendStore = useFriendStore();
-    const { friends } = storeToRefs(friendStore);
-
-    const loading = ref(true);
+    const loading = ref(false);
+    const refreshing = ref(false);
     const search = ref('');
     watch(search, () => {
         visibleCount.value = 100;
     });
-    const includeFof = ref(false);
-    const fofFetchDone = ref(0);
-    const fofFetchTotal = ref(0);
+    const sortBy = ref('friends');
+    const sortByModel = computed({
+        get: () => String(sortBy.value),
+        set: (value) => {
+            sortBy.value = value === 'total' ? 'total' : 'friends';
+        }
+    });
     const visibleCount = ref(100);
+    // 成员列表默认折叠, 点击群组行展开
     const expanded = reactive(new Set());
-    const memberCounts = reactive(new Map());
 
-    // groupId -> { id, name, friends: [{userId, displayName}], fof: [...] }
-    const groupsById = reactive(new Map());
+    // 数据在模块级单例中跨页面保留: 仅首次打开(或显式刷新)才加载,
+    // 避免每次进页面都重新走一遍加载流程
+    onMounted(() => {
+        if (friendGroups.groupsById.size === 0) {
+            handleLoad();
+        } else {
+            enableFofGroups();
+        }
+    });
 
-    onMounted(load);
-
-    // 好友列表同步完成后重跑 (刚启动就打开本页时快照成员才能对上名字)
+    // 好友列表同步完成后重载 (刚启动就打开本页时快照成员才能对上名字)
     watch(
         () => watchState.isFriendsLoaded,
         (loaded) => {
             if (loaded) {
-                load();
+                handleLoad();
             }
         }
     );
 
-    onUnmounted(() => {
-        fofFetchCancelled = true;
-    });
-
-    async function load() {
+    async function handleLoad() {
+        if (loading.value) {
+            return;
+        }
         loading.value = true;
         try {
-            const friendNames = new Map();
-            for (const ctx of friends.value.values()) {
-                if (ctx?.id) {
-                    friendNames.set(ctx.id, ctx.ref?.displayName || ctx.id);
-                }
-            }
-            const snapshots = await database.getFriendGroupSnapshots();
-            for (const [userId, snapshot] of snapshots) {
-                const displayName = friendNames.get(userId);
-                if (!displayName) {
-                    continue;
-                }
-                for (const group of snapshot.groups) {
-                    let entry = groupsById.get(group.id);
-                    if (!entry) {
-                        entry = {
-                            id: group.id,
-                            name: group.name || group.id,
-                            friends: [],
-                            fof: []
-                        };
-                        groupsById.set(group.id, entry);
-                    }
-                    if (!entry.name && group.name) {
-                        entry.name = group.name;
-                    }
-                    entry.friends.push({ userId, displayName });
-                }
-            }
-        } catch (err) {
-            console.error('[friend-groups] load failed:', err);
+            await loadFriendGroups();
+            enableFofGroups();
         } finally {
             loading.value = false;
         }
     }
 
-    // 好友的好友 = 分析结果中非 optedOut 且存在好友关联的用户
-    const fofUserIds = computed(() => {
-        const ids = [];
-        for (const [userId, entry] of metAnalysis.results) {
-            if (entry?.state === 'some' && entry.friendIds.size > 0) {
-                ids.push(userId);
-            }
-        }
-        return ids;
-    });
-
-    let fofFetchRunning = false;
-    // 注意: 必须用 let 声明。ESM 严格模式下给未声明变量赋值/读取会抛 ReferenceError,
-    // 之前漏声明导致 fetchFofGroups 在第一次自增后读取它时中断, 进度永久卡在 1/N
-    let fofFetchCancelled = false;
-
-    async function fetchFofGroups() {
-        if (fofFetchRunning) {
+    async function handleRefresh() {
+        if (refreshing.value) {
             return;
         }
-        fofFetchRunning = true;
-        const targets = fofUserIds.value;
-        fofFetchTotal.value = targets.length;
-        fofFetchDone.value = 0;
-        const userStore = useUserStore();
-        for (const userId of targets) {
-            try {
-                // 群组列表 + 缺失的玩家名字, 每人间隔 1 秒避免触发限流
-                const groups = await fetchGroupsForUser(userId);
-                let displayName =
-                    userStore.cachedUsers.get(userId)?.displayName || '';
-                if (!displayName) {
-                    try {
-                        const { json } = await userRequest.getUser({
-                            userId
-                        });
-                        displayName = json?.displayName || userId;
-                    } catch (err) {
-                        displayName = userId;
-                    }
-                }
-                for (const group of groups) {
-                    let entry = groupsById.get(group.id);
-                    if (!entry) {
-                        entry = {
-                            id: group.id,
-                            name: group.name || group.id,
-                            friends: [],
-                            fof: []
-                        };
-                        groupsById.set(group.id, entry);
-                    }
-                    if (
-                        entry.friends.some((p) => p.userId === userId) ||
-                        entry.fof.some((p) => p.userId === userId)
-                    ) {
-                        continue;
-                    }
-                    entry.fof.push({ userId, displayName });
-                }
-            } catch (err) {
-                console.error(
-                    '[friend-groups] fof groups fetch failed:',
-                    userId,
-                    err?.status
-                );
+        // 数据量大时刷新耗时可观, 先确认并给出预计耗时
+        const fofCount = await getFofEstimate();
+        const minutes = Math.max(1, Math.ceil(fofCount / 60));
+        const modalStore = useModalStore();
+        try {
+            const { ok } = await modalStore.confirm({
+                title: t('confirm.title'),
+                description: t('view.friend_groups.refresh_confirm', {
+                    count: fofCount,
+                    minutes
+                })
+            });
+            if (!ok) {
+                return;
             }
-            fofFetchDone.value++;
-            if (fofFetchCancelled) {
-                break;
-            }
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+        } catch {
+            return;
         }
-        fofFetchRunning = false;
+        refreshing.value = true;
+        try {
+            await refreshFriendGroups();
+        } finally {
+            refreshing.value = false;
+        }
     }
 
-    // 好友的好友用户名: 展示时懒取
-    watch(includeFof, async (value) => {
-        if (!value) {
-            return;
-        }
-        // G1: 先把持久化分析灌入 metAnalysis.results (独立打开本页时结果为空)
-        try {
-            const persisted = await getPersistedAnalysis();
-            const now = Date.now();
-            for (const [userId, entry] of persisted) {
-                if (metAnalysis.results.has(userId)) {
-                    continue;
-                }
-                const age = now - Date.parse(entry.lastFetchedAt || '');
-                if (Number.isFinite(age) && age < 14 * 24 * 60 * 60 * 1000) {
-                    metAnalysis.results.set(
-                        userId,
-                        entry.optedOut || !entry.friendIds.length
-                            ? { state: 'none', friendIds: new Set() }
-                            : {
-                                  state: 'some',
-                                  friendIds: new Set(entry.friendIds)
-                              }
-                    );
-                }
-            }
-        } catch (err) {
-            console.error('[friend-groups] seed failed:', err);
-        }
-        if (fofFetchTotal.value === 0 || fofFetchDone.value < fofFetchTotal.value) {
-            await fetchFofGroups();
-        }
-    });
-
-    const sortedGroups = computed(() => {
-        const list = [...groupsById.values()];
-        if (!includeFof.value) {
-            return list.filter((group) => group.friends.length > 0);
-        }
-        return list;
-    });
+    const sortedGroups = computed(() => [
+        ...friendGroups.groupsById.values()
+    ]);
 
     const filteredGroups = computed(() => {
         const query = search.value.trim().toLowerCase();
-        const list = sortedGroups.value
-            .slice()
-            .sort(
-                (a, b) =>
-                    b.friends.length - a.friends.length ||
-                    b.fof.length - a.fof.length
+        const list = sortedGroups.value.slice().sort((a, b) => {
+            if (sortBy.value === 'total') {
+                return (
+                    b.friends.length + b.fof.length - (a.friends.length + a.fof.length) ||
+                    b.friends.length - a.friends.length
+                );
+            }
+            return (
+                b.friends.length - a.friends.length || b.fof.length - a.fof.length
             );
+        });
         if (!query) {
             return list;
         }
@@ -357,23 +282,25 @@
         filteredGroups.value.slice(0, visibleCount.value)
     );
 
+    // 群组总人数后台加载 (单例队列, 已取过的群组不重复请求)
+    watch(
+        visibleGroups,
+        (groups) => {
+            ensureMemberCounts(groups);
+        },
+        { immediate: true }
+    );
+
+    /**
+     *
+     * @param groupId
+     */
     function toggleExpand(groupId) {
         if (expanded.has(groupId)) {
             expanded.delete(groupId);
             return;
         }
         expanded.add(groupId);
-        // 展开时懒取群组总成员数
-        if (!memberCounts.has(groupId)) {
-            groupRequest
-                .getGroup({ groupId })
-                .then(({ json }) => {
-                    if (json?.memberCount) {
-                        memberCounts.set(groupId, json.memberCount);
-                    }
-                })
-                .catch(() => {});
-        }
     }
 
     /**

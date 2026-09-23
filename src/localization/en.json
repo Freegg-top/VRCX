@@ -81,7 +81,8 @@
         "collapse_menu": "Collapse Menu",
         "toggle_theme": "Toggle Theme",
         "friend_network": "Friends' Friends",
-        "friend_groups": "Friends in Groups"
+        "friend_groups": "Friends in Groups",
+        "friend_avatars": "Friends' Avatars"
     },
     "nav_menu": {
         "resources": "RESOURCES",
@@ -551,11 +552,24 @@
                 },
                 "settings": {
                     "header": "Settings",
-                    "bar_width": "Bar Width",
-                    "show_solo_instance": "Show Solo Instance",
-                    "show_no_friend_instance": "Show No Friend Instance",
-                    "show_detail": "Show Detail"
+                    "bar_width": "Bar width",
+                    "show_solo_instance": "Show solo instances",
+                    "show_no_friend_instance": "Show instances without friends",
+                    "show_detail": "Show more info"
                 }
+            },
+            "friend_activity": {
+                "tab_label": "Friends' Activity",
+                "header": "Friends' Activity",
+                "description": "The friend's world records from the feed and instances shared with you on the selected day",
+                "select": "Select a friend to view their activity…",
+                "no_matches": "No matching friends",
+                "select_hint": "Pick a friend above to view, in the same style as Instance Activity, the instances they were in that day.",
+                "no_data": "No shared-instance records and no feed world records for this friend on this day",
+                "loading": "Loading…",
+                "shared_instances": "Instances shared with you",
+                "world_records": "Feed world trail",
+                "still_here": "still there"
             },
             "mutual_friend": {
                 "tab_label": "Mutual Friend Network",
@@ -1343,6 +1357,8 @@
             "met_header": "Players you have met",
             "met_description": "Reads players from your game log that you shared an instance with but are not friends with, then looks up which of your friends they are friends with. The analysis runs in the background until the whole pool is covered, results are saved to the database, and players met while playing are recorded automatically.",
             "met_load": "Load met players",
+            "refresh": "Refresh (force re-analyze)",
+            "refresh_confirm": "Force re-analyzing {count} players (1/s), estimated ~{minutes} min. You can keep using other pages meanwhile. Continue?",
             "met_lookup_progress": "Looking up mutual friends... {done}/{total}",
             "met_empty": "No met players found in the game log.",
             "met_instances": "Instances together: {count}",
@@ -1358,7 +1374,12 @@
         "friend_groups": {
             "header": "Friends in Groups",
             "description": "Groups your friends have joined, ranked by head count to spot the popular ones.",
-            "include_fof": "Show groups joined by friends' friends",
+            "load": "Load",
+            "refresh": "Refresh",
+            "refreshing": "Refreshing…",
+            "refresh_confirm": "Refreshing 'Friends in Groups' will re-fetch groups for {count} friends' friends (1/s) and re-poll friend groups in the background, estimated ~{minutes} min. Continue?",
+            "sort_friends": "Sort by friends",
+            "sort_total": "Sort by friends + fof",
             "fof_progress": "Fetching friends' friends groups… {done}/{total}",
             "search": "Search groups…",
             "loading": "Loading…",
@@ -1369,6 +1390,25 @@
             "friend_tag": "Friend",
             "fof_tag": "Friend's friend",
             "no_players": "No known members in this group",
+            "show_more": "Show more"
+        },
+        "friend_avatars": {
+            "header": "Friends' Avatars",
+            "description": "Browse avatars each friend has been seen wearing, classified into public and private. Data only covers avatar changes observed while VRCX was running.",
+            "remote_db_off_hint": "The 'Avatar Lookup Database' advanced setting is off: friends' own avatars will mostly be classified as private. Enable it in Settings - Advanced for better accuracy.",
+            "select_friend": "Select a friend…",
+            "no_matches": "No matching friends",
+            "search_avatar": "Search avatars…",
+            "summary": "{name}'s avatars: {total}",
+            "select_hint": "Select a friend to view the avatars they have worn",
+            "empty": "No avatar records for this friend yet",
+            "loading": "Loading…",
+            "current_badge": "Current",
+            "public_badge": "Public",
+            "private_badge": "Private",
+            "public_count": "Public {count}",
+            "private_count": "Private {count}",
+            "seen_range": "Worn {first} ~ {last}",
             "show_more": "Show more"
         }
     },

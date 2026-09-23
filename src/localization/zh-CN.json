@@ -81,7 +81,8 @@
         "collapse_menu": "折叠菜单",
         "toggle_theme": "切换日/夜间模式",
         "friend_network": "好友的好友",
-        "friend_groups": "群组中的好友"
+        "friend_groups": "群组中的好友",
+        "friend_avatars": "好友的模型"
     },
     "nav_menu": {
         "resources": "帮助资源",
@@ -557,6 +558,19 @@
                     "show_no_friend_instance": "显示没有好友的房间",
                     "show_detail": "显示更多信息"
                 }
+            },
+            "friend_activity": {
+                "tab_label": "好友活动记录",
+                "header": "好友的活动记录",
+                "description": "展示该好友当天的动态世界记录与和你同框的实例",
+                "select": "选择好友查看活动记录…",
+                "no_matches": "没有匹配的好友",
+                "select_hint": "在上方选择一位好友，即可按与「活动记录」相同的方式查看 TA 当天在场的实例。",
+                "no_data": "该好友当天没有与你同框的记录，动态中也没有世界记录",
+                "loading": "正在加载…",
+                "shared_instances": "与你同框的实例",
+                "world_records": "动态世界轨迹",
+                "still_here": "至今"
             },
             "mutual_friend": {
                 "tab_label": "好友关系网",
@@ -1342,6 +1356,8 @@
             "met_header": "遇到过的玩家",
             "met_description": "读取日志中你同房遇到过、且还不是好友的玩家，并自动反查 TA 是你哪些好友的好友。分析在后台自动进行直至覆盖全部，结果保存到数据库，游玩时遇到的玩家也会自动记录。",
             "met_load": "加载遇到过的玩家",
+            "refresh": "刷新（强制重新分析）",
+            "refresh_confirm": "即将强制重新分析 {count} 位玩家（1人/秒），预计约 {minutes} 分钟，期间可继续使用其他页面。确定继续吗？",
             "met_lookup_progress": "反查共同好友中… {done}/{total}",
             "met_empty": "日志里还没有遇到过的玩家。",
             "met_instances": "同房 {count} 次",
@@ -1357,7 +1373,12 @@
         "friend_groups": {
             "header": "群组中的好友",
             "description": "统计你的好友加入的群组，按人数排序查看哪些群组比较热门。",
-            "include_fof": "显示好友的好友加入的群组",
+            "load": "加载",
+            "refresh": "刷新",
+            "refreshing": "刷新中…",
+            "refresh_confirm": "即将刷新「群组中的好友」：重新拉取 {count} 位好友的好友的群组（1人/秒），并在后台重新轮询好友群组，预计约 {minutes} 分钟。确定继续吗？",
+            "sort_friends": "按好友数排序",
+            "sort_total": "按好友+好友的好友数排序",
             "fof_progress": "获取好友的好友群组中… {done}/{total}",
             "search": "搜索群组…",
             "loading": "正在加载…",
@@ -1368,6 +1389,25 @@
             "friend_tag": "好友",
             "fof_tag": "好友的好友",
             "no_players": "该群组暂无已知成员",
+            "show_more": "显示更多"
+        },
+        "friend_avatars": {
+            "header": "好友的模型",
+            "description": "查看每个好友使用过的模型，区分公开模型与私模。数据来自 VRCX 运行期间观察到的换装记录，历史无法回溯。",
+            "remote_db_off_hint": "未开启「公共模型数据库」高级设置：好友自己的模型大多只能判为私模。可在 设置-高级 中开启以提升判定准确度。",
+            "select_friend": "选择好友…",
+            "no_matches": "没有匹配的好友",
+            "search_avatar": "搜索模型…",
+            "summary": "{name} 使用过的模型 {total}",
+            "select_hint": "选择一位好友查看 TA 使用过的模型",
+            "empty": "暂无该好友的模型记录",
+            "loading": "正在加载…",
+            "current_badge": "当前",
+            "public_badge": "公开模型",
+            "private_badge": "私模",
+            "public_count": "公开 {count}",
+            "private_count": "私模 {count}",
+            "seen_range": "使用于 {first} ~ {last}",
             "show_more": "显示更多"
         }
     },

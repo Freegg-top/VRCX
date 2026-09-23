@@ -8,6 +8,7 @@ export function createBaseDefaultNavLayout(t) {
         { type: 'item', key: 'player-list' },
         { type: 'item', key: 'friend-network' },
         { type: 'item', key: 'friend-groups' },
+        { type: 'item', key: 'friend-avatars' },
         { type: 'item', key: 'search' },
         {
             type: 'folder',
@@ -33,7 +34,7 @@ export function createBaseDefaultNavLayout(t) {
             nameKey: 'nav_tooltip.charts',
             name: t('nav_tooltip.charts'),
             icon: 'ri-pie-chart-line',
-            items: ['charts-instance', 'charts-mutual', 'charts-hot-worlds']
+            items: ['charts-instance', 'charts-mutual', 'charts-hot-worlds', 'charts-friend-activity']
         },
         { type: 'item', key: 'tools' },
         { type: 'item', key: 'direct-access' }

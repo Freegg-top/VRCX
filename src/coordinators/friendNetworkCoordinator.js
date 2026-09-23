@@ -203,11 +203,12 @@ async function runAnalysisLoop() {
  * running until the whole pool is processed (1 request per second, results
  * saved to the database one by one).
  * @param {Array<string>} userIds met player ids, most recently met first
+ * @param {{ force?: boolean }} [options] force: 跳过持久化新鲜集, 已分析过的也重查
  */
-export async function startMetAnalysis(userIds) {
+export async function startMetAnalysis(userIds, { force = false } = {}) {
     await ensurePersistedLoaded();
     for (const userId of userIds) {
-        if (persistedFreshIds.has(userId)) {
+        if (!force && persistedFreshIds.has(userId)) {
             continue;
         }
         pushAnalysisTarget(userId);
@@ -215,6 +216,19 @@ export async function startMetAnalysis(userIds) {
     if (analysisQueue.length && !metAnalysis.running) {
         runAnalysisLoop();
     }
+}
+
+/**
+ * 强制重新分析: 清掉内存结果与 30 分钟 mutuals 缓存中这些用户的条目,
+ * 再以 force 模式重新入队 (绕过持久化新鲜集)。供"刷新"按钮使用。
+ * @param {Array<string>} userIds met player ids
+ */
+export function forceRefreshAnalysis(userIds) {
+    for (const userId of userIds) {
+        mutualFriendsCache.delete(userId);
+        metAnalysis.results.delete(userId);
+    }
+    return startMetAnalysis(userIds, { force: true });
 }
 
 // 实例房主信号: 好友所在 friends/friends+ 实例的房主, 经 mutuals 反查验证后

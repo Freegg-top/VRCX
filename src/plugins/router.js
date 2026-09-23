@@ -10,6 +10,7 @@ import FriendList from './../views/FriendList/FriendList.vue';
 import FriendLog from './../views/FriendLog/FriendLog.vue';
 import FriendNetwork from './../views/FriendNetwork/FriendNetwork.vue';
 import FriendGroups from './../views/FriendGroups/FriendGroups.vue';
+import FriendAvatars from './../views/FriendAvatars/FriendAvatars.vue';
 import FriendsLocations from './../views/FriendsLocations/FriendsLocations.vue';
 import Dashboard from './../views/Dashboard/Dashboard.vue';
 import Gallery from './../views/Tools/Gallery.vue';
@@ -85,6 +86,11 @@ const routes = [
                 component: FriendGroups
             },
             {
+                path: 'friend-avatars',
+                name: 'friend-avatars',
+                component: FriendAvatars
+            },
+            {
                 path: 'social/moderation',
                 name: 'moderation',
                 component: Moderation
@@ -123,6 +129,11 @@ const routes = [
                 path: 'charts/hot-worlds',
                 name: 'charts-hot-worlds',
                 component: () => import('./../views/Charts/components/HotWorlds.vue')
+            },
+            {
+                path: 'charts/friend-activity',
+                name: 'charts-friend-activity',
+                component: () => import('./../views/Charts/components/FriendActivity.vue')
             },
             { path: 'tools', name: 'tools', component: Tools },
             {

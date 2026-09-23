@@ -171,6 +171,9 @@ const database = {
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_group_snapshot (user_id TEXT PRIMARY KEY, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
         );
         await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_fof_snapshot (user_id TEXT PRIMARY KEY, display_name TEXT, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
+        );
+        await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`
         );
         // 老库升级: 清掉历史残留的空 group_id 行(旧版本 gmem->grp 迁移期的坏数据)
@@ -269,6 +272,9 @@ const database = {
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_group_snapshot (user_id TEXT PRIMARY KEY, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_fof_snapshot (user_id TEXT PRIMARY KEY, display_name TEXT, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`

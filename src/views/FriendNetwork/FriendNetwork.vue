@@ -19,16 +19,25 @@
                         {{ t('view.friend_network.met_description') }}
                     </p>
                 </div>
-                <Button
-                    :disabled="metLoading || !isFriendsLoaded"
-                    @click="loadMetUsers"
-                >
-                    {{
-                        metLoading
-                            ? t('view.friend_network.querying')
-                            : t('view.friend_network.met_load')
-                    }}
-                </Button>
+                <div class="flex items-center gap-2">
+                    <Button
+                        :disabled="metLoading || !isFriendsLoaded"
+                        @click="loadMetUsers"
+                    >
+                        {{
+                            metLoading
+                                ? t('view.friend_network.querying')
+                                : t('view.friend_network.met_load')
+                        }}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        :disabled="metLoading || metAnalysis.running || !metLoaded"
+                        @click="refreshMetUsers"
+                    >
+                        {{ t('view.friend_network.refresh') }}
+                    </Button>
+                </div>
             </div>
             <template v-if="metLoaded">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -264,9 +273,11 @@
     } from '../../components/ui/select';
     import { VirtualCombobox } from '../../components/ui/virtual-combobox';
     import { useAppearanceSettingsStore, useFriendStore, useUserStore } from '../../stores';
+    import { useModalStore } from '../../stores/modal';
     import { showUserDialog } from '../../coordinators/userCoordinator';
     import { watchState } from '../../services/watchState';
     import {
+        forceRefreshAnalysis,
         getMetUsers,
         getOwnerCandidates,
         getPersistedAnalysis,
@@ -496,6 +507,34 @@
         } finally {
             metLoading.value = false;
         }
+    }
+
+    // 刷新: 重新读日志/房主候选 (纳入新数据), 并强制重新分析整个池子
+    // (穿透 30 分钟 mutuals 缓存与 14 天持久化新鲜集)。
+    // 数据量大时耗时可观, 先确认并给出预计耗时
+    async function refreshMetUsers() {
+        if (metLoading.value || metAnalysis.running) {
+            return;
+        }
+        const count = metList.value.length;
+        const minutes = Math.max(1, Math.ceil(count / 60));
+        const modalStore = useModalStore();
+        try {
+            const { ok } = await modalStore.confirm({
+                title: t('confirm.title'),
+                description: t('view.friend_network.refresh_confirm', {
+                    count,
+                    minutes
+                })
+            });
+            if (!ok) {
+                return;
+            }
+        } catch {
+            return;
+        }
+        await loadMetUsers();
+        forceRefreshAnalysis(metList.value.map((user) => user.userId));
     }
 
     // 好友列表同步完成后重建 metList (修复好友未载入时被误判为陌生人)

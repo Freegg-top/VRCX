@@ -44,6 +44,13 @@ const navDefinitions = [
         routeName: 'friend-groups'
     },
     {
+        key: 'friend-avatars',
+        icon: 'ri-shapes-line',
+        tooltip: 'nav_tooltip.friend_avatars',
+        labelKey: 'nav_tooltip.friend_avatars',
+        routeName: 'friend-avatars'
+    },
+    {
         key: 'search',
         icon: 'ri-search-line',
         tooltip: 'nav_tooltip.search',
@@ -126,6 +133,13 @@ const navDefinitions = [
         tooltip: 'view.charts.hot_worlds.tab_label',
         labelKey: 'view.charts.hot_worlds.tab_label',
         routeName: 'charts-hot-worlds'
+    },
+    {
+        key: 'charts-friend-activity',
+        icon: 'ri-user-follow-line',
+        tooltip: 'view.charts.friend_activity.tab_label',
+        labelKey: 'view.charts.friend_activity.tab_label',
+        routeName: 'charts-friend-activity'
     },
     {
         key: 'tools',
