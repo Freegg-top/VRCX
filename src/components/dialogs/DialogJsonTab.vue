@@ -40,6 +40,15 @@
     const emit = defineEmits(['refresh']);
     const { isDarkMode } = storeToRefs(useAppearanceSettingsStore());
     const { t } = useI18n();
+
+    // fileAnalysis 在页面上是单独一棵树, 但原来只导出 dialogRef, 排查性能问题时那份数据永远丢在文件外
+    function downloadJson() {
+        const hasAnalysis = props.fileAnalysis && Object.keys(props.fileAnalysis).length;
+        downloadAndSaveJson(
+            props.dialogId,
+            hasAnalysis ? { ...props.dialogRef, fileAnalysis: props.fileAnalysis } : props.dialogRef
+        );
+    }
 </script>
 
 <template>
@@ -57,7 +66,7 @@
                 class="rounded-full"
                 size="icon-sm"
                 variant="ghost"
-                @click="downloadAndSaveJson(dialogId, dialogRef)"
+                @click="downloadJson"
                 :ariaLabel="t('dialog.vrcx_updater.download')">
                 <Download />
             </Button>

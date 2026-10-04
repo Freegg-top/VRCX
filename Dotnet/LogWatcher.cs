@@ -239,6 +239,7 @@ namespace VRCX
                             ParseLogPortalSpawn(fileInfo, logContext, line, offset) ||
                             ParseLogNotification(fileInfo, logContext, line, offset) ||
                             ParseLogAPIRequest(fileInfo, logContext, line, offset) ||
+                            ParseLogLocalIdentity(fileInfo, logContext, line, offset) ||
                             ParseLogAvatarChange(fileInfo, logContext, line, offset) ||
                             ParseLogJoinBlocked(fileInfo, logContext, line, offset) ||
                             ParseLogAvatarPedestalChange(fileInfo, logContext, line, offset) ||
@@ -901,6 +902,33 @@ namespace VRCX
                 ConvertLogTimeToISO8601(line),
                 "api-request",
                 data
+            });
+
+            return true;
+        }
+
+        private bool ParseLogLocalIdentity(FileInfo fileInfo, LogContext logContext, string line, int offset)
+        {
+            // 2026.09.27 21:53:56 Debug      -  [Behaviour] Initialized PlayerAPI "bgsxbz" is local
+            // 2020.10.31 23:36:58 Log        -  [Player] Initialized PlayerAPI "pypy" is local
+
+            const string marker = "Initialized PlayerAPI \"";
+            var pos = line.IndexOf(marker, offset, StringComparison.Ordinal);
+            if (pos < 0)
+                return false;
+
+            var start = pos + marker.Length;
+            var end = line.IndexOf('"', start);
+            // 只有 " is local 才是本机玩家, " is remote 是别人装了 PlayerAPI
+            if (end <= start || !line.EndsWith("\" is local", StringComparison.Ordinal))
+                return false;
+
+            AppendLog(new[]
+            {
+                fileInfo.Name,
+                ConvertLogTimeToISO8601(line),
+                "local-identity",
+                line.Substring(start, end - start)
             });
 
             return true;

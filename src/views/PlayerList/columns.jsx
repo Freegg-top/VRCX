@@ -1,15 +1,7 @@
 import Timer from '../../components/Timer.vue';
 import { Button } from '../../components/ui/button';
 import { TooltipWrapper } from '../../components/ui/tooltip';
-import {
-    Apple,
-    ArrowUpDown,
-    Flag,
-    IdCard,
-    User,
-    Monitor,
-    Smartphone
-} from 'lucide-vue-next';
+import { Apple, ArrowUpDown, Flag, IdCard, User, Monitor, Smartphone } from 'lucide-vue-next';
 
 import { getFaviconUrl, languageClass, openExternalLink, statusClass } from '../../shared/utils';
 import { i18n } from '../../plugins';
@@ -379,7 +371,7 @@ export const createColumns = ({
             enableSorting: false,
             meta: { label: () => t('table.playerList.bioLink') },
             cell: ({ row }) => {
-                const links = row.original?.ref?.bioLinks?.filter(Boolean) ?? [];
+                const links = row.original?.profileRef?.bioLinks?.filter(Boolean) ?? [];
                 return (
                     <div class="flex items-center">
                         {links.map((link, index) => (

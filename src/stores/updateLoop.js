@@ -12,6 +12,7 @@ import { runGroupChangePoll } from '../coordinators/groupChangeCoordinator';
 import { refreshOwnerCandidates } from '../coordinators/friendNetworkCoordinator';
 import { clearVRCXCache } from '../coordinators/vrcxCoordinator';
 import { useAuthStore } from './auth';
+import { useBackupStore } from './backup';
 import { useDiscordPresenceSettingsStore } from './settings/discordPresence';
 import { useFriendStore } from './friend';
 import { handleGroupUserInstances } from '../coordinators/groupCoordinator';
@@ -26,6 +27,7 @@ import * as workerTimers from 'worker-timers';
 
 export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
     const authStore = useAuthStore();
+    const backupStore = useBackupStore();
     const userStore = useUserStore();
     const friendStore = useFriendStore();
     const vrcxStore = useVrcxStore();
@@ -46,7 +48,8 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
         nextWatchedRefresh: 60,
         nextGroupChangePoll: 300,
         nextOwnerRefresh: 1800,
-        nextDatabaseOptimize: 3600
+        nextDatabaseOptimize: 3600,
+        nextDatabaseBackup: 86400
     };
 
     watch(
@@ -100,6 +103,10 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
                         vrcxUpdaterStore.checkForVRCXUpdate();
                     }
                     vrcxStore.tryAutoBackupVrcRegistry();
+                }
+                if (--state.nextDatabaseBackup <= 0) {
+                    state.nextDatabaseBackup = 86400; // 1day
+                    backupStore.runAutoBackup().catch(console.error);
                 }
                 if (--state.ipcTimeout <= 0) {
                     vrcxStore.setIpcEnabled(false);

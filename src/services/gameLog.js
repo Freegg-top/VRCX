@@ -60,6 +60,10 @@ class GameLogService {
                 gameLog.url = args[0];
                 break;
 
+            case 'local-identity':
+                gameLog.displayName = args[0];
+                break;
+
             case 'avatar-change':
                 gameLog.displayName = args[0];
                 gameLog.avatarName = args[1];

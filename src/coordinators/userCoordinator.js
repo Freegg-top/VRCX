@@ -45,6 +45,7 @@ import { useGameStore } from '../stores/game';
 import { useGeneralSettingsStore } from '../stores/settings/general';
 import { useInstanceStore } from '../stores/instance';
 import { useLocationStore } from '../stores/location';
+import { useWatchedStore } from '../stores/watched';
 import { useModerationStore } from '../stores/moderation';
 import { useNotificationStore } from '../stores/notification';
 import { usePhotonStore } from '../stores/photon';
@@ -54,9 +55,43 @@ import { removeAvatarFromCache } from './avatarCoordinator';
 import { useSharedFeedStore } from '../stores/sharedFeed';
 import { useUiStore } from '../stores/ui';
 import { useUserStore } from '../stores/user';
-import { useWatchedStore } from '../stores/watched';
 
 const getRobotUrl = () => `${AppDebug.endpointDomain}/file/file_0e8c4e32-7444-44ea-ade4-313c010d4bae/1/file`;
+
+/**
+ * @param {import('../types/api/profile').publicProfile & { $lastFetch?: number }} json
+ * @returns {import('../types/api/profile').publicProfile & { $lastFetch?: number }}
+ */
+export function applyPublicProfile(json) {
+    const { cachedProfiles } = useUserStore();
+    let ref = cachedProfiles.get(json.id);
+    if (typeof ref === 'undefined') {
+        ref = reactive({ ...json });
+        cachedProfiles.set(json.id, ref);
+    } else {
+        for (const prop in json) {
+            if (typeof json[prop] !== 'undefined') {
+                ref[prop] = json[prop];
+            }
+        }
+    }
+    // this is dumb
+    if (
+        ref.hasVrcPlus &&
+        ref.badges &&
+        ref.badges.every((x) => x.badgeId !== 'bdg_754f9935-0f97-49d8-b857-95afb9b673fa')
+    ) {
+        ref.badges.unshift({
+            badgeId: 'bdg_754f9935-0f97-49d8-b857-95afb9b673fa',
+            badgeName: 'Supporter',
+            badgeDescription: 'Supports VRChat through VRC+',
+            badgeImageUrl: 'https://assets.vrchat.com/badges/fa/bdgai_583f6b13-91ab-4e1b-974e-ab91600b06cb.png',
+            hidden: true,
+            showcased: false
+        });
+    }
+    return ref;
+}
 
 /**
  * @param {import('../types/api/user').GetUserResponse} json
@@ -168,20 +203,6 @@ export function applyUser(json) {
         instanceRequest.getInstance({
             worldId: ref.$location.worldId,
             instanceId: ref.$location.instanceId
-        });
-    }
-    if (
-        ref.$isVRCPlus &&
-        ref.badges &&
-        ref.badges.every((x) => x.badgeId !== 'bdg_754f9935-0f97-49d8-b857-95afb9b673fa')
-    ) {
-        ref.badges.unshift({
-            badgeId: 'bdg_754f9935-0f97-49d8-b857-95afb9b673fa',
-            badgeName: 'Supporter',
-            badgeDescription: 'Supports VRChat through VRC+',
-            badgeImageUrl: 'https://assets.vrchat.com/badges/fa/bdgai_583f6b13-91ab-4e1b-974e-ab91600b06cb.png',
-            hidden: true,
-            showcased: false
         });
     }
     const friendCtx = friendStore.friends.get(ref.id);
@@ -500,8 +521,10 @@ export function showUserDialog(userId) {
 }
 
 export function updateUserDialogProfile() {
-    const D = useUserStore().userDialog;
+    const userStore = useUserStore();
+    const D = userStore.userDialog;
     const appearanceSettingsStore = useAppearanceSettingsStore();
+    D.publicProfileRef = userStore.cachedProfiles.get(D.id);
     userRequest
         .getPublicProfile({ userId: D.id })
         .then((args1) => {

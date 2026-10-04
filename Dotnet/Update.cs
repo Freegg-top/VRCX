@@ -261,11 +261,15 @@ namespace VRCX
             if (File.Exists(VrcxSetupExecutable))
                 File.Delete(VrcxSetupExecutable);
             File.Move(UpdateExecutable, VrcxSetupExecutable);
+            // 目标目录 = 当前运行目录 (/UPDATEDIR= 为 DLC 安装器自定义开关:
+            // NSIS 会消费 /D= 并从 $CMDLINE 移除, 无法在脚本内读到)
+            var targetDir = Program.BaseDirectory.TrimEnd('\\', '/');
             var vrcxProcess = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = VrcxSetupExecutable,
+                    Arguments = "/UPDATEDIR=\"" + targetDir + "\"",
                     UseShellExecute = true,
                     WorkingDirectory = Program.AppDataDirectory
                 }

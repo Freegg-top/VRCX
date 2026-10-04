@@ -127,51 +127,62 @@ const avatarFavorites = {
 
     addAvatarToFavorites(avatarId, groupName) {
         sqliteService.executeNonQuery(
-            'INSERT OR REPLACE INTO favorite_avatar (avatar_id, group_name, created_at) VALUES (@avatar_id, @group_name, @created_at)',
+            'INSERT OR REPLACE INTO favorite_avatar (avatar_id, group_name, created_at, owner_user_id) VALUES (@avatar_id, @group_name, @created_at, @owner_user_id)',
             {
                 '@avatar_id': avatarId,
                 '@group_name': groupName,
-                '@created_at': new Date().toJSON()
+                '@created_at': new Date().toJSON(),
+                '@owner_user_id': dbVars.userId
             }
         );
     },
 
     renameAvatarFavoriteGroup(newGroupName, groupName) {
         sqliteService.executeNonQuery(
-            `UPDATE favorite_avatar SET group_name = @new_group_name WHERE group_name = @group_name`,
+            `UPDATE favorite_avatar SET group_name = @new_group_name WHERE group_name = @group_name AND owner_user_id = @owner_user_id`,
             {
                 '@new_group_name': newGroupName,
-                '@group_name': groupName
+                '@group_name': groupName,
+                '@owner_user_id': dbVars.userId
             }
         );
     },
 
     deleteAvatarFavoriteGroup(groupName) {
-        sqliteService.executeNonQuery(`DELETE FROM favorite_avatar WHERE group_name = @group_name`, {
-            '@group_name': groupName
-        });
+        sqliteService.executeNonQuery(
+            `DELETE FROM favorite_avatar WHERE group_name = @group_name AND owner_user_id = @owner_user_id`,
+            {
+                '@group_name': groupName,
+                '@owner_user_id': dbVars.userId
+            }
+        );
     },
 
     removeAvatarFromFavorites(avatarId, groupName) {
         sqliteService.executeNonQuery(
-            `DELETE FROM favorite_avatar WHERE avatar_id = @avatar_id AND group_name = @group_name`,
+            `DELETE FROM favorite_avatar WHERE avatar_id = @avatar_id AND group_name = @group_name AND owner_user_id = @owner_user_id`,
             {
                 '@avatar_id': avatarId,
-                '@group_name': groupName
+                '@group_name': groupName,
+                '@owner_user_id': dbVars.userId
             }
         );
     },
 
     async getAvatarFavorites() {
         var data = [];
-        await sqliteService.execute((dbRow) => {
-            var row = {
-                created_at: dbRow[1],
-                avatarId: dbRow[2],
-                groupName: dbRow[3]
-            };
-            data.push(row);
-        }, 'SELECT * FROM favorite_avatar');
+        await sqliteService.execute(
+            (dbRow) => {
+                var row = {
+                    created_at: dbRow[1],
+                    avatarId: dbRow[2],
+                    groupName: dbRow[3]
+                };
+                data.push(row);
+            },
+            `SELECT * FROM favorite_avatar WHERE owner_user_id = @owner_user_id`,
+            { '@owner_user_id': dbVars.userId }
+        );
         return data;
     },
 

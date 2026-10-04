@@ -7,6 +7,7 @@ import { useAppearanceSettingsStore } from './settings/appearance';
 import { useAuthStore } from './auth';
 import { useAvatarProviderStore } from './avatarProvider';
 import { useAvatarStore } from './avatar';
+import { useBackupStore } from './backup';
 import { useChartsStore } from './charts';
 import { useDashboardStore } from './dashboard';
 import { useExternalLinkStore } from './externalLink';
@@ -136,6 +137,7 @@ export function createGlobalStores() {
         user: useUserStore(),
         vrcxUpdater: useVRCXUpdaterStore(),
         avatar: useAvatarStore(),
+        backup: useBackupStore(),
         world: useWorldStore(),
         group: useGroupStore(),
         location: useLocationStore(),
@@ -206,5 +208,6 @@ export {
     useVrcStatusStore,
     useModalStore,
     useQuickSearchStore,
-    useWatchedStore
+    useWatchedStore,
+    useBackupStore
 };

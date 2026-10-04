@@ -4,6 +4,10 @@
     "common": {
         "no_data": "No data",
         "no_matching_records": "No matching records",
+        "tabs": {
+            "scroll_left": "Scroll tabs left",
+            "scroll_right": "Scroll tabs right"
+        },
         "feature_relocated": {
             "title": "Deprecation Notice",
             "description": "This feature will be removed in a future update. Please use {feature} instead."
@@ -775,7 +779,7 @@
                     "header": "Favorites"
                 },
                 "friend_requests": {
-                    "header": "Friend Reqeusts"
+                    "header": "Friend Requests"
                 }
             },
             "vr": {
@@ -1329,7 +1333,8 @@
                         "filter_favorites": "Favorites",
                         "filter_friends": "Friends",
                         "filter_everyone": "Everyone",
-                        "message_timeout": "Message Timeout"
+                        "message_timeout": "Message Timeout",
+                        "type_filter_placeholder": "Filter"
                     },
                     "timeout_hud": {
                         "header": "User Timeout HUD",
@@ -1341,6 +1346,31 @@
                         "filter_everyone": "Everyone",
                         "timeout_threshold": "Timeout Threshold"
                     }
+                },
+                "database_backup": {
+                    "header": "Database Backup",
+                    "auto_backup": "Automatic database backup",
+                    "auto_backup_description": "Creates a snapshot next to the database file. Snapshots never overwrite the live database.",
+                    "interval_days": "Backup interval",
+                    "interval_option": "{days} days",
+                    "location": "Database file",
+                    "backup_now": "Back Up Now",
+                    "running_from_snapshot": "VRCX is currently running from a snapshot instead of your main database.",
+                    "return_to_main": "Return to Main Database",
+                    "check": "Check snapshot",
+                    "restore": "Restore this snapshot",
+                    "reveal": "Show in folder",
+                    "forget": "Remove from list (keeps the file on disk)",
+                    "empty": "No snapshots yet.",
+                    "created": "Snapshot created",
+                    "failed": "Snapshot failed: {error}",
+                    "check_ok": "Snapshot is intact ({size})",
+                    "check_failed": "Snapshot check failed: {error}",
+                    "missing": "Snapshot file is missing, it may have been deleted.",
+                    "confirm_restore": "Restore this snapshot? VRCX will restart and open the snapshot instead of your current database. Your current database is not modified, so you can always switch back.",
+                    "confirm_return": "Return to the main database? VRCX will restart.",
+                    "restart_required": "VRCX has to restart for the change to take place.",
+                    "restart_now": "Restart now"
                 }
             }
         },
@@ -1555,6 +1585,7 @@
             "groups": {
                 "header": "Groups",
                 "total_count": "Total {count}",
+                "search_placeholder": "Search groups",
                 "sort_by": "Sort by:",
                 "edit_mode": "Edit Mode",
                 "exit_edit_mode": "Exit Edit Mode",
@@ -1574,6 +1605,7 @@
             "worlds": {
                 "header": "Worlds",
                 "total_count": "Total {count}",
+                "search_placeholder": "Search worlds",
                 "sort_by": "Sort by:",
                 "order_by": "Order by:",
                 "sorting": {
@@ -1589,11 +1621,13 @@
                 }
             },
             "favorite_worlds": {
-                "header": "Favorite Worlds"
+                "header": "Favorite Worlds",
+                "search_placeholder": "Search worlds"
             },
             "avatars": {
                 "header": "Avatars",
                 "total_count": "Total {count}",
+                "search_placeholder": "Search avatars",
                 "sort_by": "Sort by:",
                 "sort_by_name": "Name",
                 "sort_by_update": "Updated",
@@ -1608,6 +1642,7 @@
             },
             "mutual_friends": {
                 "header": "Mutual Friends",
+                "search_placeholder": "Search friends",
                 "sorting": {
                     "alphabetical": "Alphabetical",
                     "last_active": "Last Active",
@@ -1828,6 +1863,55 @@
             },
             "json": {
                 "header": "JSON"
+            },
+            "performance": {
+                "header": "Performance Stats",
+                "unscanned": "This variant has not been scanned yet — values are shown without ranking.",
+                "yes": "Yes",
+                "no": "No",
+                "group": {
+                    "geometry": "Geometry",
+                    "memory": "Memory",
+                    "dynamics": "Dynamics",
+                    "components": "Components",
+                    "other": "Other"
+                },
+                "metric": {
+                    "totalPolygons": "Triangles",
+                    "totalVertices": "Vertices",
+                    "bounds": "Bounds Size",
+                    "skinnedMeshCount": "Skinned Meshes",
+                    "meshCount": "Basic Meshes",
+                    "materialSlotsUsed": "Material Slots",
+                    "materialCount": "Materials",
+                    "boneCount": "Bones",
+                    "blendShapeCount": "Blendshapes",
+                    "totalTextureUsage": "Texture Memory",
+                    "physBoneComponentCount": "PhysBones Components",
+                    "physBoneTransformCount": "PhysBones Affected Transforms",
+                    "physBoneColliderCount": "PhysBones Colliders",
+                    "physBoneCollisionCheckCount": "PhysBones Collision Checks",
+                    "contactCount": "Contacts",
+                    "constraintCount": "Constraints",
+                    "constraintDepth": "Constraint Depth",
+                    "animatorCount": "Animators",
+                    "particleSystemCount": "Particle Systems",
+                    "totalMaxParticles": "Total Particles Active",
+                    "meshParticleMaxPolygons": "Mesh Particle Triangles Active",
+                    "particleTrailsEnabled": "Particle Trails Enabled",
+                    "particleCollisionEnabled": "Particle Collision Enabled",
+                    "trailRendererCount": "Trail Renderers",
+                    "lineRendererCount": "Line Renderers",
+                    "raycastCount": "Raycasts",
+                    "clothCount": "Cloths",
+                    "totalClothVertices": "Total Cloth Vertices",
+                    "physicsColliders": "Physics Colliders",
+                    "physicsRigidbodies": "Physics Rigidbodies",
+                    "lightCount": "Lights",
+                    "audioSourceCount": "Audio Sources",
+                    "cameraCount": "Cameras",
+                    "writeDefaultsUsed": "Write Defaults"
+                }
             }
         },
         "group_edit": {
@@ -2005,9 +2089,9 @@
                 "created": "Created",
                 "links": "Links",
                 "url": "Group URL",
-                "url_tooltip": "Copy URL to clipboard",
                 "id": "Group ID",
-                "id_tooltip": "Copy ID to clipboard",
+                "copy_id": "Copy ID",
+                "copy_url": "Copy URL",
                 "joined_at": "Joined At",
                 "roles": "Roles",
                 "role": "Role:",
@@ -2285,7 +2369,9 @@
             "send": "Send"
         },
         "world_export": {
-            "header": "World Favorites Export"
+            "header": "World Favorites Export",
+            "all_favorites": "All Favorites",
+            "select_group": "Select Group"
         },
         "world_import": {
             "header": "World Favorites Import",
@@ -2302,7 +2388,9 @@
             "clear_errors": "Clear Errors"
         },
         "avatar_export": {
-            "header": "Avatar Favorites Export"
+            "header": "Avatar Favorites Export",
+            "all_favorites": "All Favorites",
+            "select_group": "Select Group"
         },
         "avatar_import": {
             "header": "Avatar Favorites Import",
@@ -2318,7 +2406,9 @@
             "clear_errors": "Clear Errors"
         },
         "friend_export": {
-            "header": "Friend Favorites Export"
+            "header": "Friend Favorites Export",
+            "all_favorites": "All Favorites",
+            "select_group": "Select Group"
         },
         "friend_import": {
             "header": "Friend Favorites Import",
@@ -2371,6 +2461,7 @@
             "stickers": "Stickers",
             "prints": "Prints",
             "inventory": "Inventory",
+            "all_types": "All types",
             "refresh": "Refresh",
             "upload": "Upload",
             "clear": "Clear",

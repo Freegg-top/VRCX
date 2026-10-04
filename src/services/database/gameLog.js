@@ -1,4 +1,5 @@
 import { dbVars } from '../database';
+import { currentAccount } from './gameLogAccount';
 
 import sqliteService from '../sqlite.js';
 
@@ -111,14 +112,15 @@ const gameLog = {
 
     addGamelogLocationToDatabase(entry) {
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_location (created_at, location, world_id, world_name, time, group_name) VALUES (@created_at, @location, @world_id, @world_name, @time, @group_name)`,
+            `INSERT OR IGNORE INTO gamelog_location (created_at, location, world_id, world_name, time, group_name, account_user_id) VALUES (@created_at, @location, @world_id, @world_name, @time, @group_name, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
                 '@location': entry.location,
                 '@world_id': entry.worldId,
                 '@world_name': entry.worldName,
                 '@time': entry.time,
-                '@group_name': entry.groupName
+                '@group_name': entry.groupName,
+                '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
     },
@@ -132,14 +134,15 @@ const gameLog = {
 
     addGamelogJoinLeaveToDatabase(entry) {
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time) VALUES (@created_at, @type, @display_name, @location, @user_id, @time)`,
+            `INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time, account_user_id) VALUES (@created_at, @type, @display_name, @location, @user_id, @time, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
                 '@type': entry.type,
                 '@display_name': entry.displayName,
                 '@location': entry.location,
                 '@user_id': entry.userId,
-                '@time': entry.time
+                '@time': entry.time,
+                '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
     },
@@ -161,31 +164,33 @@ const gameLog = {
                     field[item] = '';
                 }
             }
-            sqlValues += `('${field.created_at}', '${field.type}', '${field.displayName}', '${field.location}', '${field.userId}', '${field.time}'), `;
+            const accountUserId = (line.accountUserId ?? currentAccount()).replace(/'/g, "''");
+            sqlValues += `('${field.created_at}', '${field.type}', '${field.displayName}', '${field.location}', '${field.userId}', '${field.time}', '${accountUserId}'), `;
         }
         sqlValues = sqlValues.slice(0, -2);
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time) VALUES ${sqlValues}`
+            `INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time, account_user_id) VALUES ${sqlValues}`
         );
     },
 
     addGamelogPortalSpawnToDatabase(entry) {
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_portal_spawn (created_at, display_name, location, user_id, instance_id, world_name) VALUES (@created_at, @display_name, @location, @user_id, @instance_id, @world_name)`,
+            `INSERT OR IGNORE INTO gamelog_portal_spawn (created_at, display_name, location, user_id, instance_id, world_name, account_user_id) VALUES (@created_at, @display_name, @location, @user_id, @instance_id, @world_name, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
                 '@display_name': entry.displayName,
                 '@location': entry.location,
                 '@user_id': entry.userId,
                 '@instance_id': entry.instanceId,
-                '@world_name': entry.worldName
+                '@world_name': entry.worldName,
+                '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
     },
 
     addGamelogVideoPlayToDatabase(entry) {
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_video_play (created_at, video_url, video_name, video_id, location, display_name, user_id) VALUES (@created_at, @video_url, @video_name, @video_id, @location, @display_name, @user_id)`,
+            `INSERT OR IGNORE INTO gamelog_video_play (created_at, video_url, video_name, video_id, location, display_name, user_id, account_user_id) VALUES (@created_at, @video_url, @video_name, @video_id, @location, @display_name, @user_id, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
                 '@video_url': entry.videoUrl,
@@ -193,44 +198,79 @@ const gameLog = {
                 '@video_id': entry.videoId,
                 '@location': entry.location,
                 '@display_name': entry.displayName,
-                '@user_id': entry.userId
+                '@user_id': entry.userId,
+                '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
     },
 
     addGamelogResourceLoadToDatabase(entry) {
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_resource_load (created_at, resource_url, resource_type, location) VALUES (@created_at, @resource_url, @resource_type, @location)`,
+            `INSERT OR IGNORE INTO gamelog_resource_load (created_at, resource_url, resource_type, location, account_user_id) VALUES (@created_at, @resource_url, @resource_type, @location, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
                 '@resource_url': entry.resourceUrl,
                 '@resource_type': entry.type,
-                '@location': entry.location
+                '@location': entry.location,
+                '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
     },
 
     addGamelogEventToDatabase(entry) {
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_event (created_at, data) VALUES (@created_at, @data)`,
+            `INSERT OR IGNORE INTO gamelog_event (created_at, data, account_user_id) VALUES (@created_at, @data, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
-                '@data': entry.data
+                '@data': entry.data,
+                '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
     },
 
     addGamelogExternalToDatabase(entry) {
         sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_external (created_at, message, display_name, user_id, location) VALUES (@created_at, @message, @display_name, @user_id, @location)`,
+            `INSERT OR IGNORE INTO gamelog_external (created_at, message, display_name, user_id, location, account_user_id) VALUES (@created_at, @message, @display_name, @user_id, @location, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
                 '@message': entry.message,
                 '@display_name': entry.displayName,
                 '@user_id': entry.userId,
-                '@location': entry.location
+                '@location': entry.location,
+                '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+    },
+
+    /**
+     * 日志文件的身份通常在开头几行之后才出现, 所以要把该文件已写入的 unknown 行补上归属。
+     * @param {string} fromAt
+     * @param {string} toAt
+     * @param {string} accountId
+     * @returns {Promise<void>}
+     */
+    async backfillGameLogAccount(fromAt, toAt, accountId) {
+        if (!fromAt || !toAt || !accountId) {
+            return;
+        }
+        var tables = [];
+        await sqliteService.execute((dbRow) => {
+            tables.push(dbRow[0]);
+        }, `SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE 'gamelog_%'`);
+        for (var tableName of tables) {
+            try {
+                await sqliteService.executeNonQuery(
+                    `UPDATE ${tableName} SET account_user_id = @account WHERE (account_user_id IS NULL OR account_user_id = '') AND created_at >= @from AND created_at <= @to`,
+                    {
+                        '@account': accountId,
+                        '@from': fromAt,
+                        '@to': toAt
+                    }
+                );
+            } catch (e) {
+                console.error(`[gameLog] account backfill failed for ${tableName}:`, e);
+            }
+        }
     },
 
     async getLastVisit(worldId, currentWorldMatch) {

@@ -338,7 +338,7 @@
                     </div>
                     <div class="flex flex-col gap-1.5">
                         <TooltipWrapper
-                            side="top"
+                            side="right"
                             :content="formatDateFilter(avatarDialog.ref.created_at, 'long')"
                             :disabled="!avatarDialog.ref.created_at">
                             <div class="flex justify-between items-start gap-2 text-xs">
@@ -351,7 +351,7 @@
                             </div>
                         </TooltipWrapper>
                         <TooltipWrapper
-                            side="top"
+                            side="right"
                             :content="formatDateFilter(avatarDialog.ref.updated_at, 'long')"
                             :disabled="!avatarDialog.ref.updated_at">
                             <div class="flex justify-between items-start gap-2 text-xs">
@@ -363,7 +363,7 @@
                                 }}</span>
                             </div>
                         </TooltipWrapper>
-                        <TooltipWrapper side="top" :content="avatarTags" :disabled="!avatarTags">
+                        <TooltipWrapper side="right" :content="avatarTags" :disabled="!avatarTags">
                             <div class="flex items-start justify-between gap-2 text-xs">
                                 <span class="text-muted-foreground shrink-0">{{ t('dialog.avatar.info.tags') }}</span>
                                 <span class="max-w-30 truncate text-right text-muted-foreground">
@@ -375,7 +375,7 @@
                             <span class="text-muted-foreground shrink-0">{{ t('dialog.avatar.info.version') }}</span>
                             <span class="text-right text-muted-foreground">{{ avatarDialog.ref.version || '—' }}</span>
                         </div>
-                        <TooltipWrapper side="top" :content="avatarDialogPlatform" :disabled="!avatarDialogPlatform">
+                        <TooltipWrapper side="right" :content="avatarDialogPlatform" :disabled="!avatarDialogPlatform">
                             <div class="flex items-start justify-between gap-2 text-xs">
                                 <span class="text-muted-foreground shrink-0">{{
                                     t('dialog.avatar.info.platform')
@@ -386,6 +386,17 @@
                                 </span>
                             </div>
                         </TooltipWrapper>
+                        <div class="flex justify-between items-center gap-2 text-xs">
+                            <span class="text-muted-foreground">{{ t('dialog.avatar.info.id') }}</span>
+                            <Button
+                                class="-mr-1.5 h-5 gap-1 px-1.5 text-xs font-normal text-muted-foreground has-[>svg]:px-1.5"
+                                size="sm"
+                                variant="ghost"
+                                @click="copyAvatarId(avatarDialog.id)">
+                                <Copy class="size-3" />
+                                {{ t('dialog.avatar.info.copy_id') }}
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -394,7 +405,7 @@
                         <span
                             class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                             {{ t('dialog.user.info.vrcx_info') }}
-                            <TooltipWrapper side="top" :content="t('dialog.user.info.vrcx_info_tooltip')">
+                            <TooltipWrapper side="right" :content="t('dialog.user.info.vrcx_info_tooltip')">
                                 <Info class="h-3 w-3 shrink-0" />
                             </TooltipWrapper>
                         </span>
@@ -533,6 +544,7 @@
                                     </div>
                                 </div>
                             </div>
+                            <AvatarPerformanceSection :analysis="avatarDialog.fileAnalysis" />
                             <div class="my-2 text-xs rounded-xl bg-(--profile-card) p-3">
                                 <div
                                     class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
@@ -654,6 +666,7 @@
     import { useAvatarDialogCommands } from './useAvatarDialogCommands';
 
     import DialogJsonTab from '../DialogJsonTab.vue';
+    import AvatarPerformanceSection from './AvatarPerformanceSection.vue';
     import ImageCropDialog from '../ImageCropDialog.vue';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
 

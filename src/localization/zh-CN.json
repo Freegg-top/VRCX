@@ -1340,6 +1340,31 @@
                         "filter_everyone": "所有人",
                         "timeout_threshold": "超时阈值"
                     }
+                },
+                "database_backup": {
+                    "header": "数据库备份",
+                    "auto_backup": "自动备份数据库",
+                    "auto_backup_description": "在数据库文件同级目录生成快照，快照不会覆盖正在使用的数据库。",
+                    "interval_days": "备份间隔",
+                    "interval_option": "{days} 天",
+                    "location": "数据库文件",
+                    "backup_now": "立即备份",
+                    "running_from_snapshot": "VRCX 当前正运行在某个快照上，而不是主数据库。",
+                    "return_to_main": "返回主数据库",
+                    "check": "校验快照",
+                    "restore": "恢复此快照",
+                    "reveal": "在文件夹中显示",
+                    "forget": "从列表移除（文件仍保留在磁盘）",
+                    "empty": "还没有快照。",
+                    "created": "快照已生成",
+                    "failed": "快照失败：{error}",
+                    "check_ok": "快照完整（{size}）",
+                    "check_failed": "快照校验失败：{error}",
+                    "missing": "快照文件不存在，可能已被删除。",
+                    "confirm_restore": "要恢复这个快照吗？VRCX 会重启并打开该快照，而不是当前数据库。当前数据库不会被修改，随时可以切回来。",
+                    "confirm_return": "返回主数据库？VRCX 会重启。",
+                    "restart_required": "需要重启 VRCX 才能生效。",
+                    "restart_now": "立即重启"
                 }
             }
         },
@@ -1827,6 +1852,55 @@
             },
             "json": {
                 "header": "原始 JSON 信息"
+            },
+            "performance": {
+                "header": "性能指标",
+                "unscanned": "该变体尚未扫描完成——只列数值，不做评级。",
+                "yes": "是",
+                "no": "否",
+                "group": {
+                    "geometry": "几何",
+                    "memory": "内存",
+                    "dynamics": "动态",
+                    "components": "组件",
+                    "other": "其他"
+                },
+                "metric": {
+                    "totalPolygons": "三角面",
+                    "totalVertices": "顶点数",
+                    "bounds": "包围盒尺寸",
+                    "skinnedMeshCount": "蒙皮网格",
+                    "meshCount": "基础网格",
+                    "materialSlotsUsed": "材质槽",
+                    "materialCount": "材质数量",
+                    "boneCount": "骨骼数",
+                    "blendShapeCount": "Blendshape 数量",
+                    "totalTextureUsage": "纹理内存",
+                    "physBoneComponentCount": "PhysBones 组件",
+                    "physBoneTransformCount": "PhysBones 受影响变换",
+                    "physBoneColliderCount": "PhysBones 碰撞体",
+                    "physBoneCollisionCheckCount": "PhysBones 碰撞检测",
+                    "contactCount": "Contacts 数量",
+                    "constraintCount": "约束数量",
+                    "constraintDepth": "约束层级深度",
+                    "animatorCount": "Animator 数量",
+                    "particleSystemCount": "粒子系统",
+                    "totalMaxParticles": "活跃粒子总数",
+                    "meshParticleMaxPolygons": "网格粒子三角面",
+                    "particleTrailsEnabled": "启用粒子拖尾",
+                    "particleCollisionEnabled": "启用粒子碰撞",
+                    "trailRendererCount": "拖尾渲染器",
+                    "lineRendererCount": "线条渲染器",
+                    "raycastCount": "射线检测",
+                    "clothCount": "布料数量",
+                    "totalClothVertices": "布料顶点总数",
+                    "physicsColliders": "物理碰撞体",
+                    "physicsRigidbodies": "刚体数量",
+                    "lightCount": "灯光数量",
+                    "audioSourceCount": "音频源",
+                    "cameraCount": "摄像机",
+                    "writeDefaultsUsed": "Write Defaults"
+                }
             }
         },
         "group_edit": {

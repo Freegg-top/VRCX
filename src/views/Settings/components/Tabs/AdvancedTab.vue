@@ -3,7 +3,8 @@
         <SettingsGroup :title="t('view.settings.advanced.advanced.vrchat_settings.header')">
             <SettingsItem
                 :label="t('view.settings.advanced.advanced.relaunch_vrchat.header')"
-                :description="t('view.settings.advanced.advanced.relaunch_vrchat.description')">
+                :description="t('view.settings.advanced.advanced.relaunch_vrchat.description')"
+                toggle>
                 <Switch
                     :model-value="relaunchVRChatAfterCrash"
                     :ariaLabel="t('view.settings.advanced.advanced.relaunch_vrchat.header')"
@@ -12,7 +13,8 @@
 
             <SettingsItem
                 :label="t('view.settings.advanced.advanced.vrchat_quit_fix.header')"
-                :description="t('view.settings.advanced.advanced.vrchat_quit_fix.description')">
+                :description="t('view.settings.advanced.advanced.vrchat_quit_fix.description')"
+                toggle>
                 <Switch
                     :model-value="vrcQuitFix"
                     :ariaLabel="t('view.settings.advanced.advanced.vrchat_quit_fix.header')"
@@ -21,7 +23,8 @@
 
             <SettingsItem
                 :label="t('view.settings.advanced.advanced.auto_cache_management.header')"
-                :description="t('view.settings.advanced.advanced.auto_cache_management.description')">
+                :description="t('view.settings.advanced.advanced.auto_cache_management.description')"
+                toggle>
                 <Switch
                     :model-value="autoSweepVRChatCache"
                     :ariaLabel="t('view.settings.advanced.advanced.auto_cache_management.header')"
@@ -30,7 +33,8 @@
 
             <SettingsItem
                 :label="t('view.settings.advanced.advanced.self_invite.header')"
-                :description="t('view.settings.advanced.advanced.self_invite.description')">
+                :description="t('view.settings.advanced.advanced.self_invite.description')"
+                toggle>
                 <Switch
                     :model-value="selfInviteOverride"
                     :ariaLabel="t('view.settings.advanced.advanced.self_invite.header')"
@@ -41,7 +45,8 @@
         <SettingsGroup :title="t('view.settings.advanced_groups.security.header')">
             <SettingsItem
                 :label="t('view.settings.advanced.advanced.primary_password.header')"
-                :description="t('view.settings.advanced.advanced.primary_password.description')">
+                :description="t('view.settings.advanced.advanced.primary_password.description')"
+                toggle>
                 <Switch
                     :model-value="enablePrimaryPassword"
                     :disabled="!enablePrimaryPassword"
@@ -51,21 +56,21 @@
         </SettingsGroup>
 
         <SettingsGroup :title="t('view.settings.general.logging.header')">
-            <SettingsItem :label="t('view.settings.advanced.advanced.cache_debug.udon_exception_logging')">
+            <SettingsItem :label="t('view.settings.advanced.advanced.cache_debug.udon_exception_logging')" toggle>
                 <Switch
                     :model-value="udonExceptionLogging"
                     :ariaLabel="t('view.settings.advanced.advanced.cache_debug.udon_exception_logging')"
                     @update:modelValue="setUdonExceptionLogging" />
             </SettingsItem>
 
-            <SettingsItem :label="t('view.settings.general.logging.resource_load')">
+            <SettingsItem :label="t('view.settings.general.logging.resource_load')" toggle>
                 <Switch
                     :model-value="logResourceLoad"
                     :ariaLabel="t('view.settings.general.logging.resource_load')"
                     @update:modelValue="setLogResourceLoad" />
             </SettingsItem>
 
-            <SettingsItem :label="t('view.settings.general.logging.auto_login_delay')">
+            <SettingsItem :label="t('view.settings.general.logging.auto_login_delay')" toggle>
                 <Switch
                     :model-value="autoLoginDelayEnabled"
                     :ariaLabel="t('view.settings.general.logging.auto_login_delay')"
@@ -91,21 +96,22 @@
 
                 <SettingsItem
                     :label="t('view.settings.advanced.advanced.remote_database.enable')"
-                    :description="t('view.settings.advanced.advanced.app_launcher.folder_tooltip')">
+                    :description="t('view.settings.advanced.advanced.app_launcher.folder_tooltip')"
+                    toggle>
                     <Switch
                         :model-value="enableAppLauncher"
                         :ariaLabel="t('view.settings.advanced.advanced.remote_database.enable')"
                         @update:modelValue="setEnableAppLauncher" />
                 </SettingsItem>
 
-                <SettingsItem :label="t('view.settings.advanced.advanced.app_launcher.auto_close')">
+                <SettingsItem :label="t('view.settings.advanced.advanced.app_launcher.auto_close')" toggle>
                     <Switch
                         :model-value="enableAppLauncherAutoClose"
                         :ariaLabel="t('view.settings.advanced.advanced.app_launcher.auto_close')"
                         @update:modelValue="setEnableAppLauncherAutoClose" />
                 </SettingsItem>
 
-                <SettingsItem :label="t('view.settings.advanced.advanced.app_launcher.run_process_once')">
+                <SettingsItem :label="t('view.settings.advanced.advanced.app_launcher.run_process_once')" toggle>
                     <Switch
                         :model-value="enableAppLauncherRunProcessOnce"
                         :ariaLabel="t('view.settings.advanced.advanced.app_launcher.run_process_once')"
@@ -117,9 +123,11 @@
         <SettingsGroup :title="t('view.settings.advanced.advanced.launch_commands.header')">
             <SettingsItem
                 :label="t('view.settings.advanced.advanced.launch_commands.show_confirmation_on_switch_avatar_enable')"
+                class="mb-2"
                 :description="
                     t('view.settings.advanced.advanced.launch_commands.show_confirmation_on_switch_avatar_tooltip')
-                ">
+                "
+                toggle>
                 <Switch
                     :model-value="showConfirmationOnSwitchAvatar"
                     :ariaLabel="
@@ -158,7 +166,9 @@
             </div>
 
             <SettingsItem
-                :label="`${t('view.settings.advanced.advanced.cache_debug.disable_gamelog')} ${t('view.settings.advanced.advanced.cache_debug.disable_gamelog_notice')}`">
+                :label="`${t('view.settings.advanced.advanced.cache_debug.disable_gamelog')} ${t('view.settings.advanced.advanced.cache_debug.disable_gamelog_notice')}`"
+                class="my-2"
+                toggle>
                 <Switch
                     :model-value="gameLogDisabled"
                     :ariaLabel="t('view.settings.advanced.advanced.cache_debug.disable_gamelog')"
@@ -296,6 +306,85 @@
             </SettingsItem>
         </SettingsGroup>
 
+        <SettingsGroup :title="t('view.settings.advanced.database_backup.header')">
+            <Alert v-if="runningFromSnapshot" variant="warning" class="mb-2">
+                <TriangleAlert />
+                <AlertDescription class="flex items-center justify-between gap-2">
+                    <span>{{ t('view.settings.advanced.database_backup.running_from_snapshot') }}</span>
+                    <Button size="sm" variant="outline" @click="returnToMainDatabase">
+                        {{ t('view.settings.advanced.database_backup.return_to_main') }}
+                    </Button>
+                </AlertDescription>
+            </Alert>
+
+            <SettingsItem
+                :label="t('view.settings.advanced.database_backup.auto_backup')"
+                :description="t('view.settings.advanced.database_backup.auto_backup_description')">
+                <Switch :model-value="autoBackupEnabled" @update:modelValue="setAutoBackupEnabled" />
+            </SettingsItem>
+
+            <SettingsItem :label="t('view.settings.advanced.database_backup.interval_days')">
+                <Select :model-value="String(backupIntervalDays)" @update:modelValue="changeBackupInterval">
+                    <SelectTrigger class="w-36">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectItem v-for="days in backupIntervals" :key="days" :value="String(days)">{{
+                                t('view.settings.advanced.database_backup.interval_option', { days })
+                            }}</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+            </SettingsItem>
+
+            <SettingsItem :label="t('view.settings.advanced.database_backup.location')" :description="databasePath">
+                <Button size="sm" variant="outline" :disabled="backupBusy" @click="backupNow">
+                    <DatabaseBackup class="h-4 w-4 mr-1" />
+                    {{ t('view.settings.advanced.database_backup.backup_now') }}
+                </Button>
+            </SettingsItem>
+
+            <div v-if="snapshots.length" class="max-h-64 overflow-y-auto">
+                <div
+                    v-for="snapshot in snapshots"
+                    :key="snapshot.path"
+                    class="flex items-center justify-between gap-2 border-b py-1.5 text-xs last:border-0">
+                    <div class="min-w-0">
+                        <div class="truncate">{{ snapshot.name }} · {{ formatFileSize(snapshot.size) }}</div>
+                        <div class="truncate text-muted-foreground">{{ formatDateFilter(snapshot.date, 'long') }}</div>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1">
+                        <TooltipWrapper side="right" :content="t('view.settings.advanced.database_backup.check')">
+                            <Button size="icon-sm" variant="ghost" class="button-pd-0" @click="checkSnapshot(snapshot)">
+                                <ShieldCheck />
+                            </Button>
+                        </TooltipWrapper>
+                        <TooltipWrapper side="right" :content="t('view.settings.advanced.database_backup.restore')">
+                            <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                class="button-pd-0"
+                                @click="restoreSnapshot(snapshot)">
+                                <RotateCcw />
+                            </Button>
+                        </TooltipWrapper>
+                        <TooltipWrapper side="right" :content="t('view.settings.advanced.database_backup.reveal')">
+                            <Button size="icon-sm" variant="ghost" class="button-pd-0" @click="revealSnapshot(snapshot)">
+                                <FolderOpen />
+                            </Button>
+                        </TooltipWrapper>
+                        <TooltipWrapper side="right" :content="t('view.settings.advanced.database_backup.forget')">
+                            <Button size="icon-sm" variant="ghost" class="button-pd-0" @click="forgetSnapshot(snapshot)">
+                                <Trash2 />
+                            </Button>
+                        </TooltipWrapper>
+                    </div>
+                </div>
+            </div>
+            <p v-else class="text-xs text-muted-foreground">{{ t('view.settings.advanced.database_backup.empty') }}</p>
+        </SettingsGroup>
+
         <Dialog
             :open="isPurgeDialogVisible"
             @update:open="
@@ -398,7 +487,8 @@
             <SettingsGroup :title="t('view.settings.advanced_groups.nightly.header')">
                 <SettingsItem
                     :label="t('view.settings.advanced.advanced.anonymous_error_reporting.header')"
-                    :description="t('view.settings.advanced.advanced.anonymous_error_reporting.description')">
+                    :description="t('view.settings.advanced.advanced.anonymous_error_reporting.description')"
+                    toggle>
                     <Switch :model-value="sentryErrorReporting" @update:modelValue="setSentryErrorReporting()" />
                 </SettingsItem>
             </SettingsGroup>
@@ -410,10 +500,11 @@
 </template>
 
 <script setup>
-    import { Trash2, TriangleAlert } from 'lucide-vue-next';
-    import { computed, reactive, ref } from 'vue';
+    import { DatabaseBackup, FolderOpen, RotateCcw, ShieldCheck, Trash2, TriangleAlert } from 'lucide-vue-next';
+    import { computed, onMounted, reactive, ref } from 'vue';
     import { Button } from '@/components/ui/button';
     import { Switch } from '@/components/ui/switch';
+    import { TooltipWrapper } from '@/components/ui/tooltip';
     import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
     import { Alert, AlertDescription } from '@/components/ui/alert';
     import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -427,6 +518,7 @@
         useAppearanceSettingsStore,
         useAuthStore,
         useAvatarStore,
+        useBackupStore,
         useGeneralSettingsStore,
         useGroupStore,
         useInstanceStore,
@@ -439,7 +531,7 @@
     import { authRequest, queryRequest } from '@/api';
     import { disableGameLogDialog } from '@/coordinators/gameLogCoordinator';
     import { clearVRCXCache } from '@/coordinators/vrcxCoordinator';
-    import { openExternalLink } from '@/shared/utils';
+    import { formatDateFilter, formatFileSize, openExternalLink } from '@/shared/utils';
 
     import PhotonSettings from '../PhotonSettings.vue';
     import RegistryBackupDialog from '../../../Tools/dialogs/RegistryBackupDialog.vue';
@@ -452,6 +544,42 @@
     const { enablePrimaryPasswordChange } = useAuthStore();
     const { cachedConfig } = storeToRefs(useAuthStore());
     const { showConsole } = useUiStore();
+
+    const backupStore = useBackupStore();
+    const {
+        autoBackupEnabled,
+        backupIntervalDays,
+        busy: backupBusy,
+        databasePath,
+        runningFromSnapshot,
+        snapshots
+    } = storeToRefs(backupStore);
+    const {
+        backupNow,
+        checkSnapshot,
+        forgetSnapshot,
+        refreshDatabaseInfo,
+        refreshSnapshotList,
+        restoreSnapshot,
+        returnToMainDatabase,
+        revealSnapshot,
+        setAutoBackupEnabled,
+        setBackupIntervalDays
+    } = backupStore;
+
+    const backupIntervals = [1, 3, 7, 14, 30];
+
+    /**
+     * @param {string} value
+     */
+    function changeBackupInterval(value) {
+        setBackupIntervalDays(parseInt(value, 10));
+    }
+
+    onMounted(() => {
+        refreshDatabaseInfo();
+        refreshSnapshotList();
+    });
 
     const generalSettingsStore = useGeneralSettingsStore();
     const { udonExceptionLogging, logResourceLoad, autoLoginDelayEnabled } = storeToRefs(generalSettingsStore);

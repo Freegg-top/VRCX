@@ -422,7 +422,7 @@
                         </span>
                     </div>
                     <TooltipWrapper
-                        side="top"
+                        side="right"
                         :content="formatDateFilter(groupDialog.ref.createdAt, 'long')"
                         :disabled="!groupDialog.ref.createdAt">
                         <div class="flex justify-between items-start gap-2 text-xs">
@@ -449,6 +449,17 @@
                             </template>
                         </div>
                     </div>
+                    <div class="flex justify-between items-center gap-2 text-xs">
+                        <span class="text-muted-foreground">{{ t('dialog.group.info.id') }}</span>
+                        <Button
+                            class="-mr-1.5 h-5 gap-1 px-1.5 text-xs font-normal text-muted-foreground has-[>svg]:px-1.5"
+                            size="sm"
+                            variant="ghost"
+                            @click="copyToClipboard(groupDialog.id)">
+                            <Copy class="size-3" />
+                            {{ t('dialog.group.info.copy_id') }}
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -457,14 +468,14 @@
                     <span
                         class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                         {{ t('dialog.user.info.vrcx_info') }}
-                        <TooltipWrapper side="top" :content="t('dialog.user.info.vrcx_info_tooltip')">
+                        <TooltipWrapper side="right" :content="t('dialog.user.info.vrcx_info_tooltip')">
                             <Info class="h-3 w-3 shrink-0" />
                         </TooltipWrapper>
                     </span>
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <TooltipWrapper
-                        side="top"
+                        side="right"
                         :content="formatDateFilter(groupDialog.lastVisit, 'long')"
                         :disabled="!groupDialog.lastVisit">
                         <div class="flex justify-between items-start gap-2 text-xs">
@@ -474,7 +485,7 @@
                             <span class="text-right text-muted-foreground">{{ timeAgo(groupDialog.lastVisit) }}</span>
                         </div>
                     </TooltipWrapper>
-                    <TooltipWrapper side="top" :content="t('dialog.user.info.open_previous_instance')">
+                    <TooltipWrapper side="right" :content="t('dialog.user.info.open_previous_instance')">
                         <div
                             class="flex justify-between items-start gap-2 text-xs cursor-pointer hover:text-foreground"
                             @click="showPreviousInstancesListDialog(groupDialog.ref)">
@@ -508,7 +519,7 @@
                         </span>
                     </div>
                     <TooltipWrapper
-                        side="top"
+                        side="right"
                         :content="formatDateFilter(groupDialog.ref.myMember.joinedAt, 'long')"
                         @click="showPreviousInstancesListDialog(groupDialog.ref)">
                         <div class="flex justify-between items-start gap-2 text-xs cursor-pointer">
@@ -525,7 +536,7 @@
                         >
                         <span v-else class="text-right text-muted-foreground">
                             <template v-for="(role, rIndex) in groupDialog.memberRoles" :key="rIndex">
-                                <TooltipWrapper side="top">
+                                <TooltipWrapper side="right">
                                     <template #content>
                                         <span>{{ t('dialog.group.info.role') }} {{ role.name }}</span>
                                         <br />

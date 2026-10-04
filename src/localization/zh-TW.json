@@ -1302,6 +1302,31 @@
                         "filter_everyone": "所有人",
                         "timeout_threshold": "超時閾值"
                     }
+                },
+                "database_backup": {
+                    "header": "資料庫備份",
+                    "auto_backup": "自動備份資料庫",
+                    "auto_backup_description": "在資料庫檔案同層目錄產生快照，快照不會覆蓋正在使用的資料庫。",
+                    "interval_days": "備份間隔",
+                    "interval_option": "{days} 天",
+                    "location": "資料庫檔案",
+                    "backup_now": "立即備份",
+                    "running_from_snapshot": "VRCX 目前執行於某個快照上，而非主資料庫。",
+                    "return_to_main": "返回主資料庫",
+                    "check": "校驗快照",
+                    "restore": "回復此快照",
+                    "reveal": "在檔案夾中顯示",
+                    "forget": "從清單移除（檔案仍保留在磁碟）",
+                    "empty": "還沒有快照。",
+                    "created": "快照已產生",
+                    "failed": "快照失敗：{error}",
+                    "check_ok": "快照完整（{size}）",
+                    "check_failed": "快照校驗失敗：{error}",
+                    "missing": "快照檔案不存在，可能已被刪除。",
+                    "confirm_restore": "要回復這個快照嗎？VRCX 會重新啟動並開啟該快照，而不是目前的資料庫。目前的資料庫不會被修改，隨時可以切回來。",
+                    "confirm_return": "返回主資料庫？VRCX 會重新啟動。",
+                    "restart_required": "需要重新啟動 VRCX 才能生效。",
+                    "restart_now": "立即重新啟動"
                 }
             }
         }
@@ -1709,6 +1734,55 @@
             },
             "json": {
                 "header": "原始資料"
+            },
+            "performance": {
+                "header": "效能指標",
+                "unscanned": "該變體尚未掃描完成——僅列出數值，不做評級。",
+                "yes": "是",
+                "no": "否",
+                "group": {
+                    "geometry": "幾何",
+                    "memory": "記憶體",
+                    "dynamics": "動態",
+                    "components": "元件",
+                    "other": "其他"
+                },
+                "metric": {
+                    "totalPolygons": "三角形面",
+                    "totalVertices": "頂點數",
+                    "bounds": "包圍盒尺寸",
+                    "skinnedMeshCount": "蒙皮網格",
+                    "meshCount": "基礎網格",
+                    "materialSlotsUsed": "材質槽",
+                    "materialCount": "材質數量",
+                    "boneCount": "骨骼數",
+                    "blendShapeCount": "Blendshape 数量",
+                    "totalTextureUsage": "紋理記憶體",
+                    "physBoneComponentCount": "PhysBones 组件",
+                    "physBoneTransformCount": "PhysBones 受影響轉換",
+                    "physBoneColliderCount": "PhysBones 碰撞體",
+                    "physBoneCollisionCheckCount": "PhysBones 碰撞检测",
+                    "contactCount": "Contacts 数量",
+                    "constraintCount": "约束数量",
+                    "constraintDepth": "約束層級深度",
+                    "animatorCount": "Animator 数量",
+                    "particleSystemCount": "粒子系統",
+                    "totalMaxParticles": "活躍粒子總數",
+                    "meshParticleMaxPolygons": "網格粒子三角形",
+                    "particleTrailsEnabled": "啟用粒子拖尾",
+                    "particleCollisionEnabled": "啟用粒子碰撞",
+                    "trailRendererCount": "拖尾筆畫器",
+                    "lineRendererCount": "線條筆畫器",
+                    "raycastCount": "射線偵測",
+                    "clothCount": "布料数量",
+                    "totalClothVertices": "布料頂點總數",
+                    "physicsColliders": "物理碰撞體",
+                    "physicsRigidbodies": "刚体数量",
+                    "lightCount": "灯光数量",
+                    "audioSourceCount": "音源",
+                    "cameraCount": "攝影機",
+                    "writeDefaultsUsed": "Write Defaults"
+                }
             }
         },
         "group": {

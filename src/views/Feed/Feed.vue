@@ -119,6 +119,7 @@
     import { RangeCalendar } from '../../components/ui/range-calendar';
     import { Toggle } from '../../components/ui/toggle';
     import { columns as baseColumns } from './columns.jsx';
+    import { createLocalRowId } from '../../lib/table/createLocalRowId';
     import { useVrcxVueTable } from '../../lib/table/useVrcxVueTable';
     import WatchedUsersDialog from './dialogs/WatchedUsersDialog.vue';
 
@@ -174,6 +175,7 @@
     const feedRef = ref(null);
 
     const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
+    const getLocalRowId = createLocalRowId();
 
     /**
      * @param row
@@ -182,14 +184,9 @@
         if (row?.id != null) return `id:${row.id}:${row?.type ?? ''}`;
         if (row?.rowId != null) return `row:${row.rowId}:${row?.type ?? ''}`;
 
-        const type = row?.type ?? '';
-        const createdAt = row?.created_at ?? row?.createdAt ?? '';
-        const userId = row?.userId ?? row?.senderUserId ?? '';
-        const location = row?.location ?? row?.details?.location ?? '';
-        const message = row?.message ?? '';
-        if (row?.uid) return `uid:${row.uid}`;
-
-        return `${type}:${createdAt}:${userId}:${location}:${message}`;
+        // 实时条目(无 id/rowId): 稳定本地 ID, 避免按内容拼串+时间戳导致
+        // 每次重建表格时展开状态丢失
+        return getLocalRowId(row);
     }
 
     const { table, pagination } = useVrcxVueTable({

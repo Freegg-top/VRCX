@@ -13,8 +13,8 @@ const VRChatCameraResolutions = [
     { name: '7680x4320 (8K)', width: 7680, height: 4320 }
 ];
 
-// 拓展版 (DLC) 更新源: 改为你网站的实际地址后生效
-// 服务器需提供 releases.json (历史版本数组, GitHub releases 同形状)
+// 拓展版 (DLC) 更新源: 服务器 MinIO (silo) 经 nginx 反代
+// 桶内需提供 releases.json (历史版本数组, GitHub releases 同形状)
 // 与 latest.json (最新版本检查)
 const DLC_UPDATE_BASE = 'https://s3.freegg.top/vrcx';
 

@@ -40,6 +40,8 @@ import { useVrStore } from '../stores/vr';
 import { useVrcxStore } from '../stores/vrcx';
 
 import gameLogService from '../services/gameLog.js';
+import { beginEventFile, noteEventTime } from '../services/database/gameLogAccount';
+import { handleLocalIdentity } from './gameLogIdentityCoordinator';
 
 import * as workerTimers from 'worker-timers';
 
@@ -154,12 +156,13 @@ export async function tryLoadPlayerList() {
         }
     }
     locationStore.lastLocation.playerList.forEach((ref1) => {
-        if (
-            ref1.userId &&
-            typeof ref1.userId === 'string' &&
-            !userStore.cachedUsers.has(ref1.userId)
-        ) {
-            userRequest.getUser({ userId: ref1.userId });
+        if (ref1.userId && typeof ref1.userId === 'string') {
+            if (!userStore.cachedUsers.has(ref1.userId)) {
+                userRequest.getUser({ userId: ref1.userId });
+            }
+            if (!userStore.cachedProfiles.has(ref1.userId)) {
+                userRequest.getPublicProfile({ userId: ref1.userId });
+            }
         }
     });
 
@@ -301,6 +304,7 @@ export function addGameLogEntry(gameLog, location) {
                     console.log('Fetching user from gameLog:', userId);
                 }
                 userRequest.getUser({ userId });
+                userRequest.getPublicProfile({ userId });
             }
             vrStore.updateVRLastLocation();
             instanceStore.getCurrentInstanceUserList();
@@ -545,11 +549,18 @@ export function addGameLogEvent(json) {
     const locationStore = useLocationStore();
 
     const rawLogs = JSON.parse(json);
+    beginEventFile(rawLogs[0]);
     const gameLog = gameLogService.parseRawGameLog(
         rawLogs[1],
         rawLogs[2],
         rawLogs.slice(3)
     );
+    if (gameLog.type === 'local-identity') {
+        noteEventTime(gameLog.dt);
+        handleLocalIdentity(rawLogs[0], gameLog.dt, gameLog.displayName).catch(console.error);
+        return;
+    }
+    noteEventTime(gameLog.dt);
     if (
         AppDebug.debugGameLog &&
         gameLog.type !== 'photon-id' &&

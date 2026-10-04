@@ -1,3 +1,5 @@
+import { dbVars } from '../database';
+
 import sqliteService from '../sqlite.js';
 
 const worldFavorites = {
@@ -23,51 +25,62 @@ const worldFavorites = {
 
     addWorldToFavorites(worldId, groupName) {
         sqliteService.executeNonQuery(
-            'INSERT OR REPLACE INTO favorite_world (world_id, group_name, created_at) VALUES (@world_id, @group_name, @created_at)',
+            'INSERT OR REPLACE INTO favorite_world (world_id, group_name, created_at, owner_user_id) VALUES (@world_id, @group_name, @created_at, @owner_user_id)',
             {
                 '@world_id': worldId,
                 '@group_name': groupName,
-                '@created_at': new Date().toJSON()
+                '@created_at': new Date().toJSON(),
+                '@owner_user_id': dbVars.userId
             }
         );
     },
 
     renameWorldFavoriteGroup(newGroupName, groupName) {
         sqliteService.executeNonQuery(
-            `UPDATE favorite_world SET group_name = @new_group_name WHERE group_name = @group_name`,
+            `UPDATE favorite_world SET group_name = @new_group_name WHERE group_name = @group_name AND owner_user_id = @owner_user_id`,
             {
                 '@new_group_name': newGroupName,
-                '@group_name': groupName
+                '@group_name': groupName,
+                '@owner_user_id': dbVars.userId
             }
         );
     },
 
     deleteWorldFavoriteGroup(groupName) {
-        sqliteService.executeNonQuery(`DELETE FROM favorite_world WHERE group_name = @group_name`, {
-            '@group_name': groupName
-        });
+        sqliteService.executeNonQuery(
+            `DELETE FROM favorite_world WHERE group_name = @group_name AND owner_user_id = @owner_user_id`,
+            {
+                '@group_name': groupName,
+                '@owner_user_id': dbVars.userId
+            }
+        );
     },
 
     removeWorldFromFavorites(worldId, groupName) {
         sqliteService.executeNonQuery(
-            `DELETE FROM favorite_world WHERE world_id = @world_id AND group_name = @group_name`,
+            `DELETE FROM favorite_world WHERE world_id = @world_id AND group_name = @group_name AND owner_user_id = @owner_user_id`,
             {
                 '@world_id': worldId,
-                '@group_name': groupName
+                '@group_name': groupName,
+                '@owner_user_id': dbVars.userId
             }
         );
     },
 
     async getWorldFavorites() {
         var data = [];
-        await sqliteService.execute((dbRow) => {
-            var row = {
-                created_at: dbRow[1],
-                worldId: dbRow[2],
-                groupName: dbRow[3]
-            };
-            data.push(row);
-        }, 'SELECT * FROM favorite_world');
+        await sqliteService.execute(
+            (dbRow) => {
+                var row = {
+                    created_at: dbRow[1],
+                    worldId: dbRow[2],
+                    groupName: dbRow[3]
+                };
+                data.push(row);
+            },
+            `SELECT * FROM favorite_world WHERE owner_user_id = @owner_user_id`,
+            { '@owner_user_id': dbVars.userId }
+        );
         return data;
     },
 

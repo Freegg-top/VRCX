@@ -66,7 +66,7 @@ const database = {
             dbVars.userPrefix = '_' + dbVars.userPrefix;
         }
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT PRIMARY KEY, display_name TEXT, created_at TEXT)`
+            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT NOT NULL, display_name TEXT, created_at TEXT, owner_user_id TEXT NOT NULL DEFAULT '', PRIMARY KEY (user_id, owner_user_id))`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_gps (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, location TEXT, world_name TEXT, previous_location TEXT, time INTEGER, group_name TEXT)`
@@ -196,7 +196,7 @@ const database = {
 
     async initTables() {
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS gamelog_location (id INTEGER PRIMARY KEY, created_at TEXT, location TEXT, world_id TEXT, world_name TEXT, time INTEGER, group_name TEXT, UNIQUE(created_at, location))`
+            `CREATE TABLE IF NOT EXISTS gamelog_location (id INTEGER PRIMARY KEY, created_at TEXT, location TEXT, world_id TEXT, world_name TEXT, time INTEGER, group_name TEXT, account_user_id TEXT, UNIQUE(created_at, location))`
         );
         await sqliteService.executeNonQuery(
             `CREATE INDEX IF NOT EXISTS gamelog_location_created_at_idx ON gamelog_location (created_at)`
@@ -205,7 +205,7 @@ const database = {
             `CREATE INDEX IF NOT EXISTS idx_gamelog_location_world_created ON gamelog_location (world_id, created_at)`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS gamelog_join_leave (id INTEGER PRIMARY KEY, created_at TEXT, type TEXT, display_name TEXT, location TEXT, user_id TEXT, time INTEGER, UNIQUE(created_at, type, display_name))`
+            `CREATE TABLE IF NOT EXISTS gamelog_join_leave (id INTEGER PRIMARY KEY, created_at TEXT, type TEXT, display_name TEXT, location TEXT, user_id TEXT, time INTEGER, account_user_id TEXT, UNIQUE(created_at, type, display_name))`
         );
         await sqliteService.executeNonQuery(
             `CREATE INDEX IF NOT EXISTS idx_gamelog_jl_location ON gamelog_join_leave (location)`
@@ -217,19 +217,19 @@ const database = {
             `CREATE INDEX IF NOT EXISTS idx_gamelog_jl_display_created ON gamelog_join_leave (display_name, created_at)`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS gamelog_portal_spawn (id INTEGER PRIMARY KEY, created_at TEXT, display_name TEXT, location TEXT, user_id TEXT, instance_id TEXT, world_name TEXT, UNIQUE(created_at, display_name))`
+            `CREATE TABLE IF NOT EXISTS gamelog_portal_spawn (id INTEGER PRIMARY KEY, created_at TEXT, display_name TEXT, location TEXT, user_id TEXT, instance_id TEXT, world_name TEXT, account_user_id TEXT, UNIQUE(created_at, display_name))`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS gamelog_video_play (id INTEGER PRIMARY KEY, created_at TEXT, video_url TEXT, video_name TEXT, video_id TEXT, location TEXT, display_name TEXT, user_id TEXT, UNIQUE(created_at, video_url))`
+            `CREATE TABLE IF NOT EXISTS gamelog_video_play (id INTEGER PRIMARY KEY, created_at TEXT, video_url TEXT, video_name TEXT, video_id TEXT, location TEXT, display_name TEXT, user_id TEXT, account_user_id TEXT, UNIQUE(created_at, video_url))`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS gamelog_resource_load (id INTEGER PRIMARY KEY, created_at TEXT, resource_url TEXT, resource_type TEXT, location TEXT, UNIQUE(created_at, resource_url))`
+            `CREATE TABLE IF NOT EXISTS gamelog_resource_load (id INTEGER PRIMARY KEY, created_at TEXT, resource_url TEXT, resource_type TEXT, location TEXT, account_user_id TEXT, UNIQUE(created_at, resource_url))`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS gamelog_event (id INTEGER PRIMARY KEY, created_at TEXT, data TEXT, UNIQUE(created_at, data))`
+            `CREATE TABLE IF NOT EXISTS gamelog_event (id INTEGER PRIMARY KEY, created_at TEXT, data TEXT, account_user_id TEXT, UNIQUE(created_at, data))`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS gamelog_external (id INTEGER PRIMARY KEY, created_at TEXT, message TEXT, display_name TEXT, user_id TEXT, location TEXT, UNIQUE(created_at, message))`
+            `CREATE TABLE IF NOT EXISTS gamelog_external (id INTEGER PRIMARY KEY, created_at TEXT, message TEXT, display_name TEXT, user_id TEXT, location TEXT, account_user_id TEXT, UNIQUE(created_at, message))`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS cache_avatar (id TEXT PRIMARY KEY, added_at TEXT, author_id TEXT, author_name TEXT, created_at TEXT, description TEXT, image_url TEXT, name TEXT, release_status TEXT, thumbnail_image_url TEXT, updated_at TEXT, version INTEGER)`
@@ -238,16 +238,16 @@ const database = {
             `CREATE TABLE IF NOT EXISTS cache_world (id TEXT PRIMARY KEY, added_at TEXT, author_id TEXT, author_name TEXT, created_at TEXT, description TEXT, image_url TEXT, name TEXT, release_status TEXT, thumbnail_image_url TEXT, updated_at TEXT, version INTEGER)`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS favorite_world (id INTEGER PRIMARY KEY, created_at TEXT, world_id TEXT, group_name TEXT)`
+            `CREATE TABLE IF NOT EXISTS favorite_world (id INTEGER PRIMARY KEY, created_at TEXT, world_id TEXT, group_name TEXT, owner_user_id TEXT)`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS favorite_print (id INTEGER PRIMARY KEY, print_id TEXT UNIQUE, created_at TEXT)`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS favorite_avatar (id INTEGER PRIMARY KEY, created_at TEXT, avatar_id TEXT, group_name TEXT)`
+            `CREATE TABLE IF NOT EXISTS favorite_avatar (id INTEGER PRIMARY KEY, created_at TEXT, avatar_id TEXT, group_name TEXT, owner_user_id TEXT)`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS favorite_friend (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, group_name TEXT)`
+            `CREATE TABLE IF NOT EXISTS favorite_friend (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, group_name TEXT, owner_user_id TEXT)`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS memos (user_id TEXT PRIMARY KEY, edited_at TEXT, memo TEXT)`
@@ -262,39 +262,8 @@ const database = {
             `CREATE TABLE IF NOT EXISTS avatar_tags (avatar_id TEXT NOT NULL, tag TEXT NOT NULL, color TEXT, PRIMARY KEY (avatar_id, tag))`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT PRIMARY KEY, display_name TEXT, created_at TEXT)`
+            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT NOT NULL, display_name TEXT, created_at TEXT, owner_user_id TEXT NOT NULL DEFAULT '', PRIMARY KEY (user_id, owner_user_id))`
         );
-        await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_network_user (user_id TEXT PRIMARY KEY, mutual_ids TEXT NOT NULL DEFAULT '[]', last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)`
-        );
-        await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_network_owner (owner_id TEXT PRIMARY KEY, display_name TEXT, last_seen TEXT)`
-        );
-        await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_group_snapshot (user_id TEXT PRIMARY KEY, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
-        );
-        await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_fof_snapshot (user_id TEXT PRIMARY KEY, display_name TEXT, group_ids TEXT NOT NULL DEFAULT '[]', updated_at TEXT)`
-        );
-        await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`
-        );
-        // 老库升级: 清掉历史残留的空 group_id 行(旧版本 gmem->grp 迁移期的坏数据)
-        await sqliteService.executeNonQuery(
-            `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE group_id = '' OR group_id IS NULL`
-        );
-        // 防重复索引: 对已存在的老表也生效(建表语句只对新库起作用)。
-        // 老数据里可能有同键重复行, 先去重再建唯一索引, 失败不阻塞启动
-        try {
-            await sqliteService.executeNonQuery(
-                `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE id NOT IN (SELECT MAX(id) FROM ${dbVars.userPrefix}_feed_group GROUP BY created_at, user_id, group_id, change_type)`
-            );
-            await sqliteService.executeNonQuery(
-                `CREATE UNIQUE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_group_dedup ON ${dbVars.userPrefix}_feed_group (created_at, user_id, group_id, change_type)`
-            );
-        } catch (e) {
-            console.error('[db] feed_group dedup index setup failed:', e);
-        }
     },
 
     begin() {

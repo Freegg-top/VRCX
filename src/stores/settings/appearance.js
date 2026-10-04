@@ -107,13 +107,7 @@ export const useAppearanceSettingsStore = defineStore(
         const isNavCollapsed = ref(true);
         const isSideBarTabShow = computed(() => {
             const currentRouteName = router.currentRoute.value?.name;
-            return ![
-                'friends-locations',
-                'friend-list',
-                'charts-instance',
-                'charts-mutual',
-                'charts-hot-worlds'
-            ].includes(currentRouteName);
+            return !['friend-list', 'charts-instance', 'charts-mutual', 'charts-hot-worlds'].includes(currentRouteName);
         });
 
         const isDataTableStriped = ref(false);
@@ -553,10 +547,6 @@ export const useAppearanceSettingsStore = defineStore(
             instanceUsersSortAlphabetical.value = !instanceUsersSortAlphabetical.value;
             configRepository.setBool('VRCX_instanceUsersSortAlphabetical', instanceUsersSortAlphabetical.value);
         }
-
-        /**
-         *
-         */
         function setShowMutualFriendsBadge() {
             showMutualFriendsBadge.value = !showMutualFriendsBadge.value;
             configRepository.setBool(
@@ -566,7 +556,6 @@ export const useAppearanceSettingsStore = defineStore(
         }
 
         /**
-         *
          * @param size
          */
         function setTablePageSize(size) {

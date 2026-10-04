@@ -87,6 +87,27 @@ namespace VRCX
             }
         }
 
+        // 拓展版自标识: 写 HKCU Software\VRCX-DLC, 供 DLC 安装器的「检测已安装 VRCX」页
+        // 发现便携安装目录。官方版构建不含 -dlc. 标记, 不会写此键, 两版命名空间保持隔离
+        private static void WriteDlcRegistryMarker()
+        {
+#if !LINUX
+            if (!Version.StartsWith("VRCX DLC", StringComparison.Ordinal))
+                return;
+
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\VRCX-DLC");
+                key.SetValue("InstallDir", BaseDirectory.TrimEnd('\\', '/'));
+                key.SetValue("Version", Version.Replace("VRCX DLC ", string.Empty));
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to write DLC registry marker");
+            }
+#endif
+        }
+
         private static void ConfigureLogger()
         {
             var fileName = Path.Join(AppDataDirectory, "logs", "VRCX.log");
@@ -225,6 +246,7 @@ namespace VRCX
             VRCXStorage.Instance.Load();
             ConfigureLogger();
             GetVersion();
+            WriteDlcRegistryMarker();
             if (StartupArgs.LaunchArguments.IsOverlay)
                 OverlayProgram.OverlayMain();
 
