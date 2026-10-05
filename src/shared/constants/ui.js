@@ -51,6 +51,13 @@ const navDefinitions = [
         routeName: 'friend-avatars'
     },
     {
+        key: 'friend-worlds',
+        icon: 'ri-global-line',
+        tooltip: 'nav_tooltip.friend_worlds',
+        labelKey: 'nav_tooltip.friend_worlds',
+        routeName: 'friend-worlds'
+    },
+    {
         key: 'search',
         icon: 'ri-search-line',
         tooltip: 'nav_tooltip.search',

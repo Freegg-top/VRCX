@@ -161,6 +161,37 @@ const feed = {
         return rows;
     },
 
+    /**
+     * 好友全量世界轨迹 (好友的世界页数据源): GPS 位置变动 + Online/Offline
+     * 上下线事件 (Offline 用于封住游玩段, 离线时长不计入世界), 不带日期过滤,
+     * 按时间升序返回, 时长/次数由调用方逐条 diff 聚合。
+     * 注意: 仅含 VRCX 运行期间观察到的记录, 历史无法回溯。
+     * @param {string} userId
+     * @returns {Promise<Array<{created_at: string, location: string, worldName: string, groupName: string, type: string}>>}
+     */
+    async getFriendWorldTrajectory(userId) {
+        if (!dbVars.userPrefix || !userId) {
+            return [];
+        }
+        const rows = [];
+        await sqliteService.execute(
+            (dbRow) => {
+                rows.push({
+                    created_at: dbRow[0],
+                    location: dbRow[1] || '',
+                    worldName: dbRow[2] || '',
+                    groupName: dbRow[3] || '',
+                    type: dbRow[4] || 'GPS'
+                });
+            },
+            `SELECT created_at, location, world_name, group_name, type FROM (SELECT created_at, location, world_name, group_name, 'GPS' AS type FROM ${dbVars.userPrefix}_feed_gps WHERE user_id = @user_id UNION ALL SELECT created_at, location, world_name, group_name, type FROM ${dbVars.userPrefix}_feed_online_offline WHERE user_id = @user_id AND type IN ('Online','Offline')) ORDER BY created_at ASC`,
+            {
+                '@user_id': userId
+            }
+        );
+        return rows;
+    },
+
     async addGroupChangeToDatabase(entry) {
         await sqliteService.executeNonQuery(
             `INSERT INTO ${dbVars.userPrefix}_feed_group (created_at, user_id, display_name, group_id, group_name, change_type) VALUES (@created_at, @user_id, @display_name, @group_id, @group_name, @change_type)`,

@@ -82,7 +82,8 @@
         "toggle_theme": "切换日/夜间模式",
         "friend_network": "好友的好友",
         "friend_groups": "群组中的好友",
-        "friend_avatars": "好友的模型"
+        "friend_avatars": "好友的模型",
+        "friend_worlds": "好友的世界"
     },
     "nav_menu": {
         "resources": "帮助资源",
@@ -1433,6 +1434,22 @@
             "public_count": "公开 {count}",
             "private_count": "私模 {count}",
             "seen_range": "使用于 {first} ~ {last}",
+            "show_more": "显示更多"
+        },
+        "friend_worlds": {
+            "header": "好友的世界",
+            "description": "查看每个好友游玩过的所有世界，含时长与次数统计。数据来自 VRCX 运行期间的观察记录，历史无法回溯。",
+            "select_friend": "选择好友…",
+            "no_matches": "没有匹配的好友",
+            "sort_time": "按时长",
+            "sort_count": "按次数",
+            "summary": "{name} 玩过的世界 {total} 个 · 总时长 {time}",
+            "select_hint": "选择一位好友查看 TA 玩过的世界",
+            "empty": "暂无该好友的世界记录",
+            "loading": "正在加载…",
+            "current_badge": "当前",
+            "visits": "{count} 次",
+            "col_last": "最近：",
             "show_more": "显示更多"
         }
     },

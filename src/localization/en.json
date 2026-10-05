@@ -86,7 +86,8 @@
         "toggle_theme": "Toggle Theme",
         "friend_network": "Friends' Friends",
         "friend_groups": "Friends in Groups",
-        "friend_avatars": "Friends' Avatars"
+        "friend_avatars": "Friends' Avatars",
+        "friend_worlds": "Friends' Worlds"
     },
     "nav_menu": {
         "resources": "RESOURCES",
@@ -1439,6 +1440,22 @@
             "public_count": "Public {count}",
             "private_count": "Private {count}",
             "seen_range": "Worn {first} ~ {last}",
+            "show_more": "Show more"
+        },
+        "friend_worlds": {
+            "header": "Friends' Worlds",
+            "description": "All worlds a friend has been seen playing, with time spent and visit counts. Data only covers observations made while VRCX was running.",
+            "select_friend": "Select a friend…",
+            "no_matches": "No matching friends",
+            "sort_time": "By time",
+            "sort_count": "By visits",
+            "summary": "{name}'s worlds: {total} · Total {time}",
+            "select_hint": "Select a friend to view the worlds they have played",
+            "empty": "No world records for this friend yet",
+            "loading": "Loading…",
+            "current_badge": "Current",
+            "visits": "{count} visits",
+            "col_last": "Last:",
             "show_more": "Show more"
         }
     },
