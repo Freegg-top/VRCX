@@ -36,8 +36,12 @@ const getInstanceIconWeight = (item) => {
     if (item.isMaster) value += 1000;
     if (item.isModerator) value += 500;
     if (item.isFriend) value += 200;
-    if (item?.ref?.$mutualCount > 0) value += 50;
-    if (item?.ref?.$mutualGroupCount > 0) value += 25;
+    // 共同好友数量为主排序权重, 共同群组数量为次级;
+    // 分档封顶保证好友档 (51-90) 全部高于群组档 (26-45)
+    const mutualFriends = item?.ref?.$mutualCount ?? 0;
+    const mutualGroups = item?.ref?.$mutualGroupCount ?? 0;
+    if (mutualFriends > 0) value += 50 + Math.min(mutualFriends, 40);
+    if (mutualGroups > 0) value += 25 + Math.min(mutualGroups, 20);
     if (item.isBlocked) value -= 100;
     if (item.isMuted) value -= 50;
     if (item.isAvatarInteractionDisabled) value -= 20;

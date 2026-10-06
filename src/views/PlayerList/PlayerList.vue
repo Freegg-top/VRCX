@@ -304,6 +304,8 @@
 
     const { table: playerListTable } = useVrcxVueTable({
         persistKey: 'playerList',
+        // 默认按图标列排序 (共同好友数量优先), 用户手动改列排序后按持久化的来
+        initialSorting: [{ id: 'icon', desc: true }],
         get data() {
             return currentInstanceUsersData.value;
         },
