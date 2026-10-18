@@ -38,11 +38,12 @@ export const useUserStore = defineStore('User', () => {
     const { t } = useI18n();
 
     const currentUser = ref(
-        /** @type {import('../types/api/user').VrcxCurrentUser} */ ({
+        /** @type {import('@/types/vrcx').VrcxCurrentUser} */ {
             acceptedPrivacyVersion: 0,
             acceptedTOSVersion: 0,
             accountDeletionDate: null,
             accountDeletionLog: null,
+            accountStanding: '',
             activeFriends: [],
             ageVerificationStatus: '',
             ageVerified: false,
@@ -173,7 +174,7 @@ export const useUserStore = defineStore('User', () => {
             $languages: [],
             $locationTag: '',
             $travelingToLocation: ''
-        })
+        }
     );
 
     const currentUserCredits = ref(null);
@@ -217,6 +218,7 @@ export const useUserStore = defineStore('User', () => {
         },
         worlds: [],
         avatars: [],
+        licensedAvatars: [],
         isWorldsLoading: false,
         isFavoriteWorldsLoading: false,
         isAvatarsLoading: false,
@@ -340,6 +342,11 @@ export const useUserStore = defineStore('User', () => {
     const cachedProfileEffects = shallowReactive(new Map());
     const cachedIconFrames = shallowReactive(new Map());
     const cachedNameplateEffects = shallowReactive(new Map());
+
+    const currentUserClientConfig = ref({
+        accessReduceDecorAnim: false,
+        configString: ''
+    });
 
     function addCachedUserDisplayNameEntry(displayName, userId) {
         if (!displayName || !userId) {
@@ -604,16 +611,23 @@ export const useUserStore = defineStore('User', () => {
     /**
      * @param array
      */
-    function sortUserDialogAvatars(array) {
-        const D = userDialog.value;
-        if (D.avatarSorting === 'update') {
-            array.sort(compareByUpdatedAt);
-        } else if (D.avatarSorting === 'createdAt') {
-            array.sort(compareByCreatedAt);
-        } else {
-            array.sort(compareByName);
+    function getUserDialogAvatarComparator() {
+        const { avatarSorting } = userDialog.value;
+        if (avatarSorting === 'update') {
+            return compareByUpdatedAt;
         }
-        D.avatars = array;
+        if (avatarSorting === 'createdAt') {
+            return compareByCreatedAt;
+        }
+        return compareByName;
+    }
+
+    function sortUserDialogAvatars(array) {
+        userDialog.value.avatars = array.sort(getUserDialogAvatarComparator());
+    }
+
+    function sortUserDialogLicensedAvatars(array) {
+        userDialog.value.licensedAvatars = array.sort(getUserDialogAvatarComparator());
     }
 
     async function initUserNotes() {
@@ -782,6 +796,13 @@ export const useUserStore = defineStore('User', () => {
     }
 
     /**
+     * @param {number | null} value
+     */
+    function setCurrentUserCredits(value) {
+        currentUserCredits.value = value;
+    }
+
+    /**
      * @param {object} value
      */
     function setSubsetOfLanguages(value) {
@@ -926,6 +947,23 @@ export const useUserStore = defineStore('User', () => {
         });
     }
 
+    async function toggleReducedProfileAnimations() {
+        const accessReduceDecorAnim = !currentUserClientConfig.value.accessReduceDecorAnim;
+        if (
+            !(await confirmCurrentUserToggle(t('dialog.user.info.reduced_profile_animations'), accessReduceDecorAnim))
+        ) {
+            return;
+        }
+        const { json } = await userRequest.saveClientConfig({ accessReduceDecorAnim });
+        currentUserClientConfig.value = json;
+    }
+
+    function getClientConfig() {
+        userRequest.getClientConfig().then(({ json }) => {
+            currentUserClientConfig.value = json;
+        });
+    }
+
     function changePassword(currentPassword, password) {
         return userRequest.saveCurrentUser({
             currentPassword,
@@ -945,6 +983,7 @@ export const useUserStore = defineStore('User', () => {
         (isLoggedIn) => {
             if (isLoggedIn) {
                 getCosmetics();
+                getClientConfig();
             }
         },
         { flush: 'sync' }
@@ -961,7 +1000,7 @@ export const useUserStore = defineStore('User', () => {
                 cachedIconFrames.set(frame.id, frame);
             });
         });
-        cosmeticsRequest.gatNameplateEffects().then(({ json }) => {
+        cosmeticsRequest.getNameplateEffects().then(({ json }) => {
             json.forEach((effect) => {
                 cachedNameplateEffects.set(effect.id, effect);
             });
@@ -987,6 +1026,7 @@ export const useUserStore = defineStore('User', () => {
         cachedProfileEffects,
         cachedIconFrames,
         cachedNameplateEffects,
+        currentUserClientConfig,
         applyUserLanguage,
         applyPresenceLocation,
         applyUserDialogLocation,
@@ -997,6 +1037,7 @@ export const useUserStore = defineStore('User', () => {
         clearCachedUsers,
         rebuildCachedUserDisplayNameIndex,
         sortUserDialogAvatars,
+        sortUserDialogLicensedAvatars,
         initUserNotes,
         showSendBoopDialog,
         showEditProfileDialog,
@@ -1008,12 +1049,14 @@ export const useUserStore = defineStore('User', () => {
         setCurrentUserTravelingToTime,
         setCurrentUser,
         setSubsetOfLanguages,
+        setCurrentUserCredits,
         markCurrentUserGameStarted,
         markCurrentUserGameStopped,
         checkNote,
         toggleSharedConnectionsOptOut,
         toggleDiscordFriendsOptOut,
         toggleAllowBooping,
+        toggleReducedProfileAnimations,
         toggleAvatarCopying,
         changePassword,
         changeContentFilterSettings,

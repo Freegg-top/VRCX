@@ -23,7 +23,6 @@
                             <ToggleGroupItem
                                 value="table"
                                 class="px-2"
-                                :class="sessionsViewMode === 'table' && 'bg-accent text-accent-foreground'"
                                 :ariaLabel="t('view.game_log.sessions.switch_to_table')">
                                 <Table2 class="size-4" />
                             </ToggleGroupItem>
@@ -145,7 +144,6 @@
     import { InputGroupField } from '../../components/ui/input-group';
     import { TooltipWrapper } from '../../components/ui/tooltip';
     import { createColumns } from './columns.jsx';
-    import { createLocalRowId } from '../../lib/table/createLocalRowId';
     import { database } from '../../services/database';
     import { useVrcxVueTable } from '../../lib/table/useVrcxVueTable';
     import GameLogSessions from './components/GameLogSessions.vue';
@@ -218,15 +216,12 @@
     }
 
     const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
-    const getLocalRowId = createLocalRowId();
 
     /**
      * @param row
      */
     function getGameLogRowId(row) {
-        if (row?.rowId != null) return `row:${row.rowId}:${row?.type ?? ''}`;
-
-        return getLocalRowId(row);
+        return `row:${row.rowId}:${row?.type ?? ''}`;
     }
 
     const { table, pagination } = useVrcxVueTable({

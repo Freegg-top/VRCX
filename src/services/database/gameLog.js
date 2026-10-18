@@ -110,8 +110,8 @@ const gameLog = {
         return gamelogDatabase;
     },
 
-    addGamelogLocationToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGamelogLocationToDatabase(entry) {
+        const rowId = await sqliteService.executeInsert(
             `INSERT OR IGNORE INTO gamelog_location (created_at, location, world_id, world_name, time, group_name, account_user_id) VALUES (@created_at, @location, @world_id, @world_name, @time, @group_name, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
@@ -123,6 +123,7 @@ const gameLog = {
                 '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+        return rowId ? { ...entry, rowId } : undefined;
     },
 
     updateGamelogLocationTimeToDatabase(entry) {
@@ -132,8 +133,8 @@ const gameLog = {
         });
     },
 
-    addGamelogJoinLeaveToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGamelogJoinLeaveToDatabase(entry) {
+        const rowId = await sqliteService.executeInsert(
             `INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time, account_user_id) VALUES (@created_at, @type, @display_name, @location, @user_id, @time, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
@@ -145,36 +146,19 @@ const gameLog = {
                 '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+        return rowId ? { ...entry, rowId } : undefined;
     },
 
-    addGamelogJoinLeaveBulk(inputData) {
+    async addGamelogJoinLeaveBulk(inputData) {
         if (inputData.length === 0) {
-            return;
+            return [];
         }
-        var sqlValues = '';
-        var items = ['created_at', 'type', 'displayName', 'location', 'userId', 'time'];
-        for (var line of inputData) {
-            var field = {};
-            for (var item of items) {
-                if (typeof line[item] === 'string') {
-                    field[item] = line[item].replace(/'/g, "''");
-                } else if (typeof line[item] === 'number') {
-                    field[item] = line[item];
-                } else {
-                    field[item] = '';
-                }
-            }
-            const accountUserId = (line.accountUserId ?? currentAccount()).replace(/'/g, "''");
-            sqlValues += `('${field.created_at}', '${field.type}', '${field.displayName}', '${field.location}', '${field.userId}', '${field.time}', '${accountUserId}'), `;
-        }
-        sqlValues = sqlValues.slice(0, -2);
-        sqliteService.executeNonQuery(
-            `INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time, account_user_id) VALUES ${sqlValues}`
-        );
+        const entries = await Promise.all(inputData.map((entry) => this.addGamelogJoinLeaveToDatabase(entry)));
+        return entries.filter(Boolean);
     },
 
-    addGamelogPortalSpawnToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGamelogPortalSpawnToDatabase(entry) {
+        const rowId = await sqliteService.executeInsert(
             `INSERT OR IGNORE INTO gamelog_portal_spawn (created_at, display_name, location, user_id, instance_id, world_name, account_user_id) VALUES (@created_at, @display_name, @location, @user_id, @instance_id, @world_name, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
@@ -186,10 +170,11 @@ const gameLog = {
                 '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+        return rowId ? { ...entry, rowId } : undefined;
     },
 
-    addGamelogVideoPlayToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGamelogVideoPlayToDatabase(entry) {
+        const rowId = await sqliteService.executeInsert(
             `INSERT OR IGNORE INTO gamelog_video_play (created_at, video_url, video_name, video_id, location, display_name, user_id, account_user_id) VALUES (@created_at, @video_url, @video_name, @video_id, @location, @display_name, @user_id, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
@@ -202,10 +187,11 @@ const gameLog = {
                 '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+        return rowId ? { ...entry, rowId } : undefined;
     },
 
-    addGamelogResourceLoadToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGamelogResourceLoadToDatabase(entry) {
+        const rowId = await sqliteService.executeInsert(
             `INSERT OR IGNORE INTO gamelog_resource_load (created_at, resource_url, resource_type, location, account_user_id) VALUES (@created_at, @resource_url, @resource_type, @location, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
@@ -215,10 +201,11 @@ const gameLog = {
                 '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+        return rowId ? { ...entry, rowId } : undefined;
     },
 
-    addGamelogEventToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGamelogEventToDatabase(entry) {
+        const rowId = await sqliteService.executeInsert(
             `INSERT OR IGNORE INTO gamelog_event (created_at, data, account_user_id) VALUES (@created_at, @data, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
@@ -226,10 +213,11 @@ const gameLog = {
                 '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+        return rowId ? { ...entry, rowId } : undefined;
     },
 
-    addGamelogExternalToDatabase(entry) {
-        sqliteService.executeNonQuery(
+    async addGamelogExternalToDatabase(entry) {
+        const rowId = await sqliteService.executeInsert(
             `INSERT OR IGNORE INTO gamelog_external (created_at, message, display_name, user_id, location, account_user_id) VALUES (@created_at, @message, @display_name, @user_id, @location, @account_user_id)`,
             {
                 '@created_at': entry.created_at,
@@ -240,6 +228,7 @@ const gameLog = {
                 '@account_user_id': entry.accountUserId ?? currentAccount()
             }
         );
+        return rowId ? { ...entry, rowId } : undefined;
     },
 
     /**

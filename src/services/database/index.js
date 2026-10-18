@@ -15,6 +15,7 @@ import { notifications } from './notifications.js';
 import { tableAlter } from './tableAlter.js';
 import { tableFixes } from './tableFixes.js';
 import { tableSize } from './tableSize.js';
+import { userProfile } from './userProfile.js';
 import { worldFavorites } from './worldFavorites.js';
 import { printFavorites } from './printFavorites.js';
 import { watchedUsers } from './watchedUsers.js';
@@ -49,6 +50,7 @@ const database = {
     ...friendNetwork,
     ...friendGroups,
     ...watchedUsers,
+    ...userProfile,
 
     setMaxTableSize(limit) {
         dbVars.maxTableSize = limit;
@@ -75,7 +77,7 @@ const database = {
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_status (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, status TEXT, status_description TEXT, previous_status TEXT, previous_status_description TEXT)`
         );
         await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_bio (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, bio TEXT, previous_bio TEXT)`
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_bio (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, bio TEXT, previous_bio TEXT, bio_links TEXT, previous_bio_links TEXT)`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_avatar (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, owner_id TEXT, avatar_name TEXT, current_avatar_image_url TEXT, current_avatar_thumbnail_image_url TEXT, previous_current_avatar_image_url TEXT, previous_current_avatar_thumbnail_image_url TEXT)`
@@ -192,6 +194,9 @@ const database = {
         } catch (e) {
             console.error('[db] feed_group dedup index setup failed:', e);
         }
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_user_profile (user_id TEXT PRIMARY KEY, bio TEXT, bio_links TEXT, updated_at TEXT)`
+        );
     },
 
     async initTables() {

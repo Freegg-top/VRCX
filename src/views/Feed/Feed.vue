@@ -119,8 +119,8 @@
     import { RangeCalendar } from '../../components/ui/range-calendar';
     import { Toggle } from '../../components/ui/toggle';
     import { columns as baseColumns } from './columns.jsx';
-    import { createLocalRowId } from '../../lib/table/createLocalRowId';
     import { useVrcxVueTable } from '../../lib/table/useVrcxVueTable';
+    import { createLocalRowId } from '../../lib/table/createLocalRowId';
     import WatchedUsersDialog from './dialogs/WatchedUsersDialog.vue';
 
     const { feedTable, feedTableData } = storeToRefs(useFeedStore());
@@ -175,6 +175,7 @@
     const feedRef = ref(null);
 
     const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
+
     const getLocalRowId = createLocalRowId();
 
     /**

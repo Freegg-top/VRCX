@@ -28,7 +28,7 @@ module.exports = {
     ],
     extraResources: [
         {
-            from: 'build/Electron/${os}-${arch}/',
+            from: `build/Electron/${process.platform === 'darwin' ? 'osx' : '${os}'}-\${arch}/`,
             to: 'app.asar.unpacked/build/Electron/'
         },
         {
@@ -84,6 +84,11 @@ module.exports = {
         category: 'public.app-category.utilities',
         executableName: 'VRCX',
         minimumSystemVersion: '14.0'
+    },
+    win: {
+        artifactName: 'VRCX_Version.${ext}',
+        target: ['nsis'],
+        icon: 'images/VRCX.ico'
     },
     toolsets: {
         appimage: '1.0.3'
