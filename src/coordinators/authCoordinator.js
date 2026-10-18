@@ -1,5 +1,6 @@
 import { i18n } from '../plugins/i18n';
 import { resetFriendNetworkState } from './friendNetworkCoordinator';
+import { resetMutualCoordinator } from './mutualCoordinator';
 
 import Noty from 'noty';
 
@@ -21,6 +22,7 @@ import webApiService from '../services/webapi';
  */
 export async function runLogoutFlow() {
     resetFriendNetworkState();
+    resetMutualCoordinator();
     const authStore = useAuthStore();
     const userStore = useUserStore();
     const notificationStore = useNotificationStore();

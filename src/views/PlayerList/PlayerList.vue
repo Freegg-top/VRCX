@@ -306,6 +306,8 @@
         persistKey: 'playerList',
         // 默认按图标列排序 (共同好友数量优先), 用户手动改列排序后按持久化的来
         initialSorting: [{ id: 'icon', desc: true }],
+        // 2026-10 起默认排序改为 icon desc, 清理升级前残留的非 icon 列居首排序
+        sortingMigrationColumnId: 'icon',
         get data() {
             return currentInstanceUsersData.value;
         },

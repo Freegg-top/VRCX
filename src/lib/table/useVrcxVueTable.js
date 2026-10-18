@@ -214,6 +214,8 @@ export function useVrcxVueTable(options) {
         persistColumnVisibility = true,
         persistPageSize = true,
         persistDebounceMs = 200,
+        // 2026-10 迁移: 仅保留以该列居首的存量 persisted.sorting, 其余视为旧版本残留丢弃 (PlayerList icon desc 默认排序上线用)
+        sortingMigrationColumnId,
 
         tableOptions = {}
     } = options ?? {};
@@ -269,8 +271,12 @@ export function useVrcxVueTable(options) {
     const persisted = readPersisted();
 
     let resolvedSorting = initialSorting ?? [];
-    if (persisted && persistSorting && Array.isArray(persisted.sorting)) {
-        resolvedSorting = persisted.sorting;
+    if (persisted && persistSorting && Array.isArray(persisted.sorting) && persisted.sorting.length > 0) {
+        // 空数组视为"从未有效排序", 回退 initialSorting; 启用 sortingMigrationColumnId 时仅放行首列 id 匹配的存量排序
+        const firstSortId = persisted.sorting[0]?.id;
+        if (!sortingMigrationColumnId || firstSortId === sortingMigrationColumnId) {
+            resolvedSorting = persisted.sorting;
+        }
     }
     const sorting = ref(resolvedSorting);
 
@@ -473,6 +479,7 @@ export function useVrcxVueTable(options) {
     function resetAll() {
         columnSizing.value = {};
         columnOrder.value = [];
+        sorting.value = initialSorting ?? [];
 
         const cols = columnsSource.value ?? [];
         const defaultHiddenVisibility = {};
@@ -484,7 +491,7 @@ export function useVrcxVueTable(options) {
         }
         columnVisibility.value = defaultHiddenVisibility;
 
-        removePersisted(['columnSizing', 'columnOrder', 'columnVisibility']);
+        removePersisted(['columnSizing', 'columnOrder', 'columnVisibility', 'sorting']);
     }
 
     return {

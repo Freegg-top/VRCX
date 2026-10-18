@@ -86,7 +86,7 @@
     import { database } from '../../../services/database';
     import { processBulk } from '../../../services/request';
     import { useOptionKeySelect } from '../../../composables/useOptionKeySelect';
-    import { useUserStore } from '../../../stores';
+    import { useFriendStore, useUserStore } from '../../../stores';
     import { userDialogMutualFriendSortingOptions } from '../../../shared/constants';
     import { userRequest } from '../../../api';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
@@ -95,6 +95,7 @@
     const { userImage } = useUserDisplay();
 
     const userStore = useUserStore();
+    const friendStore = useFriendStore();
     const { userDialog, currentUser } = storeToRefs(userStore);
     const { cachedUsers } = userStore;
 
@@ -172,7 +173,9 @@
             },
             done: (success) => {
                 userDialog.value.isMutualFriendsLoading = false;
-                if (success) {
+                // 只对当前好友落库: 陌生人的 mutual 图写进 DB 会让关系网图中
+                // 其他好友的 DB 计数虚高(每个被看过的 stranger 多出一条 link)
+                if (success && friendStore.friends.has(userId)) {
                     const mutualIds = userDialog.value.mutualFriends.map((u) => u.id);
                     database.updateMutualsForFriend(userId, mutualIds);
                 }

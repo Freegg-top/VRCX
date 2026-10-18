@@ -133,6 +133,17 @@ const mutualGraph = {
         }
     },
 
+    async deleteMutualsForFriend(friendId) {
+        if (!dbVars.userPrefix || !friendId) {
+            return;
+        }
+        const linkTable = `${dbVars.userPrefix}_mutual_graph_links`;
+        const metaTable = `${dbVars.userPrefix}_mutual_graph_meta`;
+        const safeFriendId = friendId.replace(/'/g, "''");
+        await sqliteService.executeNonQuery(`DELETE FROM ${linkTable} WHERE friend_id='${safeFriendId}'`);
+        await sqliteService.executeNonQuery(`DELETE FROM ${metaTable} WHERE friend_id='${safeFriendId}'`);
+    },
+
     async getMutualCountForAllUsers() {
         const mutualCountMap = new Map();
         if (!dbVars.userPrefix) {

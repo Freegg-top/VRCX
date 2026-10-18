@@ -837,14 +837,17 @@ export const useFriendStore = defineStore('Friend', () => {
             return;
         }
         runInSortedFriendsBatch(() => {
+            // $mutualFetched 守卫: mutualCoordinator 已用 VRChat API 值 stamp 过的
+            // 好友跳过清零与 DB 回填, 避免 KeepAlive 的 FriendList watcher 触发本
+            // 函数时把 API 新鲜值覆盖成陈旧的 DB 图值
             for (const ctx of friends.values()) {
-                if (ctx?.ref) {
+                if (ctx?.ref && !ctx.ref.$mutualFetched) {
                     ctx.ref.$mutualCount = 0;
                 }
             }
             for (const [userId, mutualCount] of mutualCountMap.entries()) {
                 const ref = friends.get(userId);
-                if (ref?.ref) {
+                if (ref?.ref && !ref.ref.$mutualFetched) {
                     ref.ref.$mutualCount = mutualCount;
                     reindexSortedFriend(ref);
                 }

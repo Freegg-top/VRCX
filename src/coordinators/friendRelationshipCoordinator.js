@@ -4,6 +4,7 @@ import { database } from '../services/database';
 import { friendRequest, userRequest } from '../api';
 import { getNameColour } from '../shared/utils';
 import { handleFavoriteDelete } from './favoriteCoordinator';
+import { invalidateMutualCounts } from './mutualCoordinator';
 import { useAppearanceSettingsStore } from '../stores/settings/appearance';
 import { useFriendStore } from '../stores/friend';
 import { useModalStore } from '../stores/modal';
@@ -133,6 +134,9 @@ export function addFriendship(id) {
                 if (friendCtx) {
                     syncFriendSearchIndex(friendCtx);
                 }
+                // 全清 mutual 计数缓存: 新好友会成为其他好友的共同好友来源,
+                // 下一轮列表刷新按新好友关系重拉 API 值
+                invalidateMutualCounts();
                 const friendLogHistory = {
                     created_at: new Date().toJSON(),
                     type: 'Friend',
@@ -375,6 +379,12 @@ export function runDeleteFriendshipFlow(id, { nowIso = () => new Date().toJSON()
                 if (!appearanceSettingsStore.hideUnfriends) {
                     uiStore.notifyMenu('friend-log');
                 }
+                // 清掉被删好友的 DB 共同好友图(links+meta), 否则其他好友的 DB
+                // mutual 计数因残留 link 永久虚高
+                database.deleteMutualsForFriend(id);
+                // 全清 mutual 计数缓存: 被删好友是其他用户共同好友的来源之一,
+                // 下一轮列表刷新会按新好友关系重拉 API 值
+                invalidateMutualCounts();
                 friendStore.deleteFriend(id);
                 removeFriendSearchIndex(id);
             }
