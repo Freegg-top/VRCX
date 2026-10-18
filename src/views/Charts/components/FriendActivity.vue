@@ -252,12 +252,12 @@
     });
 
     /**
-     * @param dateValue
+     * @param {import('reka-ui/date').DateValue} dateValue
      */
     function isCalendarDateDisabled(dateValue) {
         try {
             // 只禁未来日期, 过去日期自由选择
-            return toDate(dateValue, calendarTimeZone) > Date.now();
+            return toDate(dateValue, calendarTimeZone).valueOf() > Date.now();
         } catch {
             return true;
         }
@@ -338,6 +338,7 @@
                     end
                 );
                 // 相邻重复 (Online 后紧跟同世界的 GPS) 去重
+                /** @type {Array<{ created_at: string; location: string; worldName: string; groupName: string; durationMs?: number }>} */
                 const deduped = [];
                 for (const row of rows) {
                     const prev = deduped[deduped.length - 1];

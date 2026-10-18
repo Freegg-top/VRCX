@@ -116,6 +116,10 @@ vi.mock('../../coordinators/authAutoLoginCoordinator', () => ({
     runHandleAutoLoginFlow: (...args) => mocks.runHandleAutoLoginFlow(...args)
 }));
 
+vi.mock('../../coordinators/watchedCoordinator', () => ({
+    initWatchedUsers: vi.fn(() => Promise.resolve())
+}));
+
 vi.mock('../../coordinators/userCoordinator', () => ({
     getCurrentUser: (...args) => mocks.getCurrentUser(...args)
 }));

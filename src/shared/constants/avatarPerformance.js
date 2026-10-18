@@ -153,21 +153,22 @@ function assessAgainstLimits(value, limits) {
 
 /**
  * @param {string} key AvatarStats 字段名
- * @param {unknown} value 接口返回值
+ * @param {unknown} value 接口返回值（包围盒指标为三轴数组）
  * @param {string} platform UnityPackages.platform
  * @returns {{
  *     rank: string | null;
- *     maximum: number | null;
+ *     maximum: number | number[] | null;
  *     ratio: number | null;
  *     scored: boolean;
- *     value: number | null;
+ *     value: unknown;
  * }}
  */
 function assessStat(key, value, platform) {
     const family = platformFamily(platform);
     const scored = isScoredMetric(key, family);
     if (key === BOUNDS_METRIC) {
-        const assessed = assessBounds(value);
+        const axes = Array.isArray(value) ? value : null;
+        const assessed = axes ? assessBounds(axes) : null;
         if (!assessed) {
             return { rank: null, maximum: null, ratio: null, scored, value: null };
         }

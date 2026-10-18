@@ -45,7 +45,7 @@
 
     import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
     import { Button } from '../../../components/ui/button';
-    import { useWatchedStore } from '../../../stores';
+    import { useWatchedStore } from '../../../stores/watched';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
     import { removeWatchedUser } from '../../../coordinators/watchedCoordinator';
 

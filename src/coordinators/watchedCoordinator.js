@@ -61,8 +61,9 @@ export function removeWatchedUser(userId) {
 }
 
 /**
- * Polls every watched user via GET users/{userId}; each response flows
- * through applyUser and generates feed entries for watched non-friends.
+ * Polls every watched user; responses flow through applyUser/applyPublicProfile
+ * and generate feed entries (incl. bio via the profile snapshot diff) for
+ * watched non-friends.
  * @returns {Promise<void>}
  */
 export async function refreshWatchedUsers() {
@@ -90,7 +91,12 @@ export async function refreshWatchedUsers() {
             }
             try {
                 await executeWithBackoff(
-                    () => userRequest.getUser({ userId }),
+                    // bio now lives in the public profile payload; the plain
+                    // user endpoint no longer reports it
+                    () =>
+                        userRequest.getUser({ userId }).then(() =>
+                            userRequest.getPublicProfile({ userId })
+                        ),
                     {
                         maxRetries: MAX_RETRY,
                         baseDelay: RETRY_BASE_DELAY,

@@ -94,7 +94,7 @@ function sqliteVersionSupported(version) {
 /**
  * @param {string} name
  * @param {Date} date
- * @returns {string}
+ * @returns {{ name: string; date: string }}
  */
 function toIso(name, date) {
     return { name, date: (date || new Date()).toJSON() };
@@ -186,7 +186,7 @@ const databaseBackup = {
     /**
      * @param {string} name 快照名, 例如 'Auto Backup'
      * @param {Date} [date]
-     * @returns {Promise<{ path: string; name: string; date: string; size: number }>}
+     * @returns {Promise<{ path: string; name: string; date: string; size: number; invalid?: boolean }>}
      */
     async createSnapshot(name, date) {
         const dbPath = await this.getDatabasePath();
@@ -203,6 +203,7 @@ const databaseBackup = {
         // VACUUM INTO 拒绝已存在的目标文件, 所以文件名必须唯一, 不做槽位复用
         await sqliteService.executeNonQuery(`VACUUM INTO '${escapeSqlLiteral(path)}'`);
         const checked = await this.verifySnapshot(path);
+        /** @type {{ path: string; name: string; date: string; size: number; invalid?: boolean }} */
         const snapshot = {
             path,
             ...toIso(name, date),

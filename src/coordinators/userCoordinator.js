@@ -91,7 +91,7 @@ export function applyPublicProfile(json) {
             showcased: false
         });
     }
-    if (useFriendStore().friends.has(ref.id)) {
+    if (useFriendStore().friends.has(ref.id) || useWatchedStore().isWatched(ref.id)) {
         updateUserProfile(ref);
     }
     return ref;
@@ -109,6 +109,9 @@ async function updateUserProfile(ref) {
     if (existing.bio === ref.bio && arraysMatch(existing.bioLinks, ref.bioLinks)) {
         return;
     }
+    // watched non-friends generate feed entries but skip desktop notifications
+    const isWatchedNonFriend =
+        !useFriendStore().friends.has(ref.id) && useWatchedStore().isWatched(ref.id);
     const feed = {
         created_at: new Date().toJSON(),
         type: 'Bio',
@@ -119,7 +122,9 @@ async function updateUserProfile(ref) {
         bioLinks: ref.bioLinks,
         previousBioLinks: existing.bioLinks
     };
-    useNotificationStore().queueFeedNoty(feed);
+    if (!isWatchedNonFriend) {
+        useNotificationStore().queueFeedNoty(feed);
+    }
     useSharedFeedStore().addEntry(feed);
     const persistedFeed = await database.addBioToDatabase(feed);
     if (persistedFeed) {

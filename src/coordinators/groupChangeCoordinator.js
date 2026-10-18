@@ -23,6 +23,7 @@ async function fetchGroupsRaw(userId) {
         }
     }
     if (status !== 200) {
+        /** @type {Error & {status?: number}} */
         const err = new Error(`users/${userId}/groups failed with ${status}`);
         err.status = status;
         throw err;

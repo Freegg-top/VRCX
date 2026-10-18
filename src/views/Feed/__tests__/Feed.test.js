@@ -43,6 +43,21 @@ vi.mock('@internationalized/date', () => ({
     today: () => ({})
 }));
 
+vi.mock('../../../coordinators/userCoordinator', () => ({
+    showUserDialog: vi.fn()
+}));
+
+vi.mock('../../../coordinators/watchedCoordinator', () => ({
+    removeWatchedUser: vi.fn()
+}));
+
+vi.mock('../dialogs/WatchedUsersDialog.vue', () => ({
+    default: {
+        props: ['open'],
+        template: '<div v-if="open" data-testid="watched-users-dialog" />'
+    }
+}));
+
 vi.mock('../../../stores', () => ({
     useFeedStore: () => ({
         feedTable: mocks.feedTable,
@@ -152,7 +167,8 @@ vi.mock('../../../components/ui/tooltip', () => ({
 
 vi.mock('lucide-vue-next', () => ({
     ListFilter: { template: '<span />' },
-    Star: { template: '<span />' }
+    Star: { template: '<span />' },
+    Eye: { template: '<span />' }
 }));
 
 import Feed from '../Feed.vue';

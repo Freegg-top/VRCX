@@ -100,7 +100,7 @@ async function fetchMutualFriendsForUser(userId) {
 
 /**
  * Loads previously analyzed reverse-lookup results from the database.
- * @returns {Promise<Map<string, {friendIds: Array, lastFetchedAt: string, optedOut: boolean}>>}
+ * @returns {Promise<Array<{userId: string, displayName: string, lastSeen: string}>>}
  */
 export function getOwnerCandidates() {
     return database.getOwnerCandidates();

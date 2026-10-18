@@ -69,16 +69,18 @@ export const useBackupStore = defineStore('Backup', () => {
         busy.value = true;
         try {
             const snapshot = await databaseBackup.createSnapshot(name);
-            snapshot.sizeLabel = formatFileSize(snapshot.size);
+            /** @type {{ path: string; name: string; date: string; size: number; invalid?: boolean; sizeLabel?: string }} */
+            const labeled = snapshot;
+            labeled.sizeLabel = formatFileSize(snapshot.size);
             await configRepository.setString('VRCX_backupLastDate', snapshot.date);
             lastBackupDate.value = snapshot.date;
             await refreshSnapshotList();
-            if (snapshot.invalid) {
-                toast.error(t('view.settings.advanced.database_backup.check_failed', { error: snapshot.path }));
+            if (labeled.invalid) {
+                toast.error(t('view.settings.advanced.database_backup.check_failed', { error: labeled.path }));
             } else {
                 toast.success(t('view.settings.advanced.database_backup.created'));
             }
-            return snapshot;
+            return labeled;
         } catch (err) {
             console.error('[backup] snapshot failed:', err);
             toast.error(t('view.settings.advanced.database_backup.failed', { error: err?.message || err }));
@@ -93,7 +95,7 @@ export const useBackupStore = defineStore('Backup', () => {
     }
 
     /**
-     * @param {number} value
+     * @param {boolean} value
      */
     async function setAutoBackupEnabled(value) {
         autoBackupEnabled.value = value;
