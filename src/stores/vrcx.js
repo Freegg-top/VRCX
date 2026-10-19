@@ -173,7 +173,9 @@ export const useVrcxStore = defineStore('Vrcx', () => {
 
     async function updateDatabaseVersion() {
         // requires dbVars.userPrefix to be already set
-        const databaseVersion = 18;
+        // 19: 上游 addFeedBioLinks(#18) 与本地多账号迁移曾共用 18 造成
+        // 版本撞车, 已在 18 的库会跳过 bio_links 迁移, 提到 19 强制重跑幂等序列
+        const databaseVersion = 19;
         if (state.databaseVersion < databaseVersion) {
             databaseUpgradeState.value = {
                 visible: state.databaseVersion > 0,
