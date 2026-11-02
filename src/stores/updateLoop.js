@@ -91,6 +91,7 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
                         new Date(userStore.currentUser.last_activity) > new Date(Date.now() - 3600 * 1000) // 1hour
                     ) {
                         runRefreshPlayerModerationsFlow();
+                        userStore.getAllProductPurchases();
                     }
                 }
                 if (--state.nextGroupInstanceRefresh <= 0) {
@@ -160,6 +161,7 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
                 if (--state.nextBundleCheck <= 0) {
                     state.nextBundleCheck = 10800; // 3hours
                     notificationStore.checkInventoryBundles();
+                    notificationStore.checkFreeStoreItems();
                 }
             }
         } catch (err) {

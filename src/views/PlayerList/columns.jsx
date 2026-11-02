@@ -101,7 +101,7 @@ export const createColumns = ({
                 }),
             size: 90,
             meta: { label: () => t('table.playerList.timer') },
-            sortingFn: (rowA, rowB) => (rowA.original?.timer ?? 0) - (rowB.original?.timer ?? 0),
+            sortFn: (rowA, rowB) => (rowA.original?.timer ?? 0) - (rowB.original?.timer ?? 0),
             cell: ({ row }) => <Timer epoch={row.original?.timer} />
         },
         {
@@ -114,7 +114,7 @@ export const createColumns = ({
                 }),
             size: 200,
             meta: { label: () => t('table.playerList.displayName') },
-            sortingFn: (rowA, rowB) => sortAlphabetically(rowA.original, rowB.original, 'displayName'),
+            sortFn: (rowA, rowB) => sortAlphabetically(rowA.original, rowB.original, 'displayName'),
             cell: ({ row }) => {
                 const userRef = row.original?.ref;
                 const style = randomUserColours?.value ? { color: userRef?.$userColour } : null;
@@ -127,8 +127,7 @@ export const createColumns = ({
             header: ({ column }) => sortButton({ column, label: () => t('table.playerList.rank') }),
             size: 110,
             meta: { label: () => t('table.playerList.rank') },
-            sortingFn: (rowA, rowB) =>
-                (rowA.original?.ref?.$trustSortNum ?? 0) - (rowB.original?.ref?.$trustSortNum ?? 0),
+            sortFn: (rowA, rowB) => (rowA.original?.ref?.$trustSortNum ?? 0) - (rowB.original?.ref?.$trustSortNum ?? 0),
             cell: ({ row }) => {
                 const userRef = row.original?.ref;
                 return (
@@ -175,7 +174,7 @@ export const createColumns = ({
                 disableVisibilityToggle: true,
                 defaultHidden: true
             },
-            sortingFn: (rowA, rowB) => (rowA.original?.photonId ?? 0) - (rowB.original?.photonId ?? 0),
+            sortFn: (rowA, rowB) => (rowA.original?.photonId ?? 0) - (rowB.original?.photonId ?? 0),
             cell: ({ row }) => {
                 const userRef = row.original?.ref;
                 const userId = userRef?.id;
@@ -221,7 +220,7 @@ export const createColumns = ({
                 class: 'text-center',
                 label: () => t('table.playerList.icon')
             },
-            sortingFn: (rowA, rowB, _columnId) => {
+            sortFn: (rowA, rowB, _columnId) => {
                 const a = rowA.original;
                 const b = rowB.original;
                 return -sortInstanceIcon(a, b);
