@@ -37,7 +37,8 @@ export async function addWatchedUser(userId, displayName) {
         created_at: new Date().toJSON()
     };
     try {
-        database.addWatchedUser(userId, displayName);
+        // P2-2: service 已改 async, 这里 await 后 try/catch 才真正捕获得到失败
+        await database.addWatchedUser(userId, displayName);
     } catch (err) {
         console.error('Failed to persist watched user:', userId, err);
     }
@@ -54,9 +55,14 @@ export async function addWatchedUser(userId, displayName) {
  * Stops watching a non-friend user.
  * @param {string} userId
  */
-export function removeWatchedUser(userId) {
+export async function removeWatchedUser(userId) {
     const watchedStore = useWatchedStore();
-    database.removeWatchedUser(userId);
+    try {
+        // P2-2: await 异步删除, 失败不再被静默吞掉
+        await database.removeWatchedUser(userId);
+    } catch (err) {
+        console.error('Failed to remove watched user:', userId, err);
+    }
     watchedStore.removeWatchedUser(userId);
 }
 

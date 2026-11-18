@@ -23,6 +23,12 @@ import { watchedUsers } from './watchedUsers.js';
 
 import sqliteService from '../sqlite.js';
 
+import { FEED_GROUP_RETENTION_DAYS } from '../../shared/constants/settings.js';
+
+// P2-9: watched_user 建表语句此前在 initTables / initUserTables 各写一份, 合并为一份
+const WATCHED_USER_TABLE_SQL =
+    'CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT NOT NULL, display_name TEXT, created_at TEXT, owner_user_id TEXT NOT NULL DEFAULT \'\', PRIMARY KEY (user_id, owner_user_id))';
+
 const dbVars = import.meta.hot?.data.dbVars ?? {
     userId: '',
     userPrefix: '',
@@ -73,11 +79,18 @@ const database = {
         if (dbVars.userPrefix.match(/^\d/)) {
             dbVars.userPrefix = '_' + dbVars.userPrefix;
         }
-        await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT NOT NULL, display_name TEXT, created_at TEXT, owner_user_id TEXT NOT NULL DEFAULT '', PRIMARY KEY (user_id, owner_user_id))`
-        );
+        // P0-2: owner 归属修复必须发生在登录后 —— 全局迁移(upgradeDatabaseVersion)
+        // 在 store 初始化阶段执行, 早于登录, 当时 dbVars.userId 为空会把收藏/关注
+        // 写成无主行; 这里按当前登录用户回填, 兼容救回历史迁移写成的 '' 行
+        await this.migrateWatchedUserOwner();
+        await this.backfillFavoriteOwner();
+        await this.backfillWatchedUserOwner();
+        await sqliteService.executeNonQuery(WATCHED_USER_TABLE_SQL);
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_gps (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, location TEXT, world_name TEXT, previous_location TEXT, time INTEGER, group_name TEXT)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_gps_user_created_idx ON ${dbVars.userPrefix}_feed_gps (user_id, created_at)`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_status (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, status TEXT, status_description TEXT, previous_status TEXT, previous_status_description TEXT)`
@@ -87,6 +100,9 @@ const database = {
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_avatar (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, owner_id TEXT, avatar_name TEXT, current_avatar_image_url TEXT, current_avatar_thumbnail_image_url TEXT, previous_current_avatar_image_url TEXT, previous_current_avatar_thumbnail_image_url TEXT)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_avatar_user_created_idx ON ${dbVars.userPrefix}_feed_avatar (user_id, created_at)`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_online_offline (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, type TEXT, location TEXT, world_name TEXT, time INTEGER, group_name TEXT)`
@@ -192,9 +208,36 @@ const database = {
         await sqliteService.executeNonQuery(
             `CREATE INDEX IF NOT EXISTS ${dbVars.userPrefix}_mutual_event_history_created_idx ON ${dbVars.userPrefix}_mutual_event_history (created_at)`
         );
+        // A组委托: dedup 索引升级为 UNIQUE, 新库直接建 unique
         await sqliteService.executeNonQuery(
-            `CREATE INDEX IF NOT EXISTS ${dbVars.userPrefix}_mutual_event_history_dedup_idx ON ${dbVars.userPrefix}_mutual_event_history (event_type, friend_id_a, friend_id_b, created_at)`
+            `CREATE UNIQUE INDEX IF NOT EXISTS ${dbVars.userPrefix}_mutual_event_history_dedup_idx ON ${dbVars.userPrefix}_mutual_event_history (event_type, friend_id_a, friend_id_b, created_at)`
         );
+        // 老库升级: 同名旧索引是非 unique 的, 先按规范化 pair(a/b 排序)去重再换 unique。
+        // 只在检测到非 unique 索引时跑一次, 不动 mutualEvents 的查询, 失败不阻塞启动
+        let mutualDedupIndexSql = '';
+        await sqliteService.execute((dbRow) => {
+            mutualDedupIndexSql = String(dbRow[0] || '');
+        }, `SELECT sql FROM sqlite_schema WHERE type='index' AND name = '${dbVars.userPrefix}_mutual_event_history_dedup_idx'`);
+        if (mutualDedupIndexSql && !mutualDedupIndexSql.toUpperCase().includes('UNIQUE')) {
+            try {
+                await sqliteService.executeNonQuery(
+                    `DELETE FROM ${dbVars.userPrefix}_mutual_event_history WHERE id NOT IN (
+                        SELECT MIN(id) FROM ${dbVars.userPrefix}_mutual_event_history GROUP BY event_type,
+                            CASE WHEN friend_id_a <= friend_id_b THEN friend_id_a ELSE friend_id_b END,
+                            CASE WHEN friend_id_a <= friend_id_b THEN friend_id_b ELSE friend_id_a END,
+                            created_at
+                    )`
+                );
+                await sqliteService.executeNonQuery(
+                    `DROP INDEX IF EXISTS ${dbVars.userPrefix}_mutual_event_history_dedup_idx`
+                );
+                await sqliteService.executeNonQuery(
+                    `CREATE UNIQUE INDEX IF NOT EXISTS ${dbVars.userPrefix}_mutual_event_history_dedup_idx ON ${dbVars.userPrefix}_mutual_event_history (event_type, friend_id_a, friend_id_b, created_at)`
+                );
+            } catch (e) {
+                console.error('[db] mutual_event_history unique dedup upgrade failed:', e);
+            }
+        }
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_network_user (user_id TEXT PRIMARY KEY, mutual_ids TEXT NOT NULL DEFAULT '[]', last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)`
         );
@@ -210,21 +253,46 @@ const database = {
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_feed_group (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, group_id TEXT, group_name TEXT, change_type TEXT)`
         );
-        // 老库升级: 清掉历史残留的空 group_id 行(旧版本 gmem->grp 迁移期的坏数据)
+        // feed 表查询按 (user_id, created_at) 过滤/排序, 补索引
         await sqliteService.executeNonQuery(
-            `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE group_id = '' OR group_id IS NULL`
+            `CREATE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_group_user_created_idx ON ${dbVars.userPrefix}_feed_group (user_id, created_at)`
         );
-        // 防重复索引: 对已存在的老表也生效(建表语句只对新库起作用)。
-        // 老数据里可能有同键重复行, 先去重再建唯一索引, 失败不阻塞启动
+        // 保留期清理: 对齐 mutual 事件 180 天的清理模式; mutual 的清理在它的
+        // coordinator 里跑(本组禁改区), 这里选在登录必经的 initUserTables 执行,
+        // 每次登录清一次足够(见汇报说明)
         try {
+            const cutoffDate = new Date(
+                Date.now() - FEED_GROUP_RETENTION_DAYS * 24 * 60 * 60 * 1000
+            ).toISOString();
             await sqliteService.executeNonQuery(
-                `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE id NOT IN (SELECT MAX(id) FROM ${dbVars.userPrefix}_feed_group GROUP BY created_at, user_id, group_id, change_type)`
-            );
-            await sqliteService.executeNonQuery(
-                `CREATE UNIQUE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_group_dedup ON ${dbVars.userPrefix}_feed_group (created_at, user_id, group_id, change_type)`
+                `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE created_at < @cutoff`,
+                { '@cutoff': cutoffDate }
             );
         } catch (e) {
-            console.error('[db] feed_group dedup index setup failed:', e);
+            console.error('[db] feed_group retention cleanup failed:', e);
+        }
+        // 老库升级: 清掉历史残留的空 group_id 行(旧版本 gmem->grp 迁移期的坏数据)
+        // 与去重 DELETE 都有全表开销, 用「唯一索引是否已建成」做一次性门槛,
+        // 索引在就不重跑(索引建失败时下个登录重试), 不再每次登录全表扫描
+        let feedGroupDedupReady = false;
+        await sqliteService.execute((dbRow) => {
+            feedGroupDedupReady = !!dbRow[0];
+        }, `SELECT 1 FROM sqlite_schema WHERE type='index' AND name = '${dbVars.userPrefix}_feed_group_dedup'`);
+        if (!feedGroupDedupReady) {
+            try {
+                await sqliteService.executeNonQuery(
+                    `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE group_id = '' OR group_id IS NULL`
+                );
+                // 老数据里可能有同键重复行, 先去重再建唯一索引
+                await sqliteService.executeNonQuery(
+                    `DELETE FROM ${dbVars.userPrefix}_feed_group WHERE id NOT IN (SELECT MAX(id) FROM ${dbVars.userPrefix}_feed_group GROUP BY created_at, user_id, group_id, change_type)`
+                );
+                await sqliteService.executeNonQuery(
+                    `CREATE UNIQUE INDEX IF NOT EXISTS ${dbVars.userPrefix}_feed_group_dedup ON ${dbVars.userPrefix}_feed_group (created_at, user_id, group_id, change_type)`
+                );
+            } catch (e) {
+                console.error('[db] feed_group dedup index setup failed:', e);
+            }
         }
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_user_profile (user_id TEXT PRIMARY KEY, bio TEXT, bio_links TEXT, updated_at TEXT)`
@@ -298,9 +366,7 @@ const database = {
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS avatar_tags (avatar_id TEXT NOT NULL, tag TEXT NOT NULL, color TEXT, PRIMARY KEY (avatar_id, tag))`
         );
-        await sqliteService.executeNonQuery(
-            `CREATE TABLE IF NOT EXISTS watched_user (user_id TEXT NOT NULL, display_name TEXT, created_at TEXT, owner_user_id TEXT NOT NULL DEFAULT '', PRIMARY KEY (user_id, owner_user_id))`
-        );
+        await sqliteService.executeNonQuery(WATCHED_USER_TABLE_SQL);
     },
 
     begin() {

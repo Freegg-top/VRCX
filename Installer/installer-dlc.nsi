@@ -40,6 +40,8 @@
 ;StrFunc 函数需在全局作用域声明一次
 ${StrLoc}
 ${StrTrimNewLines}
+;卸载段要用 Un 前缀变体, 也需全局声明
+${UnStrLoc}
 
 ;--------------------------------
 ;General
@@ -375,11 +377,9 @@ Section "Install" SecInstall
 
     afterUpgrade:
 
-    SetOutPath "$INSTDIR"
-
-    File /r /x *.log /x *.pdb "${DLCDIR}\*.*"
-
-    ; 目标目录是官方版时额外确认, 防止误覆盖
+    ; 目标目录是官方版时额外确认, 防止误覆盖。
+    ; P1-9: 必须在 File /r 复制之前读原始 $INSTDIR\Version —— 复制之后 Version
+    ; 已被 DLC 文件覆盖, 检测永远失效; 用户 Cancel 时 Abort 不复制
     IfFileExists "$INSTDIR\Version" 0 skipOfficialCheck
         FileOpen $0 "$INSTDIR\Version" r
         IfErrors skipOfficialCheck
@@ -392,6 +392,10 @@ Section "Install" SecInstall
             Abort
     officialOk:
     skipOfficialCheck:
+
+    SetOutPath "$INSTDIR"
+
+    File /r /x *.log /x *.pdb "${DLCDIR}\*.*"
 
     WriteRegStr HKLM "Software\VRCX-DLC" "InstallDir" $INSTDIR
     WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -440,7 +444,17 @@ Section "Uninstall"
 
     DeleteRegKey HKLM "Software\VRCX-DLC"
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\VRCX-DLC"
-    DeleteRegKey HKCU "Software\Classes\vrcx"
+    ; P1-9: Program.cs WriteDlcRegistryMarker 写入的 HKCU 标记键, 卸载时一并清理
+    DeleteRegKey HKCU "Software\VRCX-DLC"
+    ; P1-9: 仅当 vrcx 协议指向本安装目录时才删, 防止误删官方版的协议注册
+    ReadRegStr $9 HKCU "Software\Classes\vrcx\shell\open\command" ""
+    ${UnStrLoc} $8 "$9" "$INSTDIR" ">"
+    StrCmp $8 "" 0 deleteVrcxProtocol
+        DetailPrint "vrcx protocol does not point to this install dir, keeping registry key"
+        Goto keepVrcxProtocol
+    deleteVrcxProtocol:
+        DeleteRegKey HKCU "Software\Classes\vrcx"
+    keepVrcxProtocol:
 
     ${IfNot} ${Silent}
         Delete "$SMPROGRAMS\VRCX.lnk"

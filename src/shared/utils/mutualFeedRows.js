@@ -20,9 +20,10 @@ const MUTUAL_FEED_TYPES = [
 
 /**
  * @param {{id?: number, createdAt: string, eventType: string, friendIdA: string, friendIdB: string}} event
- * @returns {{rowId?: number, created_at: string, type: string, userId: string, friendIdA: string, friendIdB: string}}
+ * @param {(userId: string) => string} [resolveDisplayName]
+ * @returns {{rowId?: number, created_at: string, type: string, userId: string, friendIdA: string, friendIdB: string, displayNameA?: string, displayName?: string}}
  */
-function mutualEventToFeedRow(event) {
+function mutualEventToFeedRow(event, resolveDisplayName) {
     const row = {
         created_at: event.createdAt,
         type: MUTUAL_FEED_TYPE_MAP[event.eventType] || event.eventType,
@@ -30,6 +31,10 @@ function mutualEventToFeedRow(event) {
         friendIdA: event.friendIdA,
         friendIdB: event.friendIdB
     };
+    if (typeof resolveDisplayName === 'function') {
+        row.displayNameA = resolveDisplayName(event.friendIdA);
+        row.displayName = resolveDisplayName(event.friendIdB);
+    }
     if (typeof event.id === 'number') {
         row.rowId = event.id;
     }

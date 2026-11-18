@@ -3,8 +3,13 @@ import { dbVars } from '../database';
 import sqliteService from '../sqlite.js';
 
 const watchedUsers = {
-    addWatchedUser(userId, displayName) {
-        sqliteService.executeNonQuery(
+    // P2-2: 改 async —— 调用方(coordinator)现在能 await 并真正捕获失败;
+    // 未登录(dbVars.userId 为空)时直接不写库, 防止产生无主行
+    async addWatchedUser(userId, displayName) {
+        if (!dbVars.userId) {
+            return;
+        }
+        await sqliteService.executeNonQuery(
             'INSERT OR REPLACE INTO watched_user (user_id, display_name, created_at, owner_user_id) VALUES (@user_id, @display_name, @created_at, @owner_user_id)',
             {
                 '@user_id': userId,
@@ -15,8 +20,11 @@ const watchedUsers = {
         );
     },
 
-    removeWatchedUser(userId) {
-        sqliteService.executeNonQuery(
+    async removeWatchedUser(userId) {
+        if (!dbVars.userId) {
+            return;
+        }
+        await sqliteService.executeNonQuery(
             'DELETE FROM watched_user WHERE user_id = @user_id AND owner_user_id = @owner_user_id',
             {
                 '@user_id': userId,

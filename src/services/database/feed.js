@@ -201,6 +201,10 @@ const feed = {
     },
 
     async addGroupChangeToDatabase(entry) {
+        // P2-11: 未登录(userPrefix 为空)时不写库, 防止拼出 "_feed_group" 之类的全局表名
+        if (!dbVars.userPrefix) {
+            return;
+        }
         await sqliteService.executeNonQuery(
             `INSERT INTO ${dbVars.userPrefix}_feed_group (created_at, user_id, display_name, group_id, group_name, change_type) VALUES (@created_at, @user_id, @display_name, @group_id, @group_name, @change_type)`,
             {

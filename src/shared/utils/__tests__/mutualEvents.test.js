@@ -26,7 +26,7 @@ function makeArgs(overrides = {}) {
 }
 
 describe('computeMutualEvents', () => {
-    test('双方确认解除 -> FriendshipEnd', () => {
+    test('双方确认解除 -> FriendshipEnd (对键字典序规范化)', () => {
         const result = computeMutualEvents(
             makeArgs({
                 oldFriendIds: [B1],
@@ -35,18 +35,19 @@ describe('computeMutualEvents', () => {
                 getLinks: () => []
             })
         );
+        // UI 文案对 End 对称, (A,B) 按字典序规范化: B1 < OWNER
         expect(result.events).toEqual([
             {
                 eventType: 'FriendshipEnd',
-                friendIdA: OWNER,
-                friendIdB: B1,
+                friendIdA: B1,
+                friendIdB: OWNER,
                 createdAt: NOW.toISOString()
             }
         ]);
         expect(result.refetchIds).toEqual([]);
     });
 
-    test('成为好友 -> FriendshipStart (oldFriendIds 明确为空数组 [])', () => {
+    test('成为好友 -> FriendshipStart (对键字典序规范化)', () => {
         const result = computeMutualEvents(
             makeArgs({
                 oldFriendIds: [],
@@ -56,8 +57,8 @@ describe('computeMutualEvents', () => {
         expect(result.events).toEqual([
             {
                 eventType: 'FriendshipStart',
-                friendIdA: OWNER,
-                friendIdB: B1,
+                friendIdA: B1,
+                friendIdB: OWNER,
                 createdAt: NOW.toISOString()
             }
         ]);
@@ -177,6 +178,24 @@ describe('computeMutualEvents', () => {
         expect(result.events).toEqual([]);
     });
 
+    test('同对反序历史事件 (B,A) 也去重 (规范化对键)', () => {
+        const result = computeMutualEvents(
+            makeArgs({
+                oldFriendIds: [],
+                newFriendIds: [B1],
+                recentEvents: [
+                    {
+                        eventType: 'FriendshipStart',
+                        friendIdA: B1,
+                        friendIdB: OWNER,
+                        createdAt: NOW.toISOString()
+                    }
+                ]
+            })
+        );
+        expect(result.events).toEqual([]);
+    });
+
     test('往日的同键事件不去重', () => {
         const result = computeMutualEvents(
             makeArgs({
@@ -207,14 +226,14 @@ describe('computeMutualEvents', () => {
         expect(result.events).toEqual([
             {
                 eventType: 'FriendshipEnd',
-                friendIdA: OWNER,
-                friendIdB: B1,
+                friendIdA: B1,
+                friendIdB: OWNER,
                 createdAt: NOW.toISOString()
             },
             {
                 eventType: 'FriendshipStart',
-                friendIdA: OWNER,
-                friendIdB: B2,
+                friendIdA: B2,
+                friendIdB: OWNER,
                 createdAt: NOW.toISOString()
             }
         ]);

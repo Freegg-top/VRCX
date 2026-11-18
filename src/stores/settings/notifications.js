@@ -28,96 +28,7 @@ export const useNotificationsSettingsStore = defineStore('NotificationsSettings'
     const notificationTTSNickName = ref(false);
     const inventoryBundleNotifications = ref(true);
     const freeStoreItemNotifications = ref(true);
-    const sharedFeedFilters = ref({
-        noty: {
-            Location: 'Off',
-            OnPlayerJoined: 'VIP',
-            OnPlayerLeft: 'VIP',
-            OnPlayerJoining: 'VIP',
-            Online: 'VIP',
-            Offline: 'VIP',
-            GPS: 'Off',
-            Status: 'Off',
-            invite: 'Friends',
-            requestInvite: 'Friends',
-            inviteResponse: 'Friends',
-            requestInviteResponse: 'Friends',
-            boop: 'Friends',
-            friendRequest: 'On',
-            Friend: 'On',
-            Unfriend: 'On',
-            DisplayName: 'VIP',
-            TrustLevel: 'VIP',
-            groupChange: 'On',
-            'group.announcement': 'On',
-            'group.event.created': 'On',
-            'group.event.starting': 'On',
-            'group.informative': 'On',
-            'group.invite': 'On',
-            'group.joinRequest': 'Off',
-            'group.transfer': 'On',
-            'group.queueReady': 'On',
-            'instance.closed': 'On',
-            PortalSpawn: 'Everyone',
-            Event: 'On',
-            External: 'On',
-            VideoPlay: 'Off',
-            BlockedOnPlayerJoined: 'Off',
-            BlockedOnPlayerLeft: 'Off',
-            MutedOnPlayerJoined: 'Off',
-            MutedOnPlayerLeft: 'Off',
-            AvatarChange: 'Off',
-            ChatBoxMessage: 'Off',
-            Blocked: 'Off',
-            Unblocked: 'Off',
-            Muted: 'Off',
-            Unmuted: 'Off'
-        },
-        wrist: {
-            Location: 'On',
-            OnPlayerJoined: 'Everyone',
-            OnPlayerLeft: 'Everyone',
-            OnPlayerJoining: 'Friends',
-            Online: 'Friends',
-            Offline: 'Friends',
-            GPS: 'Friends',
-            Status: 'Friends',
-            invite: 'Friends',
-            requestInvite: 'Friends',
-            inviteResponse: 'Friends',
-            requestInviteResponse: 'Friends',
-            boop: 'Friends',
-            friendRequest: 'On',
-            Friend: 'On',
-            Unfriend: 'On',
-            DisplayName: 'Friends',
-            TrustLevel: 'Friends',
-            groupChange: 'On',
-            'group.announcement': 'On',
-            'group.event.created': 'On',
-            'group.event.starting': 'On',
-            'group.informative': 'On',
-            'group.invite': 'On',
-            'group.joinRequest': 'On',
-            'group.transfer': 'On',
-            'group.queueReady': 'On',
-            'instance.closed': 'On',
-            PortalSpawn: 'Everyone',
-            Event: 'On',
-            External: 'On',
-            VideoPlay: 'On',
-            BlockedOnPlayerJoined: 'Off',
-            BlockedOnPlayerLeft: 'Off',
-            MutedOnPlayerJoined: 'Off',
-            MutedOnPlayerLeft: 'Off',
-            AvatarChange: 'Everyone',
-            ChatBoxMessage: 'Off',
-            Blocked: 'On',
-            Unblocked: 'On',
-            Muted: 'On',
-            Unmuted: 'On'
-        }
-    });
+    const sharedFeedFilters = ref(structuredClone(sharedFeedFiltersDefaults));
     const isTestTTSVisible = ref(false);
     const notificationTTSVoice = ref(0);
     const TTSvoices = ref([]);
@@ -265,6 +176,12 @@ export const useNotificationsSettingsStore = defineStore('NotificationsSettings'
         configRepository.setBool('VRCX_freeStoreItemNotifications', freeStoreItemNotifications.value);
     }
     function initSharedFeedFilters() {
+        for (const [section, defaults] of Object.entries(sharedFeedFiltersDefaults)) {
+            sharedFeedFilters.value[section] = {
+                ...defaults,
+                ...(sharedFeedFilters.value[section] || {})
+            };
+        }
         if (!sharedFeedFilters.value.noty.Blocked) {
             sharedFeedFilters.value.noty.Blocked = 'Off';
             sharedFeedFilters.value.noty.Unblocked = 'Off';

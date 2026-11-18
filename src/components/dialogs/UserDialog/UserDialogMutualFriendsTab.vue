@@ -86,6 +86,12 @@
                 </ul>
             </template>
             <template v-else>
+                <div
+                    v-if="hasMutualFetchFailed"
+                    class="mt-2 text-sm text-muted-foreground"
+                    style="padding: 4px 6px">
+                    {{ t('dialog.user.mutual_friends.fetch_failed_notice') }}
+                </div>
                 <ul class="flex flex-wrap items-start" style="margin-top: 8px; min-width: 130px">
                     <li
                         v-for="user in filteredMutualFriends"
@@ -212,10 +218,14 @@
     const hiddenMutuals = ref([]);
     // hidden mutuals 推断所依据的快照时间 (取 X 自己的 lastFetchedAt)
     const hiddenMutualsSnapshotDate = ref('');
+    // 抓取失败且没有 opt-out 证据时，明确提示而不是静默显示空列表
+    const hasMutualFetchFailed = ref(false);
 
     // 标题计数与当前实际渲染的数据源保持一致
     const displayedCount = computed(() =>
-        isTargetOptedOut.value ? retrospectiveMutuals.value.length : userDialog.value.mutualFriends.length
+        isTargetOptedOut.value
+            ? retrospectiveMutuals.value.length
+            : userDialog.value.mutualFriends.length + hiddenMutuals.value.length
     );
 
     const filteredRetrospectiveMutuals = computed(() => {
@@ -249,13 +259,25 @@
     }
 
     /**
+     * @param {number} seq
+     * @param {string} userId
+     */
+    function isCurrentMutualRequest(seq, userId) {
+        return seq === mutualReqSeq && userDialog.value.id === userId;
+    }
+
+    /**
      * 刷新回溯/hidden 分区数据
      * @param {string} userId
      * @param {boolean} fetchSucceeded 本次 API 抓取是否成功 (false 可能为 403)
      * @param {string[]|null} oldMutualIds 写库前读到的旧快照 (P1-2: 避免先覆盖后读取)
      * @param {Array} fetchedMutuals 本次抓取到的 mutual 列表 (P1-3: 不再从共享 userDialog 读)
+     * @param {number} seq 请求序号令牌
      */
-    async function loadRetrospectiveData(userId, fetchSucceeded, oldMutualIds, fetchedMutuals) {
+    async function loadRetrospectiveData(userId, fetchSucceeded, oldMutualIds, fetchedMutuals, seq) {
+        if (!isCurrentMutualRequest(seq, userId)) {
+            return;
+        }
         isTargetOptedOut.value = false;
         optedOutDetectedAt.value = '';
         retrospectiveMutuals.value = [];
@@ -266,11 +288,15 @@
             return;
         }
         const metaMap = await database.getMutualGraphMeta();
+        if (!isCurrentMutualRequest(seq, userId)) {
+            return;
+        }
         const meta = metaMap?.get?.(userId);
         const sessionOptedOut = Boolean(
             userDialog.value.ref?.$mutualOptedOut || cachedUsers.get(userId)?.$mutualOptedOut
         );
-        if (meta?.optedOut || (!fetchSucceeded && sessionOptedOut)) {
+        if (!fetchSucceeded && (meta?.optedOut || sessionOptedOut)) {
+            hasMutualFetchFailed.value = false;
             // X 自己关闭了共同好友显示: 回溯其关闭前的共同好友名单
             isTargetOptedOut.value = true;
             // P2-13: 快照日期取 lastFetchedAt (最后一次成功抓取时间),
@@ -339,6 +365,7 @@
         isTargetOptedOut.value = false;
         retrospectiveMutuals.value = [];
         hiddenMutuals.value = [];
+        hasMutualFetchFailed.value = false;
         if (currentUser.value.hasSharedConnectionsOptOut) {
             return;
         }
@@ -376,11 +403,16 @@
                     return;
                 }
                 userDialog.value.isMutualFriendsLoading = false;
-                if (success && friendStore.friends.has(userId)) {
-                    // 只对当前好友落库: 陌生人的 mutual 图写进 DB 会让关系网图中
-                    // 其他好友的 DB 计数虚高(每个被看过的 stranger 多出一条 link)
-                    const mutualIds = userDialog.value.mutualFriends.map((u) => u.id);
-                    database.updateMutualsForFriend(userId, mutualIds);
+                hasMutualFetchFailed.value = false;
+                if (success) {
+                    // 本次成功抓取说明目标已恢复公开；只清 opt-out 标志，不推进快照时间。
+                    database.upsertMutualGraphMeta(userId, { optedOut: false });
+                    if (friendStore.friends.has(userId)) {
+                        // 只对当前好友落库: 陌生人的 mutual 图写进 DB 会让关系网图中
+                        // 其他好友的 DB 计数虚高(每个被看过的 stranger 多出一条 link)
+                        const mutualIds = userDialog.value.mutualFriends.map((u) => u.id);
+                        database.updateMutualsForFriend(userId, mutualIds);
+                    }
                 }
                 // P2-14: 403 (opted-out) 时把 meta 落库, 供下次直接识别;
                 // $mutualOptedOut 是 403 的可靠信号, 普通网络错误不会置位
@@ -388,6 +420,7 @@
                     const optedOut = Boolean(
                         userDialog.value.ref?.$mutualOptedOut || cachedUsers.get(userId)?.$mutualOptedOut
                     );
+                    hasMutualFetchFailed.value = !optedOut;
                     if (optedOut) {
                         database.upsertMutualGraphMeta(userId, {
                             optedOut: true,
@@ -396,7 +429,7 @@
                     }
                 }
                 // 回溯数据依赖抓取结果做 diff; 旧快照与本次抓取列表都作为参数传入
-                loadRetrospectiveData(userId, success, oldMutualIds, userDialog.value.mutualFriends);
+                loadRetrospectiveData(userId, success, oldMutualIds, userDialog.value.mutualFriends, seq);
             }
         });
     }

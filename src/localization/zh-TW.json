@@ -1539,7 +1539,8 @@
                 "opted_out_notice": "該用戶已關閉共同好友顯示",
                 "opted_out_snapshot_hint": "根據 {date} 的快照記錄，其當時的共同好友共 {count} 人（歷史推測資料）",
                 "opted_out_detected_hint": "檢測到關閉：{date}",
-                "hidden_mutuals_hint": "隱藏的共同好友（推測，據 {date} 快照）"
+                "hidden_mutuals_hint": "隱藏的共同好友（推測，據 {date} 快照）",
+                "fetch_failed_notice": "無法載入共同好友，請稍後重試。"
             },
             "activity": {
                 "header": "活動",

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
     getDatabaseSize: vi.fn(),
     isRunningFromSnapshot: vi.fn(),
     listSnapshots: vi.fn(),
+    pruneAutoSnapshots: vi.fn(),
     returnToMainDatabase: vi.fn(),
     restoreSnapshot: vi.fn(),
     confirm: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('../../services/database/backup', () => ({
         getDatabaseSize: mocks.getDatabaseSize,
         isRunningFromSnapshot: mocks.isRunningFromSnapshot,
         listSnapshots: mocks.listSnapshots,
+        pruneAutoSnapshots: mocks.pruneAutoSnapshots,
         returnToMainDatabase: mocks.returnToMainDatabase,
         restoreSnapshot: mocks.restoreSnapshot
     }
@@ -112,7 +114,7 @@ describe('useBackupStore', () => {
 
         await store.runAutoBackup();
 
-        expect(mocks.createSnapshot).toHaveBeenCalledWith('Auto Backup');
+        expect(mocks.createSnapshot).toHaveBeenCalledWith('Auto Backup', undefined, true);
     });
 
     test('automatic backup refuses to write snapshots of a huge database', async () => {
@@ -130,7 +132,7 @@ describe('useBackupStore', () => {
 
         await store.backupNow();
 
-        expect(mocks.createSnapshot).toHaveBeenCalledWith('Manual Backup');
+        expect(mocks.createSnapshot).toHaveBeenCalledWith('Manual Backup', undefined, false);
     });
 
     test('restore only moves the database pointer after confirmation', async () => {

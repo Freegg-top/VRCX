@@ -604,7 +604,11 @@ async function processGameLogEvent(json) {
     );
     if (gameLog.type === 'local-identity') {
         noteEventTime(gameLog.dt);
-        handleLocalIdentity(rawLogs[0], gameLog.dt, gameLog.displayName).catch(console.error);
+        // 身份回填(UPDATE 归属)必须排在队列里执行: 不排队的话它会和后续
+        // 同文件事件的 INSERT 并发, 之前 insert 的行可能错过回填窗口
+        enqueueGameLogTask(() =>
+            handleLocalIdentity(rawLogs[0], gameLog.dt, gameLog.displayName)
+        ).catch((err) => console.error('Failed to backfill local identity:', err));
         return;
     }
     noteEventTime(gameLog.dt);

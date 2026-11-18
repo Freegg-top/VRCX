@@ -122,10 +122,6 @@ const mutualGraph = {
         const friendTable = `${dbVars.userPrefix}_mutual_graph_friends`;
         const linkTable = `${dbVars.userPrefix}_mutual_graph_links`;
         const safeFriendId = friendId.replace(/'/g, "''");
-        await sqliteService.executeNonQuery(
-            `INSERT OR REPLACE INTO ${friendTable} (friend_id) VALUES ('${safeFriendId}')`
-        );
-        await sqliteService.executeNonQuery(`DELETE FROM ${linkTable} WHERE friend_id='${safeFriendId}'`);
         let edgeValues = '';
         for (const mutual of mutualIds) {
             if (!mutual) {
@@ -136,9 +132,24 @@ const mutualGraph = {
         }
         if (edgeValues) {
             edgeValues = edgeValues.slice(0, -1);
+        }
+        // 事务: DELETE 与 INSERT 原子化, 防止 DELETE 后崩溃留下空基线
+        // (空基线会被误判为全部解除好友)
+        await sqliteService.executeNonQuery('BEGIN');
+        try {
             await sqliteService.executeNonQuery(
-                `INSERT OR REPLACE INTO ${linkTable} (friend_id, mutual_id) VALUES ${edgeValues}`
+                `INSERT OR REPLACE INTO ${friendTable} (friend_id) VALUES ('${safeFriendId}')`
             );
+            await sqliteService.executeNonQuery(`DELETE FROM ${linkTable} WHERE friend_id='${safeFriendId}'`);
+            if (edgeValues) {
+                await sqliteService.executeNonQuery(
+                    `INSERT OR REPLACE INTO ${linkTable} (friend_id, mutual_id) VALUES ${edgeValues}`
+                );
+            }
+            await sqliteService.executeNonQuery('COMMIT');
+        } catch (err) {
+            await sqliteService.executeNonQuery('ROLLBACK');
+            throw err;
         }
     },
 
@@ -171,11 +182,22 @@ const mutualGraph = {
         if (!dbVars.userPrefix || !friendId) {
             return;
         }
+        const friendTable = `${dbVars.userPrefix}_mutual_graph_friends`;
         const linkTable = `${dbVars.userPrefix}_mutual_graph_links`;
         const metaTable = `${dbVars.userPrefix}_mutual_graph_meta`;
         const safeFriendId = friendId.replace(/'/g, "''");
-        await sqliteService.executeNonQuery(`DELETE FROM ${linkTable} WHERE friend_id='${safeFriendId}'`);
-        await sqliteService.executeNonQuery(`DELETE FROM ${metaTable} WHERE friend_id='${safeFriendId}'`);
+        // friend 行必须一并删除: 若只删 links, getMutualsForFriend 因 friend
+        // 行仍在而返回 [], 重加好友后被误当作旧基线, 批量假 FriendshipStart
+        await sqliteService.executeNonQuery('BEGIN');
+        try {
+            await sqliteService.executeNonQuery(`DELETE FROM ${linkTable} WHERE friend_id='${safeFriendId}'`);
+            await sqliteService.executeNonQuery(`DELETE FROM ${friendTable} WHERE friend_id='${safeFriendId}'`);
+            await sqliteService.executeNonQuery(`DELETE FROM ${metaTable} WHERE friend_id='${safeFriendId}'`);
+            await sqliteService.executeNonQuery('COMMIT');
+        } catch (err) {
+            await sqliteService.executeNonQuery('ROLLBACK');
+            throw err;
+        }
     },
 
     async getMutualCountForAllUsers() {
@@ -197,6 +219,8 @@ const mutualGraph = {
     /**
      * @param {string} friendId
      * @param {{ lastFetchedAt?: string; optedOut: boolean; optOutDetectedAt?: string|null }} meta
+     *   lastFetchedAt 不传/为 null 时: 新行写 NULL, 冲突保留旧值 —— 失败路径
+     *   (403/opt-out 恢复) 不推进真实最后成功抓取时间
      * @param {object} [options]
      * @param {boolean} [options.clearOptOutDetectedAt] 为 true 时把 opt_out_detected_at 置 NULL
      *   (恢复场景显式清空); 默认不传 optOutDetectedAt 时保留旧值 (COALESCE)
@@ -207,7 +231,7 @@ const mutualGraph = {
         }
         const metaTable = `${dbVars.userPrefix}_mutual_graph_meta`;
         const escapedId = friendId.replace(/'/g, "''");
-        const time = (lastFetchedAt || new Date().toISOString()).replace(/'/g, "''");
+        const time = lastFetchedAt ? `'${lastFetchedAt.replace(/'/g, "''")}'` : 'NULL';
         const optedOutInt = optedOut ? 1 : 0;
         // opt_out_detected_at 不传时保留旧值 (恢复/常规刷新不抹掉首次检测时间);
         // clearOptOutDetectedAt 时显式置 NULL
@@ -218,8 +242,8 @@ const mutualGraph = {
             ? 'NULL'
             : `COALESCE(excluded.opt_out_detected_at, ${metaTable}.opt_out_detected_at)`;
         await sqliteService.executeNonQuery(
-            `INSERT INTO ${metaTable} (friend_id, last_fetched_at, opted_out, opt_out_detected_at) VALUES ('${escapedId}', '${time}', ${optedOutInt}, ${detectedAt})
-             ON CONFLICT(friend_id) DO UPDATE SET last_fetched_at = excluded.last_fetched_at, opted_out = excluded.opted_out, opt_out_detected_at = ${detectedUpdate}`
+            `INSERT INTO ${metaTable} (friend_id, last_fetched_at, opted_out, opt_out_detected_at) VALUES ('${escapedId}', ${time}, ${optedOutInt}, ${detectedAt})
+             ON CONFLICT(friend_id) DO UPDATE SET last_fetched_at = COALESCE(excluded.last_fetched_at, ${metaTable}.last_fetched_at), opted_out = excluded.opted_out, opt_out_detected_at = ${detectedUpdate}`
         );
     },
 
@@ -244,9 +268,13 @@ const mutualGraph = {
         });
         if (values) {
             values = values.slice(0, -1);
+            // opted_out 从 1 -> 0 (恢复) 时清空 opt_out_detected_at, 与
+            // upsertMutualGraphMeta 的 clearOptOutDetectedAt 恢复语义一致;
+            // 保持 1 时不抹掉首次检测时间
             await sqliteService.executeNonQuery(
                 `INSERT INTO ${metaTable} (friend_id, last_fetched_at, opted_out) VALUES ${values}
-                 ON CONFLICT(friend_id) DO UPDATE SET last_fetched_at = excluded.last_fetched_at, opted_out = excluded.opted_out`
+                 ON CONFLICT(friend_id) DO UPDATE SET last_fetched_at = excluded.last_fetched_at, opted_out = excluded.opted_out,
+                 opt_out_detected_at = CASE WHEN excluded.opted_out = 0 THEN NULL ELSE ${metaTable}.opt_out_detected_at END`
             );
         }
     },

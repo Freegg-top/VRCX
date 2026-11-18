@@ -356,7 +356,7 @@ export function runDeleteFriendshipFlow(id, { nowIso = () => new Date().toJSON()
             userId: id,
             currentUserId: userStore.currentUser.id
         })
-        .then((args) => {
+        .then(async (args) => {
             if (args.params.currentUserId !== userStore.currentUser.id) {
                 // safety check for delayed response
                 return;
@@ -379,9 +379,10 @@ export function runDeleteFriendshipFlow(id, { nowIso = () => new Date().toJSON()
                 if (!appearanceSettingsStore.hideUnfriends) {
                     uiStore.notifyMenu('friend-log');
                 }
-                // 清掉被删好友的 DB 共同好友图(links+meta), 否则其他好友的 DB
-                // mutual 计数因残留 link 永久虚高
-                database.deleteMutualsForFriend(id);
+                // 清掉被删好友的 DB 共同好友图(friend+links+meta), 否则其他
+                // 好友的 DB mutual 计数因残留 link 永久虚高; friend 行一并删,
+                // 重加好友后 getMutualsForFriend 返回 null 走首抓保护
+                await database.deleteMutualsForFriend(id).catch(console.error);
                 // 全清 mutual 计数缓存: 被删好友是其他用户共同好友的来源之一,
                 // 下一轮列表刷新会按新好友关系重拉 API 值
                 invalidateMutualCounts();

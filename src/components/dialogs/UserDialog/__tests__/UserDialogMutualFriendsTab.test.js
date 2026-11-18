@@ -172,6 +172,11 @@ function mountComponent(overrides = {}) {
 describe('UserDialogMutualFriendsTab.vue', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        databaseMockHandlers.getMutualGraphMeta.mockReset().mockResolvedValue(new Map());
+        databaseMockHandlers.getMutualsForFriend.mockReset().mockResolvedValue(null);
+        databaseMockHandlers.updateMutualsForFriend.mockReset().mockResolvedValue(undefined);
+        databaseMockHandlers.upsertMutualGraphMeta.mockReset().mockResolvedValue(undefined);
+        processBulk.mockReset();
     });
 
     describe('rendering', () => {
@@ -385,21 +390,15 @@ describe('UserDialogMutualFriendsTab.vue', () => {
         });
 
         test('P1-3: ignores stale callbacks when user dialog switches target mid-flight', async () => {
-            // 第一个请求 (usr_target) 的 done 迟到, 期间用户已切到 usr_other:
-            // 迟到回调不得污染新界面 (isMutualFriendsLoading / mutualFriends / 回溯数据)
             let staleDone;
             processBulk.mockImplementation(({ done }) => {
                 staleDone = done;
-                return new Promise(() => {}); // 永远不 resolve, 模拟挂起的请求
+                return new Promise(() => {});
             });
             const wrapper = mountComponent({ mutualFriends: [] });
             wrapper.vm.getUserMutualFriends('usr_target');
-            await vi.waitFor(() => {
-                expect(processBulk).toHaveBeenCalledTimes(1);
-            });
+            await vi.waitFor(() => expect(processBulk).toHaveBeenCalledTimes(1));
 
-            // 切换用户: userDialog.id 变更, 并发起第二次请求
-            const { useUserStore } = await import('../../../../stores');
             const userStore = useUserStore();
             userStore.$patch({
                 userDialog: {
@@ -411,20 +410,101 @@ describe('UserDialogMutualFriendsTab.vue', () => {
                 }
             });
             processBulk.mockImplementation(({ done }) => {
-                if (typeof done === 'function') {
-                    done(true);
-                }
+                done(true);
                 return Promise.resolve();
             });
             wrapper.vm.getUserMutualFriends('usr_other');
-            await new Promise((r) => setTimeout(r, 0));
+            await new Promise((resolve) => setTimeout(resolve, 0));
 
-            // 迟到的旧回调触发: 不应改 loading 状态, 不应写回溯分区
             staleDone(true);
-            await new Promise((r) => setTimeout(r, 0));
+            await new Promise((resolve) => setTimeout(resolve, 0));
             await wrapper.vm.$nextTick();
             expect(wrapper.text()).not.toContain('opted_out_notice');
             expect(wrapper.text()).not.toContain('hidden_mutuals_hint');
+        });
+
+        test('P1-4: a successful fetch clears DB opt-out state without changing snapshot time', async () => {
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
+                new Map([
+                    [
+                        'usr_target',
+                        {
+                            lastFetchedAt: '2026-01-15T00:00:00.000Z',
+                            optedOut: true,
+                            optOutDetectedAt: '2026-01-16T00:00:00.000Z'
+                        }
+                    ]
+                ])
+            );
+            const wrapper = mountComponent({ mutualFriends: [] });
+
+            await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
+
+            expect(wrapper.text()).not.toContain('opted_out_notice');
+            expect(wrapper.text()).toContain('Charlie');
+            expect(databaseMockHandlers.upsertMutualGraphMeta).toHaveBeenCalledWith('usr_target', {
+                optedOut: false
+            });
+        });
+
+        test('P2-11: shows a normal error when fetching fails without opt-out evidence', async () => {
+            const wrapper = mountComponent({ mutualFriends: [] });
+
+            await runFetch(wrapper, false);
+
+            expect(wrapper.text()).toContain('dialog.user.mutual_friends.fetch_failed_notice');
+            expect(wrapper.text()).not.toContain('opted_out_notice');
+        });
+
+        test('P3: total count includes hidden mutuals', async () => {
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
+                new Map([['usr_4', { lastFetchedAt: null, optedOut: true }]])
+            );
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_1', 'usr_2', 'usr_3', 'usr_4']);
+            const wrapper = mountComponent({ mutualFriends: [] });
+
+            await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
+
+            expect(wrapper.text()).toContain('dialog.user.groups.total_count:{"count":4}');
+        });
+
+        test('P2-12: ignores retrospective metadata returned after the target changes', async () => {
+            let resolveStaleMeta;
+            databaseMockHandlers.getMutualGraphMeta
+                .mockImplementationOnce(() => new Promise((resolve) => (resolveStaleMeta = resolve)))
+                .mockResolvedValueOnce(new Map());
+            processBulk.mockImplementation(({ params, handle, done }) => {
+                if (params.userId === 'usr_other') {
+                    handle({ json: [...MOCK_MUTUAL_FRIENDS] });
+                    done(true);
+                } else {
+                    done(false);
+                }
+                return Promise.resolve();
+            });
+            const wrapper = mountComponent({ mutualFriends: [] });
+            wrapper.vm.getUserMutualFriends('usr_target');
+            await vi.waitFor(() => expect(resolveStaleMeta).toBeTypeOf('function'));
+
+            const userStore = useUserStore();
+            userStore.$patch({
+                userDialog: {
+                    id: 'usr_other',
+                    ref: { id: 'usr_other' },
+                    mutualFriends: [],
+                    mutualFriendSorting: userDialogMutualFriendSortingOptions.alphabetical,
+                    isMutualFriendsLoading: false
+                }
+            });
+            wrapper.vm.getUserMutualFriends('usr_other');
+            await vi.waitFor(() => expect(wrapper.text()).toContain('Charlie'));
+
+            resolveStaleMeta(new Map([['usr_target', { optedOut: true }]]));
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.text()).not.toContain('opted_out_notice');
+            expect(wrapper.text()).toContain('Charlie');
         });
     });
 });

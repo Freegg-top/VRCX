@@ -60,11 +60,11 @@ function selectMutualSyncBatch({
     }
     candidates.sort(compareByLastFetched);
     optOutRetry.sort(compareByLastFetched);
-    const batch = candidates.slice(0, batchSize);
-    if (batch.length < batchSize && optOutRetry.length > 0) {
-        batch.push(optOutRetry[0]);
-    }
-    return batch;
+    // 重试预留槽位: 正常候选满批时 opted-out 重试仍占 1 席,
+    // 不被最旧优先的正常候选饿死 (否则对方重新开放展示后永远无法恢复)
+    const retry = batchSize > 0 && optOutRetry.length > 0 ? [optOutRetry[0]] : [];
+    const regular = candidates.slice(0, Math.max(0, batchSize - retry.length));
+    return regular.concat(retry);
 }
 
 export { selectMutualSyncBatch, compareByLastFetched, DEFAULT_OPT_OUT_RETRY_MS };

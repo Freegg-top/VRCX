@@ -4,6 +4,23 @@ import sqliteService from '../sqlite.js';
 
 // 共同好友变化事件表 (FriendshipEnd / FriendshipStart / MutualOptOut)
 // 表名含用户前缀只能拼接; 值一律走 @param 绑定 (见 feed.js 现有用法)
+// 分页参数夹取范围: limit [0, 10000], offset >= 0
+// (10000 与表格大小上限 TABLE_MAX_SIZE_MAX 一致)
+const MAX_EVENT_LIMIT = 10000;
+
+/**
+ * 夹取 limit: 负数/NaN 夹到 0, Infinity/超大值夹到 MAX_EVENT_LIMIT
+ * @param {*} limit
+ * @returns {number}
+ */
+function sanitizeLimit(limit) {
+    const n = Number(limit);
+    if (Number.isNaN(n)) {
+        return 0;
+    }
+    return Math.min(Math.max(Math.floor(n), 0), MAX_EVENT_LIMIT);
+}
+
 const mutualEvents = {
     /**
      * @param {object} args
@@ -42,7 +59,9 @@ const mutualEvents = {
             return events;
         }
         const table = `${dbVars.userPrefix}_mutual_event_history`;
-        // LIMIT/OFFSET 仅数字, Number() 强转防注入
+        // LIMIT/OFFSET 仅数字, 夹取防注入与负数/Infinity/NaN 异常值
+        const safeLimit = sanitizeLimit(limit);
+        const safeOffset = Math.max(Math.floor(Number(offset) || 0), 0);
         await sqliteService.execute((dbRow) => {
             events.push({
                 id: dbRow[0],
@@ -51,7 +70,7 @@ const mutualEvents = {
                 friendIdA: dbRow[3],
                 friendIdB: dbRow[4]
             });
-        }, `SELECT id, created_at, event_type, friend_id_a, friend_id_b FROM ${table} ORDER BY created_at DESC LIMIT ${Number(limit) || 100} OFFSET ${Number(offset) || 0}`);
+        }, `SELECT id, created_at, event_type, friend_id_a, friend_id_b FROM ${table} ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`);
         return events;
     },
 
@@ -81,7 +100,8 @@ const mutualEvents = {
     },
 
     /**
-     * 同 (eventType, friendIdA, friendIdB) 在 sinceDate 之后是否已有事件
+     * 同 (eventType, friendIdA, friendIdB) 在 sinceDate 之后是否已有事件。
+     * (A,B) 对按双方任一顺序匹配 (历史行可能未规范化, 新行统一字典序存储)
      * @param {object} args
      * @param {string} args.eventType
      * @param {string} args.friendIdA
@@ -99,7 +119,7 @@ const mutualEvents = {
             if (dbRow[0] > 0) {
                 found = true;
             }
-        }, `SELECT COUNT(*) FROM ${table} WHERE event_type = @event_type AND friend_id_a = @friend_id_a AND friend_id_b = @friend_id_b AND created_at >= @since`, {
+        }, `SELECT COUNT(*) FROM ${table} WHERE event_type = @event_type AND created_at >= @since AND ((friend_id_a = @friend_id_a AND friend_id_b = @friend_id_b) OR (friend_id_a = @friend_id_b AND friend_id_b = @friend_id_a))`, {
             '@event_type': eventType,
             '@friend_id_a': friendIdA,
             '@friend_id_b': friendIdB,

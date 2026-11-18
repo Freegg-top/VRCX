@@ -903,8 +903,8 @@
                                 <div class="detail">
                                     <span class="extra">
                                         <span class="time">{{ formatDate(feed.created_at) }}</span>
-                                        <span class="name" v-text="feed.displayNameA"></span> and
-                                        <span class="name" v-text="feed.displayName"></span> are no longer friends
+                                        <span class="name" v-text="feed.displayNameA"></span>{{ t('view.feed.mutual_and')
+                                        }}<span class="name" v-text="feed.displayName"></span>{{ t('view.feed.mutual_friendship_end_predicate') }}
                                     </span>
                                 </div>
                             </div>
@@ -915,8 +915,8 @@
                                 <div class="detail">
                                     <span class="extra">
                                         <span class="time">{{ formatDate(feed.created_at) }}</span>
-                                        <span class="name" v-text="feed.displayNameA"></span> and
-                                        <span class="name" v-text="feed.displayName"></span> became friends
+                                        <span class="name" v-text="feed.displayNameA"></span>{{ t('view.feed.mutual_and')
+                                        }}<span class="name" v-text="feed.displayName"></span>{{ t('view.feed.mutual_friendship_start_predicate') }}
                                     </span>
                                 </div>
                             </div>
@@ -927,8 +927,7 @@
                                 <div class="detail">
                                     <span class="extra">
                                         <span class="time">{{ formatDate(feed.created_at) }}</span>
-                                        <span class="name" v-text="feed.displayNameA || feed.displayName"></span> turned
-                                        off mutual friends display
+                                        <span class="name" v-text="feed.displayNameA || feed.displayName"></span>{{ t('view.feed.mutual_opt_out_suffix') }}
                                     </span>
                                 </div>
                             </div>

@@ -1761,7 +1761,8 @@
                 "opted_out_notice": "This user has turned off mutual friends display",
                 "opted_out_snapshot_hint": "Based on the snapshot from {date}, they had {count} mutual friends then (historical estimate)",
                 "opted_out_detected_hint": "Opt-out detected: {date}",
-                "hidden_mutuals_hint": "Hidden mutual friends (estimated from the {date} snapshot)"
+                "hidden_mutuals_hint": "Hidden mutual friends (estimated from the {date} snapshot)",
+                "fetch_failed_notice": "Could not load mutual friends. Please try again."
             },
             "activity": {
                 "header": "Activity",

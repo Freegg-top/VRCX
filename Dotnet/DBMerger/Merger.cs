@@ -358,8 +358,12 @@ public partial class Merger(SQLiteConnection dbConn, string oldDBName, string ne
             // Skip friend log current for obvious reasons
             // Skip notes and mutual friends since they aren't time based
             // Skip activity tables, they're only used for cache data
+            // Skip friend group/fof snapshots and friend network tables since
+            // they aren't time based either (snapshot-style state data)
             if (table.EndsWith("_friend_log_current") || table.EndsWith("_notes") ||
                 table.EndsWith("_mutual_graph_friends") || table.EndsWith("_mutual_graph_links") || table.EndsWith("_mutual_graph_meta") ||
+                table.EndsWith("_friend_group_snapshot") || table.EndsWith("_friend_fof_snapshot") ||
+                table.EndsWith("_friend_network_user") || table.EndsWith("_friend_network_owner") ||
                 table.Contains("_activity_"))
             {
                 continue;

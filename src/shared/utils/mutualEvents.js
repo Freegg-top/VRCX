@@ -50,12 +50,15 @@ function computeMutualEvents({
     const nowTime = now instanceof Date ? now.getTime() : Date.parse(now);
     const todayKey = new Date(nowTime).toDateString();
 
+    // (A,B) 对的规范化键: 字典序, 双向事件 (A,B)/(B,A) 视为同一对
+    const pairKey = (a, b) => (a <= b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
+
     const isDuplicate = (eventType, friendIdA, friendIdB) => {
+        const key = pairKey(friendIdA, friendIdB);
         for (const event of recentEvents) {
             if (
                 event.eventType === eventType &&
-                event.friendIdA === friendIdA &&
-                event.friendIdB === friendIdB &&
+                pairKey(event.friendIdA, event.friendIdB) === key &&
                 new Date(event.createdAt).toDateString() === todayKey
             ) {
                 return true;
@@ -68,10 +71,14 @@ function computeMutualEvents({
         if (isDuplicate(eventType, friendIdA, friendIdB)) {
             return;
         }
+        // 事件字段按字典序规范化: UI 文案对 Start/End 对称, 规范化后
+        // 同一对关系的事件 (含 (B,A) 反序) 在批内/DB 去重时键一致。
+        // MutualOptOut 的 B=A 特例不经过此处。
+        const sortedPair = [friendIdA, friendIdB].sort();
         events.push({
             eventType,
-            friendIdA,
-            friendIdB,
+            friendIdA: sortedPair[0],
+            friendIdB: sortedPair[1],
             createdAt: new Date(nowTime).toISOString()
         });
     };

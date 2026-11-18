@@ -98,6 +98,13 @@ export const useSharedFeedStore = defineStore('SharedFeed', () => {
     const sharedFeedData = ref([]);
     const maxEntries = 25;
 
+    function resolveDisplayName(userId) {
+        if (!userId) {
+            return '';
+        }
+        return userStore.cachedUsers.get(userId)?.displayName || userId;
+    }
+
     async function loadSharedFeed() {
         let newFeed = [];
         const wristFilter = notificationsSettingsStore.sharedFeedFilters.wrist;
@@ -168,7 +175,7 @@ export const useSharedFeedStore = defineStore('SharedFeed', () => {
         if (mutualWristTypes.length) {
             const mutualEvents = await database.getMutualEvents({ limit: 200 });
             for (const event of mutualEvents) {
-                const row = mutualEventToFeedRow(event);
+                const row = mutualEventToFeedRow(event, resolveDisplayName);
                 if (!mutualWristTypes.includes(row.type)) {
                     continue;
                 }
@@ -216,8 +223,7 @@ export const useSharedFeedStore = defineStore('SharedFeed', () => {
     async function addEntry(data) {
         const ctx = { ...data };
         // P2-9: mutual 事件主语统一为 A (列表所有者), 与 mutualFeedRows.js 的行结构一致
-        const isMutualEvent =
-            ctx.type === 'MutualFriendshipEnd' || ctx.type === 'MutualFriendshipStart' || ctx.type === 'MutualOptOut';
+        const isMutualEvent = MUTUAL_FEED_TYPES.includes(ctx.type);
         if (isMutualEvent && ctx.friendIdA) {
             ctx.userId = ctx.friendIdA;
         }

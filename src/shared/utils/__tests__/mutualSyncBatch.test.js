@@ -86,6 +86,26 @@ describe('selectMutualSyncBatch', () => {
         expect(retryBatch[0].isOptOutRetry).toBe(true);
     });
 
+    test('正常候选 ≥ batchSize 时重试仍占预留槽位 (不饿死)', () => {
+        const metaMap = makeMetaMap({
+            a: { lastFetchedAt: OLD, optedOut: false },
+            b: { lastFetchedAt: OLD, optedOut: false },
+            c: { lastFetchedAt: OLD, optedOut: true, optOutDetectedAt: OLD }
+        });
+        const batch = selectMutualSyncBatch({
+            friendIds: ['a', 'b', 'c'],
+            metaMap,
+            now: NOW,
+            batchSize: 2
+        });
+        // 正常候选满批时 opt-out 重试仍进批, 否则对方重新开放展示后永远无法恢复
+        expect(batch).toHaveLength(2);
+        const retryItems = batch.filter((x) => x.isOptOutRetry);
+        expect(retryItems).toHaveLength(1);
+        expect(retryItems[0].friendId).toBe('c');
+        expect(batch[0].friendId).toBe('a');
+    });
+
     test('opted-out 检测时间缺失 -> 视为可重试', () => {
         const metaMap = makeMetaMap({
             a: { lastFetchedAt: null, optedOut: true, optOutDetectedAt: null }

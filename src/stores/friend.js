@@ -26,6 +26,7 @@ import { useGroupStore } from './group';
 import { useLocationStore } from './location';
 import { useUserStore } from './user';
 import { useDashboardStore } from './dashboard';
+import { useVrcxStore } from './vrcx';
 import { watchState } from '../services/watchState';
 
 import configRepository from '../services/config';
@@ -39,6 +40,7 @@ export const useFriendStore = defineStore('Friend', () => {
     const groupStore = useGroupStore();
     const locationStore = useLocationStore();
     const dashboardStore = useDashboardStore();
+    const vrcxStore = useVrcxStore();
 
     const router = useRouter();
 
@@ -947,7 +949,10 @@ export const useFriendStore = defineStore('Friend', () => {
         friendLogTable.value.loading = true;
         // 好友日志与共同好友事件独立查询后在 JS 层合并:
         // 避免向现有查询的 UNION/列结构里加 SELECT 造成列对齐回归
-        const [history, mutualEvents] = await Promise.all([database.getFriendLogHistory(), database.getMutualEvents()]);
+        const [history, mutualEvents] = await Promise.all([
+            database.getFriendLogHistory(),
+            database.getMutualEvents({ limit: vrcxStore.maxTableSize })
+        ]);
         friendLogTable.value.data = history.concat(mutualEvents.map(mutualEventToFeedRow));
         friendLogTable.value.loading = false;
     }

@@ -1,8 +1,10 @@
 import { ref, shallowRef, watch } from 'vue';
 import { defineStore } from 'pinia';
+import { useRouter } from 'vue-router';
 
 import { database } from '../services/database';
 import { MUTUAL_FEED_TYPES, mutualEventToFeedRow } from '../shared/utils/mutualFeedRows';
+import { useDashboardStore } from './dashboard';
 import { useFriendStore } from './friend';
 import { useUserStore } from './user';
 import { useVrcxStore } from './vrcx';
@@ -14,6 +16,8 @@ export const useFeedStore = defineStore('Feed', () => {
     const friendStore = useFriendStore();
     const userStore = useUserStore();
     const vrcxStore = useVrcxStore();
+    const dashboardStore = useDashboardStore();
+    const router = useRouter();
 
     const feedTableData = shallowRef([]);
     const feedTable = ref({
@@ -36,6 +40,19 @@ export const useFeedStore = defineStore('Feed', () => {
             }
         },
         { flush: 'sync' }
+    );
+
+    watch(
+        [router.currentRoute, () => dashboardStore.dashboards],
+        ([route]) => {
+            const isDashboardPanel =
+                route.name === 'dashboard' && dashboardStore.getDashboard(route.params.id, 'widget:feed');
+            if (route.name === 'feed' || isDashboardPanel) {
+                // mutual 事件由独立同步管线写入，重新进入可见页面时补齐历史。
+                feedTableLookup();
+            }
+        },
+        { deep: true }
     );
 
     watch(

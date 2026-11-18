@@ -186,12 +186,20 @@ export const useChartsStore = defineStore('Charts', () => {
             return { success: false, mutuals: [], optedOut: false };
         }
 
+        // 与另外两条路径互斥: 后台共同好友同步/手动全图抓取进行中时
+        // 不并发写边表 (与 fetchMutualGraph / runMutualSyncBatch 一致)
+        if (mutualSyncState.isRunning || mutualGraphStatus.isFetching) {
+            showInfoMessage(t('view.charts.mutual_friend.status.sync_running'), 'warning');
+            return { success: false, mutuals: [], optedOut: false };
+        }
+
         try {
             const mutuals = await fetchMutualFriendsForUser(friendId);
 
             const mutualIds = mutuals.map((entry) => normalizeIdentifier(entry?.id)).filter(isValidMutualIdentifier);
             await database.updateMutualsForFriend(friendId, mutualIds);
             await database.upsertMutualGraphMeta(friendId, {
+                lastFetchedAt: new Date().toISOString(),
                 optedOut: false
             });
 
@@ -199,8 +207,11 @@ export const useChartsStore = defineStore('Charts', () => {
         } catch (err) {
             const status = err?.status;
             if (status === 403 || status === 404) {
+                // 失败路径不传 lastFetchedAt (DB 层保留旧值);
+                // 记录检测时间供 opt-out 重试窗口使用
                 await database.upsertMutualGraphMeta(friendId, {
-                    optedOut: true
+                    optedOut: true,
+                    optOutDetectedAt: new Date().toISOString()
                 });
                 return { success: false, mutuals: [], optedOut: true };
             }

@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner';
 
 import { databaseBackup } from '../services/database/backup';
 import { formatFileSize } from '../shared/utils/base/format';
+import { AUTO_BACKUP_MAX_SNAPSHOTS } from '../shared/constants/settings';
 import { useModalStore } from './modal';
 
 import configRepository from '../services/config';
@@ -60,20 +61,37 @@ export const useBackupStore = defineStore('Backup', () => {
 
     /**
      * @param {string} name
+     * @param {boolean} [auto] P1-8: 标记为自动备份, 参与轮换
      * @returns {Promise<object | null>}
      */
-    async function createSnapshot(name) {
+    async function createSnapshot(name, auto = false) {
         if (busy.value) {
             return null;
         }
         busy.value = true;
         try {
-            const snapshot = await databaseBackup.createSnapshot(name);
+            const snapshot = await databaseBackup.createSnapshot(name, undefined, auto);
             /** @type {{ path: string; name: string; date: string; size: number; invalid?: boolean; sizeLabel?: string }} */
             const labeled = snapshot;
             labeled.sizeLabel = formatFileSize(snapshot.size);
-            await configRepository.setString('VRCX_backupLastDate', snapshot.date);
-            lastBackupDate.value = snapshot.date;
+            if (labeled.invalid) {
+                // P2-8: 校验失败的快照不更新 lastBackupDate; 无效文件尽力删除
+                // (当前 AppApi 没有 DeleteFile 绑定, 删不掉只告警), 记录移出清单
+                try {
+                    if (typeof AppApi !== 'undefined' && typeof AppApi.DeleteFile === 'function') {
+                        await AppApi.DeleteFile(labeled.path);
+                    } else {
+                        console.warn('[backup] no AppApi.DeleteFile binding, invalid snapshot file kept:', labeled.path);
+                    }
+                } catch (err) {
+                    console.warn('[backup] failed to delete invalid snapshot file:', err);
+                }
+                await databaseBackup.forgetSnapshot(labeled.path);
+            } else {
+                // P2-8: 仅校验通过才更新备份时间, 失败不刷 lastBackupDate
+                await configRepository.setString('VRCX_backupLastDate', snapshot.date);
+                lastBackupDate.value = snapshot.date;
+            }
             await refreshSnapshotList();
             if (labeled.invalid) {
                 toast.error(t('view.settings.advanced.database_backup.check_failed', { error: labeled.path }));
@@ -126,7 +144,14 @@ export const useBackupStore = defineStore('Backup', () => {
             console.warn('[backup] database too large for automatic backup, skipping');
             return;
         }
-        await createSnapshot('Auto Backup');
+        await createSnapshot('Auto Backup', true);
+        // P1-8: 自动备份保留最近 AUTO_BACKUP_MAX_SNAPSHOTS 份, 超出删最旧的
+        try {
+            await databaseBackup.pruneAutoSnapshots(AUTO_BACKUP_MAX_SNAPSHOTS);
+        } catch (err) {
+            console.warn('[backup] auto snapshot rotation failed:', err);
+        }
+        await refreshSnapshotList();
     }
 
     /**
@@ -157,7 +182,14 @@ export const useBackupStore = defineStore('Backup', () => {
                 if (!ok) {
                     return;
                 }
-                await databaseBackup.restoreSnapshot(snapshot.path);
+                // P1-7: 快照不存在/校验不过时 service 会抛错, toast 提示且不重启
+                try {
+                    await databaseBackup.restoreSnapshot(snapshot.path);
+                } catch (err) {
+                    console.error('[backup] restore failed:', err);
+                    toast.error(t('view.settings.advanced.database_backup.check_failed', { error: err?.message || err }));
+                    return;
+                }
                 await askRestart();
             })
             .catch((err) => console.error('[backup] restore cancelled:', err));
@@ -176,7 +208,14 @@ export const useBackupStore = defineStore('Backup', () => {
                 if (!ok) {
                     return;
                 }
-                await databaseBackup.returnToMainDatabase();
+                // P1-6: 主库路径标记缺失时 service 拒绝切换并抛错, 不再静默把指针抹空
+                try {
+                    await databaseBackup.returnToMainDatabase();
+                } catch (err) {
+                    console.error('[backup] return to main database failed:', err);
+                    toast.error(t('view.settings.advanced.database_backup.check_failed', { error: err?.message || err }));
+                    return;
+                }
                 await askRestart();
             })
             .catch((err) => console.error('[backup] return cancelled:', err));

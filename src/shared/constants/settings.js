@@ -58,6 +58,12 @@ const DEFAULT_SEARCH_LIMIT = 50000;
 // configRepository 存储 key 与常量名同名 ('mutualSyncIntervalMinutes')
 const DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES = 30;
 
+// 自动备份(区别于手动)保留的最近快照份数, 超出删最旧的自动快照
+const AUTO_BACKUP_MAX_SNAPSHOTS = 6;
+
+// _feed_group 动态保留期(天), 对齐 mutual 事件清理策略
+const FEED_GROUP_RETENTION_DAYS = 180;
+
 export {
     VRChatScreenshotResolutions,
     VRChatCameraResolutions,
@@ -68,5 +74,7 @@ export {
     SEARCH_LIMIT_MAX,
     DEFAULT_MAX_TABLE_SIZE,
     DEFAULT_SEARCH_LIMIT,
-    DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES
+    DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES,
+    AUTO_BACKUP_MAX_SNAPSHOTS,
+    FEED_GROUP_RETENTION_DAYS
 };
