@@ -13,19 +13,41 @@ import {
     timeToText
 } from '../../shared/utils';
 import { i18n } from '../../plugins/i18n';
-import { useGalleryStore, useFriendStore } from '../../stores';
+import { useGalleryStore, useFriendStore, useUserStore } from '../../stores';
 import { showUserDialog } from '../../coordinators/userCoordinator';
 import { showGroupDialog } from '../../coordinators/groupCoordinator';
 import UserContextMenu from '../../components/UserContextMenu.vue';
 
 const { t } = i18n.global;
 let friendStore;
+let userStore;
 
 const getFriendStore = () => {
     if (!friendStore) {
         friendStore = useFriendStore();
     }
     return friendStore;
+};
+
+const getUserStore = () => {
+    if (!userStore) {
+        userStore = useUserStore();
+    }
+    return userStore;
+};
+
+const MUTUAL_TYPES = new Set(['MutualFriendshipEnd', 'MutualFriendshipStart', 'MutualOptOut']);
+
+/**
+ * 按 userId 从 cachedUsers 解析显示名, 无缓存时回退为 id
+ * @param {string} userId
+ * @returns {string}
+ */
+const resolveDisplayName = (userId) => {
+    if (!userId) {
+        return '';
+    }
+    return getUserStore().cachedUsers.get(userId)?.displayName ?? userId;
 };
 
 const expandedRow = ({ row }) => {
@@ -262,6 +284,23 @@ export const columns = [
         meta: { label: () => t('table.feed.user') },
         cell: ({ row }) => {
             const original = row.original;
+            // mutual 事件: 主语是 A(列表所有者), 显示名从 cachedUsers 解析
+            if (MUTUAL_TYPES.has(original.type)) {
+                const idA = original.friendIdA || original.userId;
+                const nameA = resolveDisplayName(idA);
+                const friend = getFriendStore().friends.get(idA);
+                return (
+                    <UserContextMenu
+                        userId={idA}
+                        state={friend?.state ?? ''}
+                        location={friend?.ref?.location ?? ''}
+                    >
+                        <span class="cursor-pointer pr-2.5" onClick={() => showUserDialog(idA)}>
+                            {nameA}
+                        </span>
+                    </UserContextMenu>
+                );
+            }
             const friend = getFriendStore().friends.get(original.userId);
             return (
                 <UserContextMenu
@@ -379,6 +418,36 @@ export const columns = [
                         ) : (
                             <span>{original.groupName}</span>
                         )}
+                    </span>
+                );
+            }
+
+            if (MUTUAL_TYPES.has(type)) {
+                // 共同好友事件: detail 列展示 "与 B 不再是好友" 等, B 可点击
+                // (MutualOptOut 的 B 可能为空或与 A 相同, 只展示后缀)
+                const showB = type !== 'MutualOptOut' && !!original.friendIdB && original.friendIdB !== original.friendIdA;
+                const predicateKey =
+                    type === 'MutualFriendshipEnd'
+                        ? 'view.feed.mutual_friendship_end_predicate'
+                        : type === 'MutualFriendshipStart'
+                          ? 'view.feed.mutual_friendship_start_predicate'
+                          : 'view.feed.mutual_opt_out_suffix';
+                return (
+                    <span class="block w-full min-w-0 truncate">
+                        {showB ? (
+                            <>
+                                <span class="text-muted-foreground">{t('view.feed.mutual_and')}</span>
+                                <span
+                                    class="cursor-pointer hover:underline"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        showUserDialog(original.friendIdB);
+                                    }}>
+                                    {resolveDisplayName(original.friendIdB)}
+                                </span>
+                            </>
+                        ) : null}
+                        <span class="text-muted-foreground">{t(predicateKey)}</span>
                     </span>
                 );
             }

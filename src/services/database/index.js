@@ -11,6 +11,7 @@ import { gameLog } from './gameLog.js';
 import { memos } from './memos.js';
 import { moderation } from './moderation.js';
 import { mutualGraph } from './mutualGraph.js';
+import { mutualEvents } from './mutualEvents.js';
 import { notifications } from './notifications.js';
 import { tableAlter } from './tableAlter.js';
 import { tableFixes } from './tableFixes.js';
@@ -51,6 +52,7 @@ const database = {
     ...tableFixes,
     ...tableSize,
     ...mutualGraph,
+    ...mutualEvents,
     ...friendNetwork,
     ...friendGroups,
     ...watchedUsers,
@@ -166,6 +168,32 @@ const database = {
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)`
+        );
+        // 老库加列: 记录 opted-out 首次检测时间 (SQLite 无 IF NOT EXISTS, try/catch 判重)
+        try {
+            await sqliteService.executeNonQuery(
+                `ALTER TABLE ${dbVars.userPrefix}_mutual_graph_meta ADD COLUMN opt_out_detected_at TEXT`
+            );
+        } catch (e) {
+            const msg = e?.message || e?.toString?.() || '';
+            if (msg.indexOf('duplicate column name') === -1) {
+                console.error('[db] mutual_graph_meta opt_out_detected_at alter failed:', e);
+            }
+        }
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_mutual_event_history (
+                id INTEGER PRIMARY KEY,
+                created_at TEXT,
+                event_type TEXT,
+                friend_id_a TEXT,
+                friend_id_b TEXT
+            )`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE INDEX IF NOT EXISTS ${dbVars.userPrefix}_mutual_event_history_created_idx ON ${dbVars.userPrefix}_mutual_event_history (created_at)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE INDEX IF NOT EXISTS ${dbVars.userPrefix}_mutual_event_history_dedup_idx ON ${dbVars.userPrefix}_mutual_event_history (event_type, friend_id_a, friend_id_b, created_at)`
         );
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_friend_network_user (user_id TEXT PRIMARY KEY, mutual_ids TEXT NOT NULL DEFAULT '[]', last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)`

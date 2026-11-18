@@ -41,16 +41,23 @@ vi.mock('vue-router', async (importOriginal) => {
     };
 });
 vi.mock('../../../../plugins/interopApi', () => ({ initInteropApi: vi.fn() }));
+
+// 可配置的 database mock: 默认所有方法 resolve null, 测试中可覆盖单个方法
+// (vi.hoisted: mock 工厂会被提升到文件顶部, 变量需随之提升)
+const databaseMockHandlers = vi.hoisted(() => ({
+    getMutualGraphMeta: vi.fn().mockResolvedValue(new Map()),
+    getMutualsForFriend: vi.fn().mockResolvedValue(null),
+    updateMutualsForFriend: vi.fn().mockResolvedValue(undefined),
+    upsertMutualGraphMeta: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock('../../../../services/database', () => ({
-    database: new Proxy(
-        {},
-        {
-            get: (_target, prop) => {
-                if (prop === '__esModule') return false;
-                return vi.fn().mockResolvedValue(null);
-            }
+    database: new Proxy(databaseMockHandlers, {
+        get: (target, prop) => {
+            if (prop === '__esModule') return false;
+            if (prop in target) return target[prop];
+            return vi.fn().mockResolvedValue(null);
         }
-    )
+    })
 }));
 vi.mock('../../../../services/config', () => ({
     default: {
@@ -84,6 +91,8 @@ vi.mock('../../../../services/request', () => ({
     failedGetRequests: new Map()
 }));
 
+import { processBulk } from '../../../../services/request';
+
 import * as userCoordinatorModule from '../../../../coordinators/userCoordinator';
 vi.mock('../../../../coordinators/userCoordinator', async (importOriginal) => {
     const actual = await importOriginal();
@@ -91,7 +100,7 @@ vi.mock('../../../../coordinators/userCoordinator', async (importOriginal) => {
 });
 
 import UserDialogMutualFriendsTab from '../UserDialogMutualFriendsTab.vue';
-import { useUserStore } from '../../../../stores';
+import { useFriendStore, useUserStore } from '../../../../stores';
 import { userDialogMutualFriendSortingOptions } from '../../../../shared/constants';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -141,6 +150,12 @@ function mountComponent(overrides = {}) {
             ...overrides.currentUser
         }
     });
+
+    // done(success) 分支只对当前好友落库: 把 usr_target 标为好友,
+    // 使 P1-2 时序断言里的 updateMutualsForFriend 路径可达
+    // (friends 是 reactive Map, 不能 $patch 替换, 直接 set)
+    const friendStore = useFriendStore(pinia);
+    friendStore.friends.set('usr_target', { id: 'usr_target' });
 
     return mount(UserDialogMutualFriendsTab, {
         global: {
@@ -240,6 +255,176 @@ describe('UserDialogMutualFriendsTab.vue', () => {
             const firstItem = wrapper.findAll('li')[0];
             await firstItem.trigger('click');
             expect(showUserDialogSpy).toHaveBeenCalledWith('usr_1');
+        });
+    });
+
+    describe('retrospective mutuals (opted-out target)', () => {
+        /**
+         * 模拟抓取流程: 触发 getUserMutualFriends 并让 processBulk 立即回调 handle/done
+         * @param {boolean} success
+         * @param {ReturnType<typeof mount>} wrapper
+         * @param {Array} fetched 抓取返回的 mutual 列表 (success 时经 handle 回填)
+         */
+        async function runFetch(wrapper, success, fetched = []) {
+            processBulk.mockImplementation(({ handle, done }) => {
+                if (success && typeof handle === 'function') {
+                    handle({ json: fetched });
+                }
+                if (typeof done === 'function') {
+                    done(success);
+                }
+                return Promise.resolve();
+            });
+            wrapper.vm.getUserMutualFriends('usr_target');
+            // processBulk done -> loadRetrospectiveData 中有两个 await, 多刷几个微任务
+            await vi.waitFor(() => {
+                expect(processBulk).toHaveBeenCalled();
+            });
+            await new Promise((r) => setTimeout(r, 0));
+            await wrapper.vm.$nextTick();
+            await new Promise((r) => setTimeout(r, 0));
+            await wrapper.vm.$nextTick();
+        }
+
+        test('shows retrospective list when target opted out (DB meta)', async () => {
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
+                new Map([['usr_target', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-01-15T00:00:00.000Z' }]])
+            );
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_1', 'usr_2']);
+            const wrapper = mountComponent({ mutualFriends: [] });
+            await runFetch(wrapper, false);
+            const text = wrapper.text();
+            expect(text).toContain('dialog.user.mutual_friends.opted_out_notice');
+            expect(text).toContain('opted_out_snapshot_hint');
+            // 回溯名单渲染了快照中的两个用户 (无 cachedUsers 时回退为 id)
+            expect(text).toContain('usr_1');
+            expect(text).toContain('usr_2');
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(new Map());
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(null);
+        });
+
+        test('hides retrospective list and shows normal list when target is not opted out', async () => {
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(new Map());
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_1', 'usr_2']);
+            const wrapper = mountComponent({ mutualFriends: [] });
+            await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
+            const text = wrapper.text();
+            expect(text).not.toContain('opted_out_notice');
+            expect(text).not.toContain('hidden_mutuals_hint');
+            expect(text).toContain('Charlie');
+        });
+
+        test('renders hidden mutuals section for members that vanished and opted out', async () => {
+            // 旧快照含 usr_1..usr_4; 新抓取只剩 usr_1..usr_3; usr_4 optedOut -> Hidden Mutual
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
+                new Map([['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]])
+            );
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_1', 'usr_2', 'usr_3', 'usr_4']);
+            const wrapper = mountComponent({ mutualFriends: [] });
+            await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
+            const text = wrapper.text();
+            expect(text).toContain('dialog.user.mutual_friends.hidden_mutuals_hint');
+            expect(text).toContain('usr_4');
+            // usr_1 不是 hidden, 只在主列表出现
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(new Map());
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(null);
+        });
+
+        test('does not render hidden mutuals for members that vanished without opting out', async () => {
+            // usr_4 消失但未 optedOut (可能真的解除了好友关系) -> 不应出现在 hidden 区
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(new Map());
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_1', 'usr_2', 'usr_3', 'usr_4']);
+            const wrapper = mountComponent({ mutualFriends: [] });
+            await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
+            expect(wrapper.text()).not.toContain('hidden_mutuals_hint');
+        });
+
+        test('P1-2: reads old snapshot before updateMutualsForFriend overwrites it', async () => {
+            // 时序断言: getMutualsForFriend 必须在 updateMutualsForFriend 之前被调,
+            // 否则 Hidden Mutual diff 读到的永远是覆盖后的新数据
+            const callOrder = [];
+            databaseMockHandlers.getMutualsForFriend.mockImplementation(async () => {
+                callOrder.push('getMutualsForFriend');
+                return ['usr_1', 'usr_2', 'usr_3', 'usr_4'];
+            });
+            databaseMockHandlers.updateMutualsForFriend.mockImplementation(async () => {
+                callOrder.push('updateMutualsForFriend');
+            });
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
+                new Map([['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]])
+            );
+            const wrapper = mountComponent({ mutualFriends: [] });
+            await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
+            expect(callOrder).toEqual(['getMutualsForFriend', 'updateMutualsForFriend']);
+            // 渲染的是差集: usr_4 在旧快照但不在新抓取 -> hidden
+            expect(wrapper.text()).toContain('usr_4');
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(new Map());
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(null);
+        });
+
+        test('P1-2: hidden diff uses pre-write snapshot even when update overwrites DB', async () => {
+            // 用内存 Map 模拟真实覆盖写: 若组件在写库后才读快照, 差集必然为空
+            const db = new Map([['usr_target', ['usr_1', 'usr_2', 'usr_3', 'usr_4']]]);
+            databaseMockHandlers.getMutualsForFriend.mockImplementation(async (id) => db.get(id) ?? null);
+            databaseMockHandlers.updateMutualsForFriend.mockImplementation(async (id, ids) => {
+                db.set(id, ids);
+            });
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
+                new Map([['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]])
+            );
+            const wrapper = mountComponent({ mutualFriends: [] });
+            await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
+            // DB 已被覆盖为新列表 (内容等价于 usr_1..usr_3, 顺序按 alphabetical 排序),
+            // 但 hidden 区仍应展示 usr_4
+            expect([...db.get('usr_target')].sort()).toEqual(['usr_1', 'usr_2', 'usr_3']);
+            expect(wrapper.text()).toContain('hidden_mutuals_hint');
+            expect(wrapper.text()).toContain('usr_4');
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(new Map());
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(null);
+            databaseMockHandlers.updateMutualsForFriend.mockResolvedValue(undefined);
+        });
+
+        test('P1-3: ignores stale callbacks when user dialog switches target mid-flight', async () => {
+            // 第一个请求 (usr_target) 的 done 迟到, 期间用户已切到 usr_other:
+            // 迟到回调不得污染新界面 (isMutualFriendsLoading / mutualFriends / 回溯数据)
+            let staleDone;
+            processBulk.mockImplementation(({ done }) => {
+                staleDone = done;
+                return new Promise(() => {}); // 永远不 resolve, 模拟挂起的请求
+            });
+            const wrapper = mountComponent({ mutualFriends: [] });
+            wrapper.vm.getUserMutualFriends('usr_target');
+            await vi.waitFor(() => {
+                expect(processBulk).toHaveBeenCalledTimes(1);
+            });
+
+            // 切换用户: userDialog.id 变更, 并发起第二次请求
+            const { useUserStore } = await import('../../../../stores');
+            const userStore = useUserStore();
+            userStore.$patch({
+                userDialog: {
+                    id: 'usr_other',
+                    ref: { id: 'usr_other' },
+                    mutualFriends: [],
+                    mutualFriendSorting: userDialogMutualFriendSortingOptions.alphabetical,
+                    isMutualFriendsLoading: false
+                }
+            });
+            processBulk.mockImplementation(({ done }) => {
+                if (typeof done === 'function') {
+                    done(true);
+                }
+                return Promise.resolve();
+            });
+            wrapper.vm.getUserMutualFriends('usr_other');
+            await new Promise((r) => setTimeout(r, 0));
+
+            // 迟到的旧回调触发: 不应改 loading 状态, 不应写回溯分区
+            staleDone(true);
+            await new Promise((r) => setTimeout(r, 0));
+            await wrapper.vm.$nextTick();
+            expect(wrapper.text()).not.toContain('opted_out_notice');
+            expect(wrapper.text()).not.toContain('hidden_mutuals_hint');
         });
     });
 });

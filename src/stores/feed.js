@@ -2,7 +2,9 @@ import { ref, shallowRef, watch } from 'vue';
 import { defineStore } from 'pinia';
 
 import { database } from '../services/database';
+import { MUTUAL_FEED_TYPES, mutualEventToFeedRow } from '../shared/utils/mutualFeedRows';
 import { useFriendStore } from './friend';
+import { useUserStore } from './user';
 import { useVrcxStore } from './vrcx';
 import { watchState } from '../services/watchState';
 
@@ -10,6 +12,7 @@ import configRepository from '../services/config';
 
 export const useFeedStore = defineStore('Feed', () => {
     const friendStore = useFriendStore();
+    const userStore = useUserStore();
     const vrcxStore = useVrcxStore();
 
     const feedTableData = shallowRef([]);
@@ -129,6 +132,15 @@ export const useFeedStore = defineStore('Feed', () => {
                     return true;
                 }
                 return false;
+            case 'MutualFriendshipEnd':
+            case 'MutualFriendshipStart':
+            case 'MutualOptOut': {
+                // mutual 事件无 displayName 字段, 按解析后的双方显示名匹配
+                const resolveName = (id) => (id ? (userStore.cachedUsers.get(id)?.displayName ?? id) : '');
+                const nameA = String(resolveName(row.friendIdA || row.userId)).toUpperCase();
+                const nameB = String(resolveName(row.friendIdB)).toUpperCase();
+                return nameA.includes(value) || nameB.includes(value);
+            }
         }
         return true;
     }
@@ -145,25 +157,56 @@ export const useFeedStore = defineStore('Feed', () => {
             if (feedTable.value.vip) {
                 vipList = Array.from(friendStore.localFavoriteFriends.values());
             }
+            const vipSet = feedTable.value.vip ? new Set(vipList) : null;
             const search = feedTable.value.search.trim();
             const { dateFrom, dateTo } = feedTable.value;
+            const filter = feedTable.value.filter;
+            const includeMutual = filter.length === 0 || MUTUAL_FEED_TYPES.some((t) => filter.includes(t));
             const rows =
                 search || dateFrom || dateTo
                     ? await database.searchFeedDatabase(
                           search,
-                          feedTable.value.filter,
+                          filter,
                           vipList,
                           vrcxStore.searchLimit,
                           dateFrom,
                           dateTo
                       )
-                    : await database.lookupFeedDatabase(feedTable.value.filter, vipList);
+                    : await database.lookupFeedDatabase(filter, vipList);
+            let merged = rows;
+            if (includeMutual) {
+                // 共同好友事件独立查询后 JS 层合并: 不动现有 UNION 查询的列结构
+                const mutualEvents = await database.getMutualEvents({ limit: vrcxStore.maxTableSize });
+                merged = merged.concat(
+                    mutualEvents.map(mutualEventToFeedRow).filter((row) => {
+                        if (filter.length > 0 && !filter.includes(row.type)) {
+                            return false;
+                        }
+                        // P2-7: mutual 行与其他行一致, 应用 VIP 过滤与搜索过滤
+                        if (vipSet && !vipSet.has(row.userId)) {
+                            return false;
+                        }
+                        if (!feedSearch(row)) {
+                            return false;
+                        }
+                        if (dateFrom && row.created_at < dateFrom) {
+                            return false;
+                        }
+                        if (dateTo && row.created_at > dateTo) {
+                            return false;
+                        }
+                        return true;
+                    })
+                );
+                merged.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+            }
+            // P2-8: 校验移到最终赋值之前 (getMutualEvents 之后重新比较一次)
             if (lookupSeq !== feedLookupSeq) {
                 // 已有更新的查询完成: 丢弃本次过期结果 (防止先发后至覆盖新数据)
                 return;
             }
             feedTableData.value = [];
-            feedTableData.value = [...feedTableData.value, ...rows];
+            feedTableData.value = [...feedTableData.value, ...merged];
         } finally {
             if (lookupSeq === feedLookupSeq) {
                 feedTable.value.loading = false;

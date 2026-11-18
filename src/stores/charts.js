@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router';
 
 import { createRateLimiter, executeWithBackoff } from '../shared/utils';
 import { database } from '../services/database';
+import { mutualSyncState } from '../services/mutualSyncState';
 import { useFriendStore } from './friend';
 import { useUserStore } from './user';
 import { userRequest } from '../api';
@@ -121,17 +122,25 @@ export const useChartsStore = defineStore('Charts', () => {
      * @param {object} [options]
      * @param {{ wait(): Promise<void> }} [options.rateLimiter]
      * @param {() => boolean} [options.isCancelled]
-     * @returns {Promise<Array>} Collected mutual friend entries
+     * @returns {Promise<Array|null>} 完整抓取返回条目数组;
+     *   被取消时返回 null (半截数据不落库, 调用方按抓取失败/取消处理)
      */
     async function fetchMutualFriendsForUser(userId, options = {}) {
         const { rateLimiter, isCancelled = () => false } = options;
         const collected = [];
+        let cancelled = false;
         let offset = 0;
 
         while (true) {
-            if (isCancelled()) break;
+            if (isCancelled()) {
+                cancelled = true;
+                break;
+            }
             if (rateLimiter) await rateLimiter.wait();
-            if (isCancelled()) break;
+            if (isCancelled()) {
+                cancelled = true;
+                break;
+            }
 
             const args = await executeWithBackoff(
                 () => {
@@ -152,7 +161,10 @@ export const useChartsStore = defineStore('Charts', () => {
                 throw err;
             });
 
-            if (!args || isCancelled()) break;
+            if (!args || isCancelled()) {
+                cancelled = true;
+                break;
+            }
 
             collected.push(...args.json.filter((entry) => isValidMutualIdentifier(entry?.id)));
 
@@ -160,7 +172,7 @@ export const useChartsStore = defineStore('Charts', () => {
             offset += args.json.length;
         }
 
-        return collected;
+        return cancelled ? null : collected;
     }
 
     /**
@@ -199,6 +211,12 @@ export const useChartsStore = defineStore('Charts', () => {
 
     async function fetchMutualGraph() {
         if (mutualGraphStatus.isFetching || isOptOut.value) return null;
+
+        if (mutualSyncState.isRunning) {
+            // 后台共同好友同步进行中, 与全图抓取互斥, 稍后再试
+            showInfoMessage(t('view.charts.mutual_friend.status.sync_running'), 'warning');
+            return null;
+        }
 
         if (!friendCount.value) {
             showInfoMessage(t('view.charts.mutual_friend.status.no_friends_to_process'), 'info');
@@ -240,12 +258,25 @@ export const useChartsStore = defineStore('Charts', () => {
                         rateLimiter,
                         isCancelled
                     });
+                    if (mutuals === null) {
+                        // 被取消导致半截数据: 该好友按抓取失败处理, 不落库
+                        if (isCancelled()) {
+                            cancelled = true;
+                            break;
+                        }
+                        continue;
+                    }
                     if (isCancelled()) {
                         cancelled = true;
                         break;
                     }
                     mutualMap.set(friend.id, { friend, mutuals });
-                    metaEntries.set(friend.id, { optedOut: false });
+                    // 记录真实抓取完成时刻, 结束时带各自时间写 meta,
+                    // 避免 freshness 误判为整个全图抓取的结束时间
+                    metaEntries.set(friend.id, {
+                        optedOut: false,
+                        lastFetchedAt: new Date().toISOString()
+                    });
                 } catch (err) {
                     if ((err?.message || '') === 'cancelled' || isCancelled()) {
                         cancelled = true;
@@ -321,6 +352,7 @@ export const useChartsStore = defineStore('Charts', () => {
         markMutualGraphLoaded,
         requestMutualGraphCancel,
         fetchMutualGraph,
-        fetchSingleFriendMutuals
+        fetchSingleFriendMutuals,
+        fetchMutualFriendsForUser
     };
 });

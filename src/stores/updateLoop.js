@@ -10,6 +10,7 @@ import { runRefreshPlayerModerationsFlow } from '../coordinators/moderationCoord
 import { refreshWatchedUsers } from '../coordinators/watchedCoordinator';
 import { runGroupChangePoll } from '../coordinators/groupChangeCoordinator';
 import { refreshOwnerCandidates } from '../coordinators/friendNetworkCoordinator';
+import { runMutualSyncBatch, getMutualSyncIntervalMinutes } from '../coordinators/mutualSyncCoordinator';
 import { clearVRCXCache } from '../coordinators/vrcxCoordinator';
 import { useAuthStore } from './auth';
 import { useBackupStore } from './backup';
@@ -52,7 +53,8 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
         nextOwnerRefresh: 1800,
         nextDatabaseOptimize: 3600,
         nextDatabaseBackup: 86400,
-        nextBundleCheck: 60
+        nextBundleCheck: 60,
+        nextMutualSync: 300
     };
 
     watch(
@@ -63,6 +65,7 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
             state.nextGroupInstanceRefresh = 0;
             state.nextOwnerRefresh = 1800;
             state.nextBundleCheck = 60;
+            state.nextMutualSync = 300;
         },
         { flush: 'sync' }
     );
@@ -153,6 +156,22 @@ export const useUpdateLoopStore = defineStore('UpdateLoop', () => {
                 if (--state.nextOwnerRefresh <= 0) {
                     state.nextOwnerRefresh = 1800; // 30min
                     refreshOwnerCandidates().catch(console.error);
+                }
+                if (--state.nextMutualSync <= 0) {
+                    // 共同好友变化检测: 默认 30min, 0 = 关闭; 设置变更下个周期生效。
+                    // 先同步置正数, 防止读取设置的 await 期间重复触发, 读到后再校正
+                    state.nextMutualSync = 300;
+                    getMutualSyncIntervalMinutes()
+                        .then((intervalMinutes) => {
+                            state.nextMutualSync =
+                                intervalMinutes > 0 ? intervalMinutes * 60 : 60;
+                            if (intervalMinutes > 0) {
+                                runMutualSyncBatch().catch(console.error);
+                            }
+                        })
+                        .catch(() => {
+                            state.nextMutualSync = 300;
+                        });
                 }
                 if (--state.nextDatabaseOptimize <= 0) {
                     state.nextDatabaseOptimize = 86400; // 1 day

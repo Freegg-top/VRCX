@@ -288,13 +288,20 @@
                 "Status": "Status",
                 "Avatar": "Avatar",
                 "Bio": "Bio",
-                "GroupChange": "Group changes"
+                "GroupChange": "Group changes",
+                "MutualFriendshipEnd": "Mutual unfriend",
+                "MutualFriendshipStart": "Mutual friendship",
+                "MutualOptOut": "Mutual opt-out"
             },
             "photon_event_logging": "Photon Event Logging",
             "watched_users": "Watched",
             "watched_users_tooltip": "Watched non-friend players",
             "group_change_joined": "Joined group",
-            "group_change_left": "Left group"
+            "group_change_left": "Left group",
+            "mutual_and": " and ",
+            "mutual_friendship_end_predicate": " are no longer friends",
+            "mutual_friendship_start_predicate": " became friends",
+            "mutual_opt_out_suffix": " turned off mutual friends display"
         },
         "friends_locations": {
             "online": "Online",
@@ -455,8 +462,15 @@
                 "FriendRequest": "Friend request",
                 "CancelFriendRequest": "Cancel friend request",
                 "DisplayName": "Display name",
-                "TrustLevel": "Trust level"
-            }
+                "TrustLevel": "Trust level",
+                "MutualFriendshipEnd": "Mutual unfriend",
+                "MutualFriendshipStart": "Mutual friendship",
+                "MutualOptOut": "Mutual opt-out"
+            },
+            "mutual_and": " and ",
+            "mutual_friendship_end_predicate": " are no longer friends",
+            "mutual_friendship_start_predicate": " became friends",
+            "mutual_opt_out_suffix": " turned off mutual friends display"
         },
         "moderation": {
             "filter_placeholder": "Filter",
@@ -603,6 +617,7 @@
                 },
                 "status": {
                     "no_friends_to_process": "You have no friends to process",
+                    "sync_running": "Background mutual friend sync is running. Please try again later.",
                     "loading_cache": "Loading cached mutual friends from database"
                 },
                 "progress": {
@@ -821,6 +836,11 @@
                 },
                 "friend_requests": {
                     "header": "Friend Requests"
+                },
+                "mutual_friends": {
+                    "header": "Mutual Friends",
+                    "sync_interval": "Mutual friends background sync interval (minutes)",
+                    "sync_interval_description": "0 disables it. Shorter intervals mean more frequent VRChat API requests"
                 }
             },
             "vr": {
@@ -1737,7 +1757,11 @@
                     "alphabetical": "Alphabetical",
                     "last_active": "Last Active",
                     "friend_order": "Friend Order"
-                }
+                },
+                "opted_out_notice": "This user has turned off mutual friends display",
+                "opted_out_snapshot_hint": "Based on the snapshot from {date}, they had {count} mutual friends then (historical estimate)",
+                "opted_out_detected_hint": "Opt-out detected: {date}",
+                "hidden_mutuals_hint": "Hidden mutual friends (estimated from the {date} snapshot)"
             },
             "activity": {
                 "header": "Activity",

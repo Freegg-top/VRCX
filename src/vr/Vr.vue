@@ -251,6 +251,46 @@
                                 </div>
                             </div>
                             <div
+                                v-else-if="feed.type === 'MutualFriendshipEnd'"
+                                class="x-friend-item"
+                                :class="{ friend: feed.isFriend, favorite: feed.isFavorite }">
+                                <div class="detail">
+                                    <span class="extra flex items-center">
+                                        <span class="time">{{ formatDate(feed.created_at) }}</span>
+                                        <Users class="mr-5 h-5 w-5" />
+                                        <span class="name" v-text="feed.displayNameA"></span>
+                                        <ArrowRight class="mr-5 h-4 w-4 inline-block" />
+                                        <span class="name" v-text="feed.displayName"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                v-else-if="feed.type === 'MutualFriendshipStart'"
+                                class="x-friend-item"
+                                :class="{ friend: feed.isFriend, favorite: feed.isFavorite }">
+                                <div class="detail">
+                                    <span class="extra flex items-center">
+                                        <span class="time">{{ formatDate(feed.created_at) }}</span>
+                                        <HeartHandshake class="mr-5 h-5 w-5" />
+                                        <span class="name" v-text="feed.displayNameA"></span>
+                                        <ArrowRight class="mr-5 h-4 w-4 inline-block" />
+                                        <span class="name" v-text="feed.displayName"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                v-else-if="feed.type === 'MutualOptOut'"
+                                class="x-friend-item"
+                                :class="{ friend: feed.isFriend, favorite: feed.isFavorite }">
+                                <div class="detail">
+                                    <span class="extra flex items-center">
+                                        <span class="time">{{ formatDate(feed.created_at) }}</span>
+                                        <EyeOff class="mr-5 h-5 w-5" />
+                                        <span class="name" v-text="feed.displayNameA || feed.displayName"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div
                                 v-else-if="feed.type === 'DisplayName'"
                                 class="x-friend-item"
                                 :class="{ friend: feed.isFriend, favorite: feed.isFavorite }">
@@ -853,6 +893,42 @@
                                     <span class="extra">
                                         <span class="time">{{ formatDate(feed.created_at) }}</span>
                                         <span class="name" v-text="feed.displayName"></span> is no longer your friend
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                v-else-if="feed.type === 'MutualFriendshipEnd'"
+                                class="x-friend-item"
+                                :class="{ friend: feed.isFriend, favorite: feed.isFavorite }">
+                                <div class="detail">
+                                    <span class="extra">
+                                        <span class="time">{{ formatDate(feed.created_at) }}</span>
+                                        <span class="name" v-text="feed.displayNameA"></span> and
+                                        <span class="name" v-text="feed.displayName"></span> are no longer friends
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                v-else-if="feed.type === 'MutualFriendshipStart'"
+                                class="x-friend-item"
+                                :class="{ friend: feed.isFriend, favorite: feed.isFavorite }">
+                                <div class="detail">
+                                    <span class="extra">
+                                        <span class="time">{{ formatDate(feed.created_at) }}</span>
+                                        <span class="name" v-text="feed.displayNameA"></span> and
+                                        <span class="name" v-text="feed.displayName"></span> became friends
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                v-else-if="feed.type === 'MutualOptOut'"
+                                class="x-friend-item"
+                                :class="{ friend: feed.isFriend, favorite: feed.isFavorite }">
+                                <div class="detail">
+                                    <span class="extra">
+                                        <span class="time">{{ formatDate(feed.created_at) }}</span>
+                                        <span class="name" v-text="feed.displayNameA || feed.displayName"></span> turned
+                                        off mutual friends display
                                     </span>
                                 </div>
                             </div>
@@ -1475,6 +1551,7 @@
         Check,
         Circle,
         Download,
+        EyeOff,
         Footprints,
         GraduationCap,
         Heart,
@@ -1491,6 +1568,7 @@
         Tag,
         ThumbsDown,
         TvMinimalPlay,
+        Users,
         VolumeX,
         Volume2,
         X,

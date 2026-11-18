@@ -288,13 +288,20 @@
                 "Status": "状态变动",
                 "Avatar": "模型变动",
                 "Bio": "简介变更",
-                "GroupChange": "群组变更"
+                "GroupChange": "群组变更",
+                "MutualFriendshipEnd": "共同好友解除",
+                "MutualFriendshipStart": "共同好友建立",
+                "MutualOptOut": "关闭共同好友显示"
             },
             "photon_event_logging": "Photon 事件日志",
             "watched_users": "已关注",
             "watched_users_tooltip": "已关注的非好友玩家",
             "group_change_joined": "加入了群组",
-            "group_change_left": "退出了群组"
+            "group_change_left": "退出了群组",
+            "mutual_and": " 与 ",
+            "mutual_friendship_end_predicate": " 不再是好友",
+            "mutual_friendship_start_predicate": " 成为好友",
+            "mutual_opt_out_suffix": " 关闭了共同好友显示"
         },
         "friends_locations": {
             "online": "在线",
@@ -455,8 +462,15 @@
                 "FriendRequest": "发送好友申请",
                 "CancelFriendRequest": "取消好友申请",
                 "DisplayName": "昵称变动",
-                "TrustLevel": "等级变动"
-            }
+                "TrustLevel": "等级变动",
+                "MutualFriendshipEnd": "共同好友解除",
+                "MutualFriendshipStart": "共同好友建立",
+                "MutualOptOut": "关闭共同好友显示"
+            },
+            "mutual_and": " 与 ",
+            "mutual_friendship_end_predicate": " 不再是好友",
+            "mutual_friendship_start_predicate": " 成为好友",
+            "mutual_opt_out_suffix": " 关闭了共同好友显示"
         },
         "moderation": {
             "filter_placeholder": "筛选管理操作",
@@ -603,6 +617,7 @@
                 },
                 "status": {
                     "no_friends_to_process": "目前没有好友需要处理",
+                    "sync_running": "后台共同好友同步正在进行中，请稍后再试",
                     "loading_cache": "正在从数据库加载缓存的共同好友关系"
                 },
                 "progress": {
@@ -821,6 +836,11 @@
                 },
                 "friend_requests": {
                     "header": "好友申请"
+                },
+                "mutual_friends": {
+                    "header": "共同好友",
+                    "sync_interval": "共同好友后台同步间隔（分钟）",
+                    "sync_interval_description": "0 为关闭。间隔越小，对 VRChat API 的请求越频繁"
                 }
             },
             "vr": {
@@ -1735,7 +1755,11 @@
                     "alphabetical": "字母顺序",
                     "last_active": "最后活跃",
                     "friend_order": "添加顺序"
-                }
+                },
+                "opted_out_notice": "该用户已关闭共同好友显示",
+                "opted_out_snapshot_hint": "根据 {date} 的快照记录，其当时的共同好友共 {count} 人（历史推测数据）",
+                "opted_out_detected_hint": "检测到关闭：{date}",
+                "hidden_mutuals_hint": "隐藏的共同好友（推测，据 {date} 快照）"
             },
             "activity": {
                 "header": "活动记录",

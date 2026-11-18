@@ -54,6 +54,10 @@ const SEARCH_LIMIT_MAX = 100000;
 const DEFAULT_MAX_TABLE_SIZE = 500;
 const DEFAULT_SEARCH_LIMIT = 50000;
 
+// 共同好友变化检测: 后台同步间隔(分钟), 0 = 关闭
+// configRepository 存储 key 与常量名同名 ('mutualSyncIntervalMinutes')
+const DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES = 30;
+
 export {
     VRChatScreenshotResolutions,
     VRChatCameraResolutions,
@@ -63,5 +67,6 @@ export {
     SEARCH_LIMIT_MIN,
     SEARCH_LIMIT_MAX,
     DEFAULT_MAX_TABLE_SIZE,
-    DEFAULT_SEARCH_LIMIT
+    DEFAULT_SEARCH_LIMIT,
+    DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES
 };

@@ -43,6 +43,27 @@
             </SettingsItem>
         </SettingsGroup>
 
+        <SettingsGroup :title="t('view.settings.social.mutual_friends.header')">
+            <SettingsItem
+                :label="t('view.settings.social.mutual_friends.sync_interval')"
+                :description="t('view.settings.social.mutual_friends.sync_interval_description')">
+                <NumberField
+                    :model-value="mutualSyncIntervalMinutes"
+                    :min="0"
+                    :max="1440"
+                    :step="1"
+                    :format-options="{ maximumFractionDigits: 0 }"
+                    class="w-32"
+                    @update:modelValue="setMutualSyncIntervalMinutes">
+                    <NumberFieldContent>
+                        <NumberFieldDecrement />
+                        <NumberFieldInput />
+                        <NumberFieldIncrement />
+                    </NumberFieldContent>
+                </NumberField>
+            </SettingsItem>
+        </SettingsGroup>
+
         <SettingsGroup :title="t('view.settings.social.favorites.header')">
             <SettingsItem
                 :label="t('view.settings.general.favorites.header')"
@@ -114,14 +135,16 @@
         recentActionCooldownEnabled,
         recentActionCooldownMinutes,
         localFavoriteFriendsGroups,
-        autoDeclineFriendRequests
+        autoDeclineFriendRequests,
+        mutualSyncIntervalMinutes
     } = storeToRefs(generalSettingsStore);
 
     const {
         setRecentActionCooldownEnabled,
         setRecentActionCooldownMinutes,
         setLocalFavoriteFriendsGroups,
-        setAutoDeclineFriendRequests
+        setAutoDeclineFriendRequests,
+        setMutualSyncIntervalMinutes
     } = generalSettingsStore;
 
     const { favoriteFriendGroups, localFriendFavoriteGroups } = storeToRefs(favoriteStore);

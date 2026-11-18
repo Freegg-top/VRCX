@@ -9,6 +9,8 @@ import { useVrcxStore } from '../vrcx';
 
 import configRepository from '../../services/config';
 
+import { DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES } from '../../shared/constants/settings';
+
 import * as workerTimers from 'worker-timers';
 
 export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
@@ -45,6 +47,7 @@ export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
     const recentActionCooldownEnabled = ref(false);
     const recentActionCooldownMinutes = ref(60);
     const autoDeclineFriendRequests = ref(false);
+    const mutualSyncIntervalMinutes = ref(DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES);
 
     async function initGeneralSettings() {
         const [
@@ -74,7 +77,8 @@ export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
             autoAcceptInviteStatusesStrConfig,
             recentActionCooldownEnabledConfig,
             recentActionCooldownMinutesConfig,
-            autoDeclineFriendRequestsConfig
+            autoDeclineFriendRequestsConfig,
+            mutualSyncIntervalMinutesConfig
         ] = await Promise.all([
             configRepository.getBool('VRCX_StartAtWindowsStartup', false),
             VRCXStorage.Get('VRCX_StartAsMinimizedState'),
@@ -102,7 +106,8 @@ export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
             configRepository.getString('VRCX_autoAcceptInviteStatuses', '[]'),
             configRepository.getBool('VRCX_recentActionCooldownEnabled', false),
             configRepository.getInt('VRCX_recentActionCooldownMinutes', 60),
-            configRepository.getBool('VRCX_autoDeclineFriendRequests', false)
+            configRepository.getBool('VRCX_autoDeclineFriendRequests', false),
+            configRepository.getInt('mutualSyncIntervalMinutes', DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES)
         ]);
 
         isStartAtWindowsStartup.value = isStartAtWindowsStartupConfig;
@@ -140,6 +145,7 @@ export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
         recentActionCooldownEnabled.value = recentActionCooldownEnabledConfig;
         recentActionCooldownMinutes.value = recentActionCooldownMinutesConfig;
         autoDeclineFriendRequests.value = autoDeclineFriendRequestsConfig;
+        mutualSyncIntervalMinutes.value = mutualSyncIntervalMinutesConfig;
     }
 
     initGeneralSettings();
@@ -347,6 +353,18 @@ export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
         configRepository.setBool('VRCX_autoDeclineFriendRequests', autoDeclineFriendRequests.value);
     }
 
+    /**
+     * 共同好友后台同步间隔(分钟), 0 = 关闭
+     * @param {any} value
+     */
+    function setMutualSyncIntervalMinutes(value) {
+        const parsed = parseInt(String(value), 10);
+        mutualSyncIntervalMinutes.value = Number.isNaN(parsed)
+            ? DEFAULT_MUTUAL_SYNC_INTERVAL_MINUTES
+            : Math.min(1440, Math.max(0, parsed));
+        configRepository.setInt('mutualSyncIntervalMinutes', mutualSyncIntervalMinutes.value);
+    }
+
     return {
         isStartAtWindowsStartup,
         isStartAsMinimizedState,
@@ -374,6 +392,7 @@ export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
         recentActionCooldownEnabled,
         recentActionCooldownMinutes,
         autoDeclineFriendRequests,
+        mutualSyncIntervalMinutes,
 
         setIsStartAtWindowsStartup,
         setIsStartAsMinimizedState,
@@ -401,6 +420,7 @@ export const useGeneralSettingsStore = defineStore('GeneralSettings', () => {
         promptProxySettings,
         setRecentActionCooldownEnabled,
         setRecentActionCooldownMinutes,
-        setAutoDeclineFriendRequests
+        setAutoDeclineFriendRequests,
+        setMutualSyncIntervalMinutes
     };
 });

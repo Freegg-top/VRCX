@@ -4,6 +4,7 @@ import { watch } from 'vue';
 
 import { compareByCreatedAt, getGroupName, getWorldName } from '../shared/utils';
 import { database } from '../services/database';
+import { MUTUAL_FEED_TYPES, mutualEventToFeedRow } from '../shared/utils/mutualFeedRows';
 import { useFriendStore } from './friend';
 import { useInstanceStore } from './instance';
 import { useLocationStore } from './location';
@@ -158,6 +159,32 @@ export const useSharedFeedStore = defineStore('SharedFeed', () => {
             newFeed = newFeed.filter((ctx) => !(ctx.type === 'GPS' && ctx.location === 'private'));
         }
 
+        // P2-10: mutual 事件存在独立表中, 按 wrist 过滤补查后合并
+        // (VIP/Friends 按主语 A 判定, 与下行 isFriend/isFavorite 统一)
+        const mutualWristTypes = MUTUAL_FEED_TYPES.filter((type) => {
+            const setting = wristFilter[type];
+            return setting && setting !== 'Off';
+        });
+        if (mutualWristTypes.length) {
+            const mutualEvents = await database.getMutualEvents({ limit: 200 });
+            for (const event of mutualEvents) {
+                const row = mutualEventToFeedRow(event);
+                if (!mutualWristTypes.includes(row.type)) {
+                    continue;
+                }
+                const setting = wristFilter[row.type];
+                const isFriendA = friendStore.friends.has(row.userId);
+                const isFavoriteA = friendStore.localFavoriteFriends.has(row.userId);
+                if (
+                    setting === 'VIP' && !isFavoriteA ||
+                    setting === 'Friends' && !isFriendA
+                ) {
+                    continue;
+                }
+                newFeed.push(row);
+            }
+        }
+
         // remove current user
         newFeed = newFeed.filter((ctx) => ctx.userId !== userStore.currentUser.id);
 
@@ -188,6 +215,12 @@ export const useSharedFeedStore = defineStore('SharedFeed', () => {
 
     async function addEntry(data) {
         const ctx = { ...data };
+        // P2-9: mutual 事件主语统一为 A (列表所有者), 与 mutualFeedRows.js 的行结构一致
+        const isMutualEvent =
+            ctx.type === 'MutualFriendshipEnd' || ctx.type === 'MutualFriendshipStart' || ctx.type === 'MutualOptOut';
+        if (isMutualEvent && ctx.friendIdA) {
+            ctx.userId = ctx.friendIdA;
+        }
         const userId = ctx.userId || ctx.senderUserId;
         const wristFilter = notificationsSettingsStore.sharedFeedFilters.wrist;
         if (userId === userStore.currentUser.id) {
@@ -198,6 +231,17 @@ export const useSharedFeedStore = defineStore('SharedFeed', () => {
         }
         if (ctx.type === 'FriendRequest' || ctx.type === 'Avatar') {
             return;
+        }
+        // mutual 事件: 补解析 A/B 的显示名供 VR 腕部渲染
+        // (displayName 字段已被推送方填为 B 的名字, displayNameA 缺失时按 A 解析)
+        if (isMutualEvent) {
+            const idA = ctx.friendIdA;
+            if (!ctx.displayNameA) {
+                ctx.displayNameA = (idA && userStore.cachedUsers.get(idA)?.displayName) || idA || '';
+            }
+            if (!ctx.displayName && ctx.friendIdB) {
+                ctx.displayName = userStore.cachedUsers.get(ctx.friendIdB)?.displayName || ctx.friendIdB;
+            }
         }
 
         let isFriend = false;

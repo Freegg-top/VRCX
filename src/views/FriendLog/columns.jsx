@@ -6,10 +6,23 @@ import { storeToRefs } from 'pinia';
 
 import { formatDateFilter } from '../../shared/utils';
 import { i18n } from '../../plugins/i18n';
-import { useUiStore } from '../../stores';
+import { useUiStore, useUserStore } from '../../stores';
 import { showUserDialog } from '../../coordinators/userCoordinator';
 
 const { t } = i18n.global;
+const MUTUAL_TYPES = new Set(['MutualFriendshipEnd', 'MutualFriendshipStart', 'MutualOptOut']);
+
+/**
+ * 按 userId 从 cachedUsers 解析显示名, 无缓存时回退为 id
+ * @param {string} userId
+ * @returns {string}
+ */
+const resolveDisplayName = (userId) => {
+    if (!userId) {
+        return '';
+    }
+    return useUserStore().cachedUsers.get(userId)?.displayName ?? userId;
+};
 
 export const createColumns = ({ onDelete, onDeletePrompt }) => {
     const { shiftHeld } = storeToRefs(useUiStore());
@@ -77,6 +90,42 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
             },
             cell: ({ row }) => {
                 const original = row.original;
+                if (MUTUAL_TYPES.has(original.type)) {
+                    // 共同好友事件: 双方均可点击打开 UserDialog, 显示名从 cachedUsers 解析
+                    const nameA = resolveDisplayName(original.friendIdA || original.userId);
+                    // MutualOptOut 的 B 字段可能为空或与 A 相同, 只显示 A
+                    const showB =
+                        original.type !== 'MutualOptOut' &&
+                        !!original.friendIdB &&
+                        original.friendIdB !== original.friendIdA;
+                    const nameB = showB ? resolveDisplayName(original.friendIdB) : '';
+                    const predicateKey =
+                        original.type === 'MutualFriendshipEnd'
+                            ? 'view.friend_log.mutual_friendship_end_predicate'
+                            : original.type === 'MutualFriendshipStart'
+                              ? 'view.friend_log.mutual_friendship_start_predicate'
+                              : 'view.friend_log.mutual_opt_out_suffix';
+                    return (
+                        <span class="block w-full whitespace-normal wrap-break-word">
+                            <span
+                                class="cursor-pointer hover:underline"
+                                onClick={() => showUserDialog(original.friendIdA || original.userId)}>
+                                {nameA}
+                            </span>
+                            {showB ? (
+                                <>
+                                    <span class="text-muted-foreground">{t('view.friend_log.mutual_and')}</span>
+                                    <span
+                                        class="cursor-pointer hover:underline"
+                                        onClick={() => showUserDialog(original.friendIdB)}>
+                                        {nameB}
+                                    </span>
+                                </>
+                            ) : null}
+                            <span class="text-muted-foreground">{t(predicateKey)}</span>
+                        </span>
+                    );
+                }
                 const displayName = original.displayName || original.userId || '';
                 return (
                     <span class="block w-full whitespace-normal wrap-break-word cursor-pointer">
@@ -112,6 +161,10 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
             enableSorting: false,
             cell: ({ row }) => {
                 const original = row.original;
+                // mutual 事件存在独立表中且无删除接口, 不渲染删除按钮
+                if (MUTUAL_TYPES.has(original.type)) {
+                    return null;
+                }
                 return (
                     <div class="flex justify-end">
                         <button

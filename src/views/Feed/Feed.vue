@@ -137,7 +137,10 @@
         'Status',
         'Avatar',
         'Bio',
-        'GroupChange'
+        'GroupChange',
+        'MutualFriendshipEnd',
+        'MutualFriendshipStart',
+        'MutualOptOut'
     ];
 
     const popoverOpen = ref(false);

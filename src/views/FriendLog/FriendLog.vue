@@ -27,7 +27,10 @@
                                         'FriendRequest',
                                         'CancelFriendRequest',
                                         'DisplayName',
-                                        'TrustLevel'
+                                        'TrustLevel',
+                                        'MutualFriendshipEnd',
+                                        'MutualFriendshipStart',
+                                        'MutualOptOut'
                                     ]"
                                     :key="type"
                                     :value="type">
@@ -62,7 +65,7 @@
         SelectTrigger,
         SelectValue
     } from '../../components/ui/select';
-    import { useAppearanceSettingsStore, useFriendStore, useModalStore, useVrcxStore } from '../../stores';
+    import { useAppearanceSettingsStore, useFriendStore, useModalStore, useUserStore, useVrcxStore } from '../../stores';
     import { DataTableLayout } from '../../components/ui/data-table';
     import { InputGroupField } from '../../components/ui/input-group';
     import { createColumns } from './columns.jsx';
@@ -71,6 +74,20 @@
     import { useVrcxVueTable } from '../../lib/table/useVrcxVueTable';
 
     import configRepository from '../../services/config';
+
+    const MUTUAL_TYPES = new Set(['MutualFriendshipEnd', 'MutualFriendshipStart', 'MutualOptOut']);
+
+    /**
+     * 按 userId 从 cachedUsers 解析显示名, 无缓存时回退为 id
+     * @param {string} userId
+     * @returns {string}
+     */
+    const resolveDisplayName = (userId) => {
+        if (!userId) {
+            return '';
+        }
+        return useUserStore().cachedUsers.get(userId)?.displayName ?? userId;
+    };
 
     const appearanceSettingsStore = useAppearanceSettingsStore();
     const vrcxStore = useVrcxStore();
@@ -101,6 +118,12 @@
                 }
             }
             if (searchValue) {
+                // mutual 事件无 displayName 字段, 按解析后的双方显示名匹配
+                if (MUTUAL_TYPES.has(row.type)) {
+                    const nameA = resolveDisplayName(row.friendIdA || row.userId).toLowerCase();
+                    const nameB = row.friendIdB ? resolveDisplayName(row.friendIdB).toLowerCase() : '';
+                    return nameA.includes(searchValue) || nameB.includes(searchValue);
+                }
                 const displayName = row.displayName;
                 if (
                     displayName === undefined ||

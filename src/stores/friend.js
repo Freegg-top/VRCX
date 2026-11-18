@@ -12,6 +12,7 @@ import {
 } from '../shared/utils';
 import { getUserMemo } from '../coordinators/memoCoordinator';
 import { friendRequest, userRequest } from '../api';
+import { mutualEventToFeedRow } from '../shared/utils/mutualFeedRows';
 import { runInitFriendsListFlow } from '../coordinators/friendSyncCoordinator';
 import { runPendingOfflineTickFlow, runUpdateFriendFlow } from '../coordinators/friendPresenceCoordinator';
 import { updateFriendship, runUpdateFriendshipsFlow } from '../coordinators/friendRelationshipCoordinator';
@@ -944,7 +945,10 @@ export const useFriendStore = defineStore('Friend', () => {
 
     async function initFriendLogHistoryTable() {
         friendLogTable.value.loading = true;
-        friendLogTable.value.data = await database.getFriendLogHistory();
+        // 好友日志与共同好友事件独立查询后在 JS 层合并:
+        // 避免向现有查询的 UNION/列结构里加 SELECT 造成列对齐回归
+        const [history, mutualEvents] = await Promise.all([database.getFriendLogHistory(), database.getMutualEvents()]);
+        friendLogTable.value.data = history.concat(mutualEvents.map(mutualEventToFeedRow));
         friendLogTable.value.loading = false;
     }
 

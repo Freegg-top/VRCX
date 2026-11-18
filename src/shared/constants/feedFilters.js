@@ -96,6 +96,21 @@ function feedFiltersOptions() {
             options: getOptions(['Off', 'On'])
         },
         {
+            key: 'MutualFriendshipEnd',
+            name: 'Mutual Unfriend',
+            options: getOptions(['Off', 'On'])
+        },
+        {
+            key: 'MutualFriendshipStart',
+            name: 'Mutual Friendship',
+            options: getOptions(['Off', 'On'])
+        },
+        {
+            key: 'MutualOptOut',
+            name: 'Mutual Opt-out',
+            options: getOptions(['Off', 'On'])
+        },
+        {
             key: 'DisplayName',
             name: 'Display Name Change',
             options: getOptions(['Off', 'VIP', 'Friends'])
@@ -264,6 +279,9 @@ const sharedFeedFiltersDefaults = {
         friendRequest: 'On',
         Friend: 'On',
         Unfriend: 'On',
+        MutualFriendshipEnd: 'On',
+        MutualFriendshipStart: 'On',
+        MutualOptOut: 'On',
         DisplayName: 'VIP',
         TrustLevel: 'VIP',
         groupChange: 'On',
@@ -308,6 +326,9 @@ const sharedFeedFiltersDefaults = {
         friendRequest: 'On',
         Friend: 'On',
         Unfriend: 'On',
+        MutualFriendshipEnd: 'On',
+        MutualFriendshipStart: 'On',
+        MutualOptOut: 'On',
         DisplayName: 'Friends',
         TrustLevel: 'Friends',
         groupChange: 'On',
