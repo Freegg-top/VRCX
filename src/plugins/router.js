@@ -26,6 +26,7 @@ import ScreenshotMetadata from './../views/Tools/ScreenshotMetadata.vue';
 import Search from './../views/Search/Search.vue';
 import Settings from './../views/Settings/Settings.vue';
 import Tools from './../views/Tools/Tools.vue';
+import VRChatStore from './../views/Tools/VRChatStore.vue';
 
 const routes = [
     {
@@ -153,6 +154,12 @@ const routes = [
                 name: 'screenshot-metadata',
                 component: ScreenshotMetadata,
                 meta: { navKeys: ['tool-screenshot-metadata', 'tools'] }
+            },
+            {
+                path: 'tools/vrchat-store',
+                name: 'vrchat-store',
+                component: VRChatStore,
+                meta: { navKeys: ['tool-vrchat-store', 'tools'] }
             },
             {
                 path: 'settings',
