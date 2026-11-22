@@ -109,11 +109,16 @@
                 class="hover:bg-accent cursor-pointer rounded-lg border p-2"
                 @click="openAvatar(item)">
                 <div class="flex items-center gap-3">
-                    <img
+                    <CacheedImage
                         v-if="item.thumbnail"
                         class="size-14 flex-none rounded-md object-cover"
-                        :src="item.thumbnail"
-                        loading="lazy" />
+                        :url="item.thumbnail">
+                        <template #fallback>
+                            <div class="bg-muted flex size-14 flex-none items-center justify-center rounded-md">
+                                <Package class="text-muted-foreground size-6" />
+                            </div>
+                        </template>
+                    </CacheedImage>
                     <div
                         v-else
                         class="bg-muted flex size-14 flex-none items-center justify-center rounded-md">
@@ -186,6 +191,7 @@
     import dayjs from 'dayjs';
     import { CheckIcon, Lock, Package } from 'lucide-vue-next';
 
+    import CacheedImage from '../../components/CacheedImage.vue';
     import { Badge } from '../../components/ui/badge';
     import { Button } from '../../components/ui/button';
     import { Input } from '../../components/ui/input';
@@ -196,7 +202,7 @@
     import { extractFileId } from '../../shared/utils';
     import {
         checkAvatarCache,
-        lookupAvatarByImageFileId,
+        lookupAuthorPublicFileIds,
         showAvatarAuthorDialog
     } from '../../coordinators/avatarCoordinator';
     import { createRateLimiter } from '../../shared/utils/throttle';
@@ -225,7 +231,10 @@
 
     // fileId -> 'public' | 'private' 解析结果缓存 (模块级, 跨页面复用)
     const avatarVisibilityCache = new Map();
-    const resolveQueued = new Set();
+    // ownerId -> Set<fileId> 作者在公共模型库中的全部公开模型 (模块级, 跨页面复用)
+    const authorVisibilityCache = new Map();
+    // 在途的作者解析, 避免同一次选中触发重复查询
+    const authorResolveQueued = new Set();
     const resolveRateLimiter = createRateLimiter({
         limitPerInterval: 1,
         intervalMs: 1000
@@ -341,49 +350,82 @@
         friendAvatars.value.slice(0, visibleCount.value)
     );
 
-    // 后台解析好友自己的模型 (1/s): 本地缓存 -> 公共模型库, 命中即公开模
+    // 后台解析好友自己的模型 (1/s): 按作者查询公共模型库一次, 命中集合内即公开模
     watch(
         friendAvatars,
         (items) => {
+            const itemsByAuthor = new Map();
             for (const item of items) {
                 if (item.ownerId !== item.userId) {
                     continue;
                 }
-                if (
-                    !item.fileId ||
-                    avatarVisibilityCache.has(item.fileId) ||
-                    resolveQueued.has(item.fileId)
-                ) {
+                if (!item.fileId || avatarVisibilityCache.has(item.fileId)) {
                     continue;
                 }
-                resolveQueued.add(item.fileId);
-                resolveAvatarVisibility(item);
+                if (checkAvatarCache(item.fileId)) {
+                    avatarVisibilityCache.set(item.fileId, 'public');
+                    applyVisibility(item, 'public');
+                    continue;
+                }
+                const authorPublicFileIds = authorVisibilityCache.get(item.ownerId);
+                if (authorPublicFileIds) {
+                    const visibility = authorPublicFileIds.has(item.fileId) ? 'public' : 'private';
+                    avatarVisibilityCache.set(item.fileId, visibility);
+                    applyVisibility(item, visibility);
+                    continue;
+                }
+                let authorItems = itemsByAuthor.get(item.ownerId);
+                if (!authorItems) {
+                    authorItems = [];
+                    itemsByAuthor.set(item.ownerId, authorItems);
+                }
+                authorItems.push(item);
+            }
+            for (const [ownerId, authorItems] of itemsByAuthor) {
+                resolveAuthorVisibility(ownerId, authorItems);
             }
         },
         { immediate: true }
     );
 
-    async function resolveAvatarVisibility(item) {
-        await resolveRateLimiter.wait();
-        let found = false;
-        try {
-            let avatarId = checkAvatarCache(item.fileId);
-            if (!avatarId && remoteDatabaseEnabled.value) {
-                avatarId = await lookupAvatarByImageFileId(
-                    item.ownerId,
-                    item.fileId
-                );
-            }
-            found = Boolean(avatarId);
-        } catch {
-            found = false;
-        }
-        const visibility = found ? 'public' : 'private';
-        avatarVisibilityCache.set(item.fileId, visibility);
+    function applyVisibility(item, visibility) {
         for (const row of avatarHistory.value) {
             if (row.fileId === item.fileId && row.ownerId === row.userId) {
                 row.visibility = visibility;
             }
+        }
+    }
+
+    async function resolveAuthorVisibility(ownerId, authorItems) {
+        if (authorResolveQueued.has(ownerId)) {
+            return;
+        }
+        authorResolveQueued.add(ownerId);
+        try {
+            await resolveRateLimiter.wait();
+            if (!remoteDatabaseEnabled.value) {
+                // 未开启远程库: 一律按 private 展示, 不写缓存
+                for (const item of authorItems) {
+                    applyVisibility(item, 'private');
+                }
+                return;
+            }
+            const publicFileIds = await lookupAuthorPublicFileIds(ownerId);
+            if (!publicFileIds) {
+                // 限流/查询失败: 按 private 展示, 不写缓存, 下次可重试
+                for (const item of authorItems) {
+                    applyVisibility(item, 'private');
+                }
+                return;
+            }
+            authorVisibilityCache.set(ownerId, publicFileIds);
+            for (const item of authorItems) {
+                const visibility = publicFileIds.has(item.fileId) ? 'public' : 'private';
+                avatarVisibilityCache.set(item.fileId, visibility);
+                applyVisibility(item, visibility);
+            }
+        } finally {
+            authorResolveQueued.delete(ownerId);
         }
     }
 

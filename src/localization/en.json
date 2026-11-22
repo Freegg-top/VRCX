@@ -91,11 +91,7 @@
         "friend_worlds": "Friends' Worlds"
     },
     "nav_menu": {
-        "resources": "RESOURCES",
-        "wiki": "Wiki",
-        "get_help": "GET HELP",
-        "github": "VRCX on GitHub",
-        "discord": "Join our Discord",
+        "freegg": "Visit FREEGG",
         "changelog": "Changelog",
         "update_available": "Update available",
         "update": "Update",
@@ -1496,7 +1492,8 @@
             "friend_tag": "Friend",
             "fof_tag": "Friend's friend",
             "no_players": "No known members in this group",
-            "show_more": "Show more"
+            "show_more": "Show more",
+            "page_info": "Page {page} / {total}"
         },
         "friend_avatars": {
             "header": "Friends' Avatars",
@@ -3068,7 +3065,8 @@
             "description": "Consider donating to support future development of VRCX",
             "close": "Close",
             "donate": "Donate",
-            "github": "GitHub"
+            "github": "GitHub",
+            "load_failed": "Failed to load changelog. Please try again later."
         },
         "open_source": {
             "header": "Open Source Software Notice",
@@ -3427,7 +3425,11 @@
             "not_found": "Avatar not found in search providers",
             "failed": "Avatar lookup failed",
             "private_or_not_found": "Users avatar is private or not found in search providers",
-            "loading": "Searching for avatar using search providers"
+            "loading": "Searching for avatar using search providers",
+            "rate_limited": "Remote avatar database is rate-limited (Cloudflare 1015); public/private avatar detection paused for 10 minutes"
+        },
+        "group_api": {
+            "rate_limited": "VRChat group API is rate-limited (429); group background tasks paused and will resume automatically"
         },
         "database": {
             "upgrade_complete": "Database upgrade complete",

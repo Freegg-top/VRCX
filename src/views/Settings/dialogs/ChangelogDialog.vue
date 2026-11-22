@@ -5,17 +5,36 @@
                 <DialogTitle>{{ t('dialog.change_log.header') }}</DialogTitle>
             </DialogHeader>
             <div class="changelog-dialog">
-                <h2 v-text="changeLogDialog.buildName"></h2>
-                <VueShowdown
-                    class="changelog-markdown mt-2"
-                    :markdown="changeLogDialog.changeLog"
-                    flavor="github"
-                    :options="showdownOptions"
-                    @click="handleLinkClick"
-                    style="height: 62vh; overflow-y: auto" />
+                <template v-if="isDlcBuild">
+                    <!-- 拓展版: 当前运行版本的更新日志 (本地 changelog.txt) -->
+                    <div style="height: 62vh; overflow-y: auto">
+                        <h2>{{ currentVersion }}</h2>
+                        <p v-if="!dlcChangeLogText && !dlcChangeLogLoaded" class="py-4 text-sm text-muted-foreground">
+                            {{ t('dialog.change_log.load_failed') }}
+                        </p>
+                        <VueShowdown
+                            v-else
+                            class="changelog-markdown mt-2"
+                            :markdown="dlcChangeLogText"
+                            flavor="github"
+                            :options="showdownOptions"
+                            @click="handleLinkClick" />
+                    </div>
+                </template>
+                <template v-else>
+                    <h2 v-text="changeLogDialog.buildName"></h2>
+                    <VueShowdown
+                        class="changelog-markdown mt-2"
+                        :markdown="changeLogDialog.changeLog"
+                        flavor="github"
+                        :options="showdownOptions"
+                        @click="handleLinkClick"
+                        style="height: 62vh; overflow-y: auto" />
+                </template>
             </div>
             <DialogFooter>
                 <Button
+                    v-if="!isDlcBuild"
                     variant="ghost"
                     class="mr-2"
                     @click="openExternalLink('https://github.com/vrcx-team/VRCX/releases')">
@@ -32,7 +51,7 @@
 <script setup>
     import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
     import { Button } from '@/components/ui/button';
-    import { defineAsyncComponent } from 'vue';
+    import { defineAsyncComponent, watch } from 'vue';
     import { storeToRefs } from 'pinia';
     import { useI18n } from 'vue-i18n';
 
@@ -43,7 +62,9 @@
 
     const VRCXUpdaterStore = useVRCXUpdaterStore();
 
-    const { changeLogDialog } = storeToRefs(VRCXUpdaterStore);
+    const { changeLogDialog, currentVersion, dlcChangeLogText, dlcChangeLogLoaded, isDlcBuild } =
+        storeToRefs(VRCXUpdaterStore);
+    const { loadDlcChangeLog } = VRCXUpdaterStore;
 
     const { t } = useI18n();
 
@@ -57,8 +78,19 @@
         tables: true,
         tablesHeaderId: false,
         ghCodeBlocks: true,
-        tasklists: true
+        tasklists: true,
+        simpleLineBreaks: true
     };
+
+    // 打开对话框时按需读取本地更新日志 (成功后本次会话不再重复加载)
+    watch(
+        () => changeLogDialog.value.visible,
+        (visible) => {
+            if (visible && isDlcBuild.value && !dlcChangeLogLoaded.value) {
+                loadDlcChangeLog();
+            }
+        }
+    );
 
     function closeDialog() {
         changeLogDialog.value.visible = false;

@@ -9,6 +9,7 @@ import {
     fetchGroupsForUser,
     runGroupChangePoll
 } from './groupChangeCoordinator';
+import { isGroupApiCoolingDown, markGroupApi429, markGroupApiSuccess } from './groupApiBreaker';
 import {
     getPersistedAnalysis,
     metAnalysis,
@@ -36,30 +37,41 @@ const memberCountRateLimiter = createRateLimiter({
 });
 const memberCountQueued = new Set();
 
+function isGroupApi429(err) {
+    return err?.status === 429 || (err?.message || '').includes('429');
+}
+
 /**
  * 后台补齐群组总人数 (1群/秒), 已有/已排队的跳过。
  * @param {Array<{id: string}>} groups
  */
 export function ensureMemberCounts(groups) {
     for (const group of groups) {
-        if (
-            friendGroups.memberCounts.has(group.id) ||
-            memberCountQueued.has(group.id)
-        ) {
+        if (friendGroups.memberCounts.has(group.id) || memberCountQueued.has(group.id) || isGroupApiCoolingDown()) {
             continue;
         }
         memberCountQueued.add(group.id);
         (async () => {
             await memberCountRateLimiter.wait();
             try {
+                if (isGroupApiCoolingDown()) {
+                    memberCountQueued.delete(group.id);
+                    return;
+                }
                 const { json } = await groupRequest.getGroup({
                     groupId: group.id
                 });
                 if (json?.memberCount) {
                     friendGroups.memberCounts.set(group.id, json.memberCount);
                 }
-            } catch {
-                // 隐藏群组等取不到人数, 静默跳过
+                markGroupApiSuccess();
+            } catch (err) {
+                // 隐藏群组等取不到人数, 静默跳过; 429 时暂停全部群组后台任务
+                if (isGroupApi429(err)) {
+                    markGroupApi429();
+                }
+            } finally {
+                memberCountQueued.delete(group.id);
             }
         })();
     }
@@ -211,9 +223,17 @@ async function fetchFofGroups() {
             if (friendGroups.fofFetchCancelled) {
                 break;
             }
+            // 429 熔断期间保持当前进度, 冷却结束后继续同一用户
+            while (isGroupApiCoolingDown() && !friendGroups.fofFetchCancelled) {
+                await sleep(1000);
+            }
+            if (friendGroups.fofFetchCancelled) {
+                break;
+            }
             try {
                 // 群组列表 + 缺失的玩家名字, 每人间隔 1 秒避免触发限流
                 const groups = await fetchGroupsForUser(userId);
+                markGroupApiSuccess();
                 let displayName =
                     userStore.cachedUsers.get(userId)?.displayName || '';
                 if (!displayName) {
@@ -245,6 +265,9 @@ async function fetchFofGroups() {
                         console.error('[friend-groups] fof save failed:', e)
                     );
             } catch (err) {
+                if (isGroupApi429(err)) {
+                    markGroupApi429();
+                }
                 console.error(
                     '[friend-groups] fof groups fetch failed:',
                     userId,

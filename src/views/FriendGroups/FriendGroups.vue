@@ -105,24 +105,44 @@
                 </div>
                 <div v-if="expanded.has(group.id)" class="mb-2 ml-8 flex flex-col gap-1">
                     <div
-                        v-for="player in group.friends"
+                        v-for="player in pagedMembers(group)"
                         :key="player.userId"
                         class="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm"
                         @click="openUser(player.userId)">
                         <span class="truncate">{{ player.displayName }}</span>
                         <span class="text-muted-foreground flex-none text-xs">
-                            {{ t('view.friend_groups.friend_tag') }}
+                            {{
+                                player.tag === 'friend'
+                                    ? t('view.friend_groups.friend_tag')
+                                    : t('view.friend_groups.fof_tag')
+                            }}
                         </span>
                     </div>
                     <div
-                        v-for="player in group.fof"
-                        :key="player.userId"
-                        class="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm"
-                        @click="openUser(player.userId)">
-                        <span class="truncate">{{ player.displayName }}</span>
-                        <span class="text-muted-foreground flex-none text-xs">
-                            {{ t('view.friend_groups.fof_tag') }}
+                        v-if="memberTotalPages(group) > 1"
+                        class="flex items-center justify-center gap-1 py-1">
+                        <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            :disabled="memberPageOf(group.id) <= 1"
+                            @click="setMemberPage(group.id, memberPageOf(group.id) - 1)">
+                            <ChevronLeft class="size-4" />
+                        </Button>
+                        <span class="text-muted-foreground text-xs">
+                            {{
+                                t('view.friend_groups.page_info', {
+                                    page: memberPageOf(group.id),
+                                    total: memberTotalPages(group)
+                                })
+                            }}
                         </span>
+                        <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            :disabled="memberPageOf(group.id) >= memberTotalPages(group)"
+                            @click="setMemberPage(group.id, memberPageOf(group.id) + 1)">
+                            <ChevronRight class="size-4" />
+                        </Button>
                     </div>
                     <div
                         v-if="group.friends.length + group.fof.length === 0"
@@ -131,12 +151,54 @@
                     </div>
                 </div>
             </div>
-            <div
-                v-if="filteredGroups.length > visibleCount"
-                class="py-2 text-center">
-                <Button variant="outline" size="sm" @click="visibleCount += 100">
-                    {{ t('view.friend_groups.show_more') }}
-                </Button>
+            <div class="mt-1 flex w-full items-center gap-3">
+                <div
+                    class="inline-flex flex-1 items-center justify-end gap-2">
+                    <span
+                        class="text-muted-foreground truncate text-xs">
+                        {{ t('table.pagination.rows_per_page') }}
+                    </span>
+                    <Select v-model="pageSizeModel">
+                        <SelectTrigger size="sm">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="size in pageSizes"
+                                :key="String(size)"
+                                :value="String(size)">
+                                {{ size }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Pagination
+                    v-model:page="pageNum"
+                    :total="filteredGroups.length"
+                    :items-per-page="pageSize"
+                    :sibling-count="1"
+                    show-edges
+                    class="flex-none">
+                    <PaginationContent v-slot="{ items }">
+                        <PaginationPrevious />
+                        <template
+                            v-for="(item, index) in items"
+                            :key="
+                                item.type === 'page'
+                                    ? `page-${item.value}`
+                                    : `ellipsis-${index}`
+                            ">
+                            <PaginationItem
+                                v-if="item.type === 'page'"
+                                :value="item.value"
+                                :is-active="item.value === pageNum">
+                                {{ item.value }}
+                            </PaginationItem>
+                            <PaginationEllipsis v-else />
+                        </template>
+                        <PaginationNext />
+                    </PaginationContent>
+                </Pagination>
             </div>
         </div>
     </div>
@@ -146,11 +208,19 @@
     import { computed, onMounted, reactive, ref, watch } from 'vue';
     import { useI18n } from 'vue-i18n';
 
-    import { ChevronRight } from 'lucide-vue-next';
+    import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
     import { Badge } from '../../components/ui/badge';
     import { Button } from '../../components/ui/button';
     import { Input } from '../../components/ui/input';
+    import {
+        Pagination,
+        PaginationContent,
+        PaginationEllipsis,
+        PaginationItem,
+        PaginationNext,
+        PaginationPrevious
+    } from '../../components/ui/pagination';
     import {
         Select,
         SelectContent,
@@ -159,6 +229,7 @@
         SelectValue
     } from '../../components/ui/select';
     import { watchState } from '../../services/watchState';
+    import { useAppearanceSettingsStore } from '../../stores';
     import { useModalStore } from '../../stores/modal';
     import { showUserDialog } from '../../coordinators/userCoordinator';
     import { showGroupDialog } from '../../coordinators/groupCoordinator';
@@ -173,12 +244,11 @@
 
     const { t } = useI18n();
 
+    const appearanceSettingsStore = useAppearanceSettingsStore();
+
     const loading = ref(false);
     const refreshing = ref(false);
     const search = ref('');
-    watch(search, () => {
-        visibleCount.value = 100;
-    });
     const sortBy = ref('friends');
     const sortByModel = computed({
         get: () => String(sortBy.value),
@@ -186,9 +256,32 @@
             sortBy.value = value === 'total' ? 'total' : 'friends';
         }
     });
-    const visibleCount = ref(100);
+    // 群组列表分页 (页大小取外观设置, 初始 100 与旧的"显示更多"容量一致)
+    const pageNum = ref(1);
+    const pageSize = ref(100);
+    const pageSizes = computed(
+        () => appearanceSettingsStore.tablePageSizes || [20, 50, 100, 200]
+    );
+    const pageSizeModel = computed({
+        get: () => String(pageSize.value),
+        set: (value) => {
+            pageSize.value = Number(value) || 100;
+            pageNum.value = 1;
+        }
+    });
+    watch(search, () => {
+        pageNum.value = 1;
+        memberPages.clear();
+    });
+    watch(sortBy, () => {
+        pageNum.value = 1;
+    });
     // 成员列表默认折叠, 点击群组行展开
     const expanded = reactive(new Set());
+    // 展开群组的成员分页: groupId -> 页码(1 起), 固定每页 50,
+    // 仅渲染当前页切片, 避免大群组一次铺开上千行 DOM
+    const MEMBER_PAGE_SIZE = 50;
+    const memberPages = reactive(new Map());
 
     // 数据在模块级单例中跨页面保留: 仅首次打开(或显式刷新)才加载,
     // 避免每次进页面都重新走一遍加载流程
@@ -278,9 +371,21 @@
         );
     });
 
-    const visibleGroups = computed(() =>
-        filteredGroups.value.slice(0, visibleCount.value)
+    const totalPage = computed(() =>
+        Math.max(1, Math.ceil(filteredGroups.value.length / pageSize.value))
     );
+
+    const visibleGroups = computed(() => {
+        const start = (pageNum.value - 1) * pageSize.value;
+        return filteredGroups.value.slice(start, start + pageSize.value);
+    });
+
+    // 搜索或数据变化后结果变少时, 把页码压回范围内
+    watch(totalPage, (value) => {
+        if (pageNum.value > value) {
+            pageNum.value = value;
+        }
+    });
 
     // 群组总人数后台加载 (单例队列, 已取过的群组不重复请求)
     watch(
@@ -292,12 +397,96 @@
     );
 
     /**
+     * 合并好友与好友的好友为平铺成员列表
+     * @param group
+     */
+    function mergedMembers(group) {
+        return [
+            ...group.friends.map((player) => ({
+                userId: player.userId,
+                displayName: player.displayName,
+                tag: 'friend'
+            })),
+            ...group.fof.map((player) => ({
+                userId: player.userId,
+                displayName: player.displayName,
+                tag: 'fof'
+            }))
+        ];
+    }
+
+    /**
+     *
+     * @param groupId
+     */
+    function memberPageOf(groupId) {
+        return memberPages.get(groupId) || 1;
+    }
+
+    /**
+     *
+     * @param group
+     */
+    function memberTotalPages(group) {
+        return Math.max(
+            1,
+            Math.ceil(
+                (group.friends.length + group.fof.length) / MEMBER_PAGE_SIZE
+            )
+        );
+    }
+
+    /**
+     * 当前页的成员切片
+     * @param group
+     */
+    function pagedMembers(group) {
+        const start = (memberPageOf(group.id) - 1) * MEMBER_PAGE_SIZE;
+        return mergedMembers(group).slice(start, start + MEMBER_PAGE_SIZE);
+    }
+
+    /**
+     *
+     * @param groupId
+     * @param page
+     */
+    function setMemberPage(groupId, page) {
+        memberPages.set(groupId, page);
+    }
+
+    // reload 后成员数可能变小, 把展开群组的页码压回总页数内
+    watch(
+        () => {
+            let sig = '';
+            for (const groupId of memberPages.keys()) {
+                const group = friendGroups.groupsById.get(groupId);
+                sig += `${groupId}:${group?.friends.length ?? 0},${group?.fof.length ?? 0};`;
+            }
+            return sig;
+        },
+        () => {
+            for (const groupId of [...memberPages.keys()]) {
+                const group = friendGroups.groupsById.get(groupId);
+                if (!group) {
+                    memberPages.delete(groupId);
+                    continue;
+                }
+                const total = memberTotalPages(group);
+                if (memberPages.get(groupId) > total) {
+                    memberPages.set(groupId, total);
+                }
+            }
+        }
+    );
+
+    /**
      *
      * @param groupId
      */
     function toggleExpand(groupId) {
         if (expanded.has(groupId)) {
             expanded.delete(groupId);
+            memberPages.delete(groupId);
             return;
         }
         expanded.add(groupId);

@@ -91,11 +91,7 @@
         "friend_worlds": "好友的世界"
     },
     "nav_menu": {
-        "resources": "帮助资源",
-        "wiki": "Wiki",
-        "get_help": "请求帮助",
-        "github": "GitHub 仓库",
-        "discord": "加入 Discord",
+        "freegg": "访问 FREEGG",
         "changelog": "更新日志",
         "update_available": "有新版本可用",
         "update": "更新",
@@ -1494,7 +1490,8 @@
             "friend_tag": "好友",
             "fof_tag": "好友的好友",
             "no_players": "该群组暂无已知成员",
-            "show_more": "显示更多"
+            "show_more": "显示更多",
+            "page_info": "第 {page} / {total} 页"
         },
         "friend_avatars": {
             "header": "好友的模型",
@@ -1669,7 +1666,7 @@
                 "copy_id": "复制 ID",
                 "copy_url": "复制URL",
                 "copy_display_name": "复制昵称",
-                "icon_hides_avatar": "当用户头像被设置时，模型信息将被隐藏。包括好友动态中的模型变动",
+                "icon_hides_avatar": "模型信息由资料背景（模型封面）或资料头像推断；若两者均非模型图片（如自定义照片）则无法显示。好友动态中的模型变动遵循相同机制",
                 "instance_full": "房间已满",
                 "instance_closed_at": "房间关闭于",
                 "instance_age_restricted": "年龄限制",
@@ -3066,7 +3063,8 @@
             "description": "考虑捐赠一下，以支持 VRCX 的未来发展",
             "close": "关闭",
             "donate": "捐赠支持",
-            "github": "在 GitHub 上查看"
+            "github": "在 GitHub 上查看",
+            "load_failed": "更新日志获取失败，请稍后重试"
         },
         "open_source": {
             "header": "开放源代码许可条款",
@@ -3425,7 +3423,11 @@
             "not_found": "在模型数据库中未能找到模型",
             "failed": "在模型数据库中查找此模型信息时失败",
             "private_or_not_found": "此玩家的模型是私人的，或者在公共模型数据库中未能找到",
-            "loading": "正在从指定的模型数据库中查找模型"
+            "loading": "正在从指定的模型数据库中查找模型",
+            "rate_limited": "公共模型数据库暂时被限流（Cloudflare 1015），模型公开/私模判定暂停 10 分钟"
+        },
+        "group_api": {
+            "rate_limited": "VRChat 群组接口限流（429），群组相关后台任务暂停，稍后自动恢复"
         },
         "database": {
             "upgrade_complete": "数据库升级完成",

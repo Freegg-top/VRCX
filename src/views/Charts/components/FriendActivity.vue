@@ -1,6 +1,6 @@
 <template>
     <div id="chart" class="x-container">
-        <div ref="friendActivityRef" class="pt-12">
+        <div ref="friendActivityRef" class="pt-4">
             <BackToTop :target="friendActivityRef" :right="30" :bottom="30" :teleport="false" />
             <div class="options-container flex items-center justify-between mt-0">
                 <span class="shrink-0">{{ t('view.charts.friend_activity.header') }}</span>

@@ -86,11 +86,7 @@
         "toggle_theme": "切換主題"
     },
     "nav_menu": {
-        "resources": "資源",
-        "wiki": "Wiki",
-        "get_help": "取得協助",
-        "github": "在 GitHub 上查看 VRCX",
-        "discord": "加入我們的 Discord",
+        "freegg": "訪問 FREEGG",
         "changelog": "最新更新",
         "update_available": "有可用更新",
         "update": "更新",
@@ -542,6 +538,9 @@
             "filter_placeholder": "篩選好友",
             "load_mutual_friends": "載入共同好友",
             "mutual_loading_hint": "在共同好友圖表頁面查看進度"
+        },
+        "friend_groups": {
+            "page_info": "第 {page} / {total} 頁"
         },
         "charts": {
             "instance_activity": {
@@ -1464,6 +1463,7 @@
                 "copy_id": "複製 ID",
                 "copy_url": "複製連結",
                 "copy_display_name": "複製顯示名稱",
+                "icon_hides_avatar": "模型資訊由資料背景（模型封面）或資料頭像推斷；若兩者均非模型圖片（如自訂相片）則無法顯示。好友動態中的模型變動遵循相同機制",
                 "instance_full": "已滿",
                 "instance_age_restricted": "年齡限制",
                 "instance_age_restricted_tooltip": "在有年齡限制的房間中",
@@ -2647,7 +2647,8 @@
             "description": "考慮捐款來支持未來 VRCX 的開發：",
             "close": "關閉",
             "donate": "贊助",
-            "github": "GitHub"
+            "github": "GitHub",
+            "load_failed": "更新日誌獲取失敗，請稍後重試"
         },
         "open_source": {
             "header": "開放原始碼軟體授權條款",
@@ -2973,7 +2974,11 @@
             "not_found": "在搜尋來源中找不到該角色",
             "failed": "角色查詢失敗",
             "private_or_not_found": "角色設為私人，或在搜尋來源中找不到",
-            "loading": "正在透過搜尋來源尋找角色"
+            "loading": "正在透過搜尋來源尋找角色",
+            "rate_limited": "公共模型資料庫暫時被限流（Cloudflare 1015），模型公開/私模判定暫停 10 分鐘"
+        },
+        "group_api": {
+            "rate_limited": "VRChat 群組介面限流（429），群組相關後台任務暫停，稍後自動恢復"
         },
         "database": {
             "upgrade_complete": "資料庫升級完成",

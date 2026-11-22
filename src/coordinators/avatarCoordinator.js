@@ -31,6 +31,26 @@ import { useVRCXUpdaterStore } from '../stores/vrcxUpdater';
 
 import webApiService from '../services/webapi';
 
+const REMOTE_DB_COOLDOWN_MS = 10 * 60 * 1000;
+let remoteDbCooldownUntil = 0;
+let remoteDbCooldownNotified = false;
+
+/**
+ * @param body
+ * @returns {boolean}
+ */
+export function isCloudflareBlocked(body) {
+    return typeof body === 'string' && /error code:\s*\d+/i.test(body);
+}
+
+function markRemoteDbCooldown() {
+    remoteDbCooldownUntil = Date.now() + REMOTE_DB_COOLDOWN_MS;
+    if (!remoteDbCooldownNotified) {
+        remoteDbCooldownNotified = true;
+        toast.warning(i18n.global.t('message.avatar_lookup.rate_limited'));
+    }
+}
+
 /**
  * @param {object} json
  * @returns {object} Ref
@@ -269,6 +289,30 @@ export async function getAvatarName(imageUrl) {
 }
 
 /**
+ * 从资料背景(模型封面横幅)/资料头像推断"正在使用的模型":
+ * avatarBanner 背景优先 (VRChat 随换模自动更新), 其次资料头像。
+ * 背景非 avatarBanner (自定义图/纯色) 时不参与推断, 避免把自定义图片当成当前模型。
+ *
+ * @param {{ bannerType?: string; bannerUrl?: string; iconUrl?: string }} profile
+ * @returns {Promise<{ url: string; ownerId: string; avatarName: string } | null>}
+ */
+export async function resolveProfileAvatarInfo({ bannerType, bannerUrl, iconUrl }) {
+    if (bannerType === 'avatarBanner' && bannerUrl) {
+        const info = await getAvatarName(bannerUrl);
+        if (info.ownerId) {
+            return { url: bannerUrl, ownerId: info.ownerId, avatarName: info.avatarName };
+        }
+    }
+    if (iconUrl) {
+        const info = await getAvatarName(iconUrl);
+        if (info.ownerId) {
+            return { url: iconUrl, ownerId: info.ownerId, avatarName: info.avatarName };
+        }
+    }
+    return null;
+}
+
+/**
  * @param type
  * @param search
  */
@@ -339,6 +383,9 @@ export async function lookupAvatars(type, search) {
  * @param fileId
  */
 export async function lookupAvatarByImageFileId(authorId, fileId) {
+    if (Date.now() < remoteDbCooldownUntil) {
+        return null;
+    }
     const avatarProviderStore = useAvatarProviderStore();
 
     for (const providerUrl of avatarProviderStore.avatarRemoteDatabaseProviderList) {
@@ -349,12 +396,46 @@ export async function lookupAvatarByImageFileId(authorId, fileId) {
     }
 
     for (const providerUrl of avatarProviderStore.avatarRemoteDatabaseProviderList) {
-        const avatarArray = await lookupAvatarsByAuthor(providerUrl, authorId);
+        const avatarArray = await lookupAvatarsByAuthor(providerUrl, authorId, {
+            silent: true
+        });
         for (const avatar of avatarArray) {
             if (extractFileId(avatar.imageUrl) === fileId) {
                 return avatar.id;
             }
         }
+    }
+    return null;
+}
+
+/**
+ * 查询作者在公共模型数据库中的全部公开模型, 返回其图片 fileId 集合。
+ * 熔断期间直接返回 null (调用方不应缓存该结果)。
+ *
+ * @param {string} authorId
+ * @returns {Promise<Set<string> | null>}
+ */
+export async function lookupAuthorPublicFileIds(authorId) {
+    if (Date.now() < remoteDbCooldownUntil) {
+        return null;
+    }
+    const avatarProviderStore = useAvatarProviderStore();
+
+    for (const providerUrl of avatarProviderStore.avatarRemoteDatabaseProviderList) {
+        const avatarArray = await lookupAvatarsByAuthor(providerUrl, authorId, {
+            silent: true
+        });
+        if (avatarArray.length === 0) {
+            continue;
+        }
+        const fileIds = new Set();
+        for (const avatar of avatarArray) {
+            const fileId = extractFileId(avatar.imageUrl);
+            if (fileId) {
+                fileIds.add(fileId);
+            }
+        }
+        return fileIds;
     }
     return null;
 }
@@ -376,6 +457,10 @@ async function lookupAvatarByFileId(providerUrl, fileId) {
                 'VRCX-ID': vrcxUpdaterStore.vrcxId
             }
         });
+        if (isCloudflareBlocked(response.data)) {
+            markRemoteDbCooldown();
+            return null;
+        }
         const json = JSON.parse(response.data);
         logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, json);
         if (response.status === 200 && typeof json === 'object') {
@@ -405,8 +490,9 @@ async function lookupAvatarByFileId(providerUrl, fileId) {
 /**
  * @param providerUrl
  * @param authorId
+ * @param options
  */
-async function lookupAvatarsByAuthor(providerUrl, authorId) {
+async function lookupAvatarsByAuthor(providerUrl, authorId, { silent = false } = {}) {
     const vrcxUpdaterStore = useVRCXUpdaterStore();
 
     const avatars = [];
@@ -423,6 +509,10 @@ async function lookupAvatarsByAuthor(providerUrl, authorId) {
                 'VRCX-ID': vrcxUpdaterStore.vrcxId
             }
         });
+        if (isCloudflareBlocked(response.data)) {
+            markRemoteDbCooldown();
+            return avatars;
+        }
         const json = JSON.parse(response.data);
         logWebRequest('[EXTERNAL GET]', url, `(${response.status})`, json);
         if (response.status === 200 && typeof json === 'object') {
@@ -448,7 +538,9 @@ async function lookupAvatarsByAuthor(providerUrl, authorId) {
     } catch (err) {
         const msg = `Avatar lookup failed for ${authorId} with ${url}\n${err}`;
         console.error(msg);
-        toast.error(msg);
+        if (!silent) {
+            toast.error(msg);
+        }
     }
     return avatars;
 }

@@ -44,6 +44,10 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         buildName: '',
         changeLog: ''
     });
+    // 拓展版当前运行版本的更新日志: 打包脚本写入安装目录 html/changelog.txt, 与应用同源
+    const dlcChangeLogText = ref('');
+    // 语义: 本次会话已成功加载过 (加载失败保持 false, 下次打开对话框可重试)
+    const dlcChangeLogLoaded = ref(false);
     const whatsNewDialog = ref(emptyWhatsNewDialog());
     const pendingVRCXUpdate = ref(false);
     const pendingVRCXInstall = ref('');
@@ -106,7 +110,8 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
     /**
      * 数值化版本比较: 剥前缀后按 . / - 分段, 数字段按数值比较 (修复 dlc.9 → dlc.10
      * 的字典序进位问题), 非数字段按字符串比较。返回 >0 / 0 / <0。
-     * @param {string} a release 名称 (如 "VRCX DLC 2026.09.20-dlc.10")
+     *
+     * @param {string} a Release 名称 (如 "VRCX DLC 2026.09.20-dlc.10")
      * @param {string} b 当前版本名称
      * @returns {number}
      */
@@ -288,8 +293,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                 WINDOWS &&
                 isDlcBuild.value &&
                 asset.name.endsWith('.zip') &&
-                (asset.content_type === 'application/zip' ||
-                    asset.content_type === 'application/octet-stream')
+                (asset.content_type === 'application/zip' || asset.content_type === 'application/octet-stream')
             ) {
                 // 拓展版分发: 便携 zip 更新包, C# 在重启时解压覆盖安装目录
                 // (仅拓展版启用: 官方源的便携 zip 不得劫持官方安装)
@@ -370,15 +374,12 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             const releaseName = json.name;
             if (compareVersionNames(releaseName, currentVersion.value) > 0) {
                 changeLogDialog.value.buildName = releaseName;
-                changeLogDialog.value.changeLog =
-                    changeLogRemoveLinks(json.body);
+                changeLogDialog.value.changeLog = changeLogRemoveLinks(json.body);
                 setLatestAppVersion(releaseName);
             } else {
                 // 服务器最新版本不比本地新: 显示本地版本号, 不显示过期的服务器版本
                 changeLogDialog.value.buildName = currentVersion.value;
-                changeLogDialog.value.changeLog = t(
-                    'dialog.vrcx_updater.local_up_to_date'
-                );
+                changeLogDialog.value.changeLog = t('dialog.vrcx_updater.local_up_to_date');
                 setLatestAppVersion(currentVersion.value);
             }
             VRCXUpdateDialog.value.updatePendingIsLatest = false;
@@ -403,10 +404,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                             officialLatestVersion.value = officialJson.name;
                         }
                     } else {
-                        console.warn(
-                            '[vrcx-updater] official latest fetch:',
-                            official.status
-                        );
+                        console.warn('[vrcx-updater] official latest fetch:', official.status);
                         officialLatestVersion.value = '';
                     }
                 } catch (e) {
@@ -420,9 +418,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             if (releaseName === pendingVRCXInstall.value) {
                 // update already downloaded
                 VRCXUpdateDialog.value.updatePendingIsLatest = true;
-            } else if (
-                compareVersionNames(releaseName, currentVersion.value) > 0
-            ) {
+            } else if (compareVersionNames(releaseName, currentVersion.value) > 0) {
                 const { downloadUrl, hashString, size } = getAssetOfInterest(json.assets);
                 if (!downloadUrl) {
                     return true;
@@ -581,6 +577,28 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         }
         return checkForVRCXUpdate();
     }
+
+    /**
+     * 读取本地打包的当前运行版本更新日志 (安装目录 html/changelog.txt, 与应用同源)
+     * 相对路径 + 时间戳防缓存; 请求失败/空内容/HTML 错误页均视为未加载, 静默保持 text 为空
+     */
+    async function loadDlcChangeLog() {
+        try {
+            const response = await fetch(`changelog.txt?t=${Date.now()}`);
+            if (!response.ok) {
+                return;
+            }
+            const text = await response.text();
+            // dev server 等场景下缺失文件可能回退成 index.html, 不能当作更新日志
+            if (!text.trim() || /<!doctype html|<html[\s>]/i.test(text)) {
+                return;
+            }
+            dlcChangeLogText.value = text;
+            dlcChangeLogLoaded.value = true;
+        } catch (error) {
+            console.error('Failed to load local DLC changelog', error);
+        }
+    }
     function restartVRCX(isUpgrade) {
         if (!LINUX) {
             AppApi.RestartApplication(isUpgrade);
@@ -612,6 +630,8 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         checkingForVRCXUpdate,
         VRCXUpdateDialog,
         changeLogDialog,
+        dlcChangeLogText,
+        dlcChangeLogLoaded,
         whatsNewDialog,
         pendingVRCXUpdate,
         pendingVRCXInstall,
@@ -632,6 +652,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         installVRCXUpdate,
         showVRCXUpdateDialog,
         showChangeLogDialog,
+        loadDlcChangeLog,
         restartVRCX,
         updateProgressText,
         cancelUpdate

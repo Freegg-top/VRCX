@@ -11,6 +11,7 @@ export * from './csv';
 export * from './fileUtils';
 export * from './friend';
 export * from './group';
+export * from './horizontalScroll';
 export * from './instance';
 export * from './platformUtils';
 export * from './setting';

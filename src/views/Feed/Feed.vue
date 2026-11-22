@@ -70,21 +70,38 @@
                             </Button>
                         </TooltipWrapper>
                     </div>
-                    <ToggleGroup
-                        type="multiple"
-                        variant="outline"
-                        size="sm"
-                        :model-value="activeFilterSelection"
-                        @update:model-value="handleFeedFilterChange"
-                        class="w-full justify-start"
-                        style="flex: 1">
-                        <ToggleGroupItem value="All">
-                            {{ t('view.search.avatar.all') }}
-                        </ToggleGroupItem>
-                        <ToggleGroupItem v-for="type in feedFilterTypes" :key="type" :value="type">
-                            {{ t('view.feed.filters.' + type) }}
-                        </ToggleGroupItem>
-                    </ToggleGroup>
+                    <div class="relative min-w-0" style="flex: 1">
+                        <div
+                            ref="feedFilterScrollRef"
+                            class="feed-filter-scroll min-w-0 overflow-x-auto"
+                            @scroll="updateFeedFilterScrollState">
+                            <ToggleGroup
+                                ref="feedFilterGroupRef"
+                                type="multiple"
+                                variant="outline"
+                                size="sm"
+                                :model-value="activeFilterSelection"
+                                @update:model-value="handleFeedFilterChange"
+                                class="w-max min-w-full justify-start">
+                                <ToggleGroupItem value="All" data-filter="All">
+                                    {{ t('view.search.avatar.all') }}
+                                </ToggleGroupItem>
+                                <ToggleGroupItem
+                                    v-for="type in feedFilterTypes"
+                                    :key="type"
+                                    :value="type"
+                                    :data-filter="type">
+                                    {{ t('view.feed.filters.' + type) }}
+                                </ToggleGroupItem>
+                            </ToggleGroup>
+                        </div>
+                        <div
+                            v-if="canScrollFilterLeft"
+                            class="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-linear-to-r from-background to-transparent" />
+                        <div
+                            v-if="canScrollFilterRight"
+                            class="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-linear-to-l from-background to-transparent" />
+                    </div>
                     <InputGroupField
                         class="ml-2"
                         v-model="feedTable.search"
@@ -101,7 +118,7 @@
 </template>
 
 <script setup>
-    import { computed, ref } from 'vue';
+    import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
     import { Eye, ListFilter, Star } from 'lucide-vue-next';
     import { getLocalTimeZone, today } from '@internationalized/date';
     import { storeToRefs } from 'pinia';
@@ -121,6 +138,7 @@
     import { columns as baseColumns } from './columns.jsx';
     import { useVrcxVueTable } from '../../lib/table/useVrcxVueTable';
     import { createLocalRowId } from '../../lib/table/createLocalRowId';
+    import { getHorizontalWheelScroll } from '../../shared/utils/horizontalScroll';
     import WatchedUsersDialog from './dialogs/WatchedUsersDialog.vue';
 
     const { feedTable, feedTableData } = storeToRefs(useFeedStore());
@@ -176,6 +194,53 @@
     }
 
     const feedRef = ref(null);
+    const feedFilterScrollRef = ref(null);
+    const feedFilterGroupRef = ref(null);
+    const canScrollFilterLeft = ref(false);
+    const canScrollFilterRight = ref(false);
+    let feedFilterResizeObserver;
+
+    function updateFeedFilterScrollState() {
+        const element = feedFilterScrollRef.value;
+        if (!element) return;
+        canScrollFilterLeft.value = element.scrollLeft > 0;
+        canScrollFilterRight.value = element.scrollLeft + element.clientWidth < element.scrollWidth;
+    }
+
+    /**
+     * @param {WheelEvent} event
+     */
+    function handleFeedFilterWheel(event) {
+        const element = feedFilterScrollRef.value;
+        if (!element) return;
+        const { delta, preventDefault } = getHorizontalWheelScroll({
+            deltaX: event.deltaX,
+            deltaY: event.deltaY,
+            scrollLeft: element.scrollLeft,
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth
+        });
+        element.scrollLeft += delta;
+        if (preventDefault) event.preventDefault();
+    }
+
+    onMounted(() => {
+        const element = feedFilterScrollRef.value;
+        if (!element) return;
+        element.addEventListener('wheel', handleFeedFilterWheel, { passive: false });
+        updateFeedFilterScrollState();
+        if (typeof ResizeObserver !== 'undefined') {
+            feedFilterResizeObserver = new ResizeObserver(updateFeedFilterScrollState);
+            feedFilterResizeObserver.observe(element);
+            const groupElement = feedFilterGroupRef.value?.$el ?? feedFilterGroupRef.value;
+            if (groupElement) feedFilterResizeObserver.observe(groupElement);
+        }
+    });
+
+    onUnmounted(() => {
+        feedFilterScrollRef.value?.removeEventListener('wheel', handleFeedFilterWheel);
+        feedFilterResizeObserver?.disconnect();
+    });
 
     const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
@@ -201,10 +266,7 @@
         columns: baseColumns,
         getRowId: getFeedRowId,
         enableExpanded: true,
-        getRowCanExpand: (row) =>
-            ['GPS', 'Online', 'Offline', 'Avatar', 'Status', 'Bio'].includes(
-                row?.original?.type
-            ),
+        getRowCanExpand: (row) => ['GPS', 'Online', 'Offline', 'Avatar', 'Status', 'Bio'].includes(row?.original?.type),
         initialSorting: [],
         initialExpanded: {},
         initialPagination: {
@@ -256,10 +318,25 @@
             feedTable.value.filter = types.length === feedFilterTypes.length ? [] : types.length ? types : [];
         }
         feedTableLookup();
+
+        const selectedFilter = selected[selected.length - 1] || 'All';
+        nextTick(() => {
+            feedFilterScrollRef.value
+                ?.querySelector(`[data-filter="${selectedFilter}"]`)
+                ?.scrollIntoView?.({ inline: 'nearest', behavior: 'smooth' });
+        });
     }
 </script>
 
 <style scoped>
+    .feed-filter-scroll {
+        scrollbar-width: none;
+    }
+
+    .feed-filter-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
     .feed :deep(.x-text-removed) {
         text-decoration: line-through;
         color: #ff0000;

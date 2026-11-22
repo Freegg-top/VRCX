@@ -540,7 +540,7 @@
 
     import UserActionDropdown from './UserActionDropdown.vue';
     import { showGroupDialog } from '@/coordinators/groupCoordinator';
-    import { getAvatarName } from '@/coordinators/avatarCoordinator';
+    import { resolveProfileAvatarInfo } from '@/coordinators/avatarCoordinator';
 
     const props = defineProps({
         getUserStateText: {
@@ -583,22 +583,36 @@
     const profileImageError = ref(false);
     const userIconError = ref(false);
     const hasAvatarSet = ref(false);
+    const resolvedAvatarUrl = ref('');
+
     const avatarImageUrl = computed(() => {
         if (userDialog.value.id === currentUser.value.id) {
             return currentUser.value.currentAvatarImageUrl;
         }
 
-        return hasAvatarSet.value ? userDialog.value.publicProfileRef?.iconUrl : '';
+        return hasAvatarSet.value ? resolvedAvatarUrl.value : '';
     });
 
     watch(
-        () => userDialog.value.publicProfileRef?.iconUrl,
-        async (iconUrl) => {
+        [
+            () => userDialog.value.id,
+            () => userDialog.value.ref?.bannerType,
+            () => userDialog.value.ref?.bannerUrl,
+            () => userDialog.value.publicProfileRef?.iconUrl
+        ],
+        async ([userId, bannerType, bannerUrl, iconUrl]) => {
             hasAvatarSet.value = false;
-            // check if image is from an avatar
-            const avatarInfo = await getAvatarName(iconUrl);
-            if (iconUrl === userDialog.value.publicProfileRef?.iconUrl) {
-                hasAvatarSet.value = Boolean(avatarInfo.ownerId);
+            resolvedAvatarUrl.value = '';
+            // check if banner (avatar cover) or icon image is from an avatar
+            const info = await resolveProfileAvatarInfo({ bannerType, bannerUrl, iconUrl });
+            if (
+                userId === userDialog.value.id &&
+                bannerType === userDialog.value.ref?.bannerType &&
+                bannerUrl === userDialog.value.ref?.bannerUrl &&
+                iconUrl === userDialog.value.publicProfileRef?.iconUrl
+            ) {
+                hasAvatarSet.value = Boolean(info);
+                resolvedAvatarUrl.value = info?.url || '';
             }
         },
         { immediate: true }

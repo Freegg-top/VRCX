@@ -1,6 +1,6 @@
 <template>
     <div id="chart" class="x-container">
-        <div ref="instanceActivityRef" class="pt-12">
+        <div ref="instanceActivityRef" class="pt-4">
             <BackToTop :target="instanceActivityRef" :right="30" :bottom="30" :teleport="false" />
             <div class="options-container flex items-center justify-between mt-0">
                 <div class="flex items-center justify-between">

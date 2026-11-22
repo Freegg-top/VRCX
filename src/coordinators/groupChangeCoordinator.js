@@ -6,6 +6,11 @@ import { useFeedStore } from '../stores/feed';
 import { watchState } from '../services/watchState';
 import { buildRequestInit } from '../services/request';
 import webApiService from '../services/webapi';
+import { isGroupApiCoolingDown, markGroupApi429, markGroupApiSuccess } from './groupApiBreaker';
+
+function isGroupApi429(err) {
+    return err?.status === 429 || (err?.message || '').includes('429');
+}
 
 // users/{id}/groups 403/404 常见 (隐藏群组/已删号), request() 层会 toast 且
 // 写入 15 分钟 bail 名单——这里改走 webApi 直连, 错误交由调用方静默处理
@@ -102,8 +107,13 @@ export async function runGroupChangePoll() {
                 // 登出: 中止本轮, 避免继续打 API
                 break;
             }
+            if (isGroupApiCoolingDown()) {
+                // 群组接口 429 熔断: 结束本轮, 等待下一次调度重试
+                break;
+            }
             try {
                 const groups = await fetchGroupsRaw(userId);
+                markGroupApiSuccess();
                 const current = normalizeGroups(groups).sort(
                     (a, b) => (a.id < b.id ? -1 : 1)
                 );
@@ -147,6 +157,9 @@ export async function runGroupChangePoll() {
                 }
                 await database.saveFriendGroupSnapshot(userId, current);
             } catch (err) {
+                if (isGroupApi429(err)) {
+                    markGroupApi429();
+                }
                 // 单个用户失败(隐藏群组/瞬态错误/DB 忙): 保留旧快照, 不中断整轮
                 console.error(
                     '[group-change] poll target failed:',

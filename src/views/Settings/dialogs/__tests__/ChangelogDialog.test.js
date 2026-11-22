@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { flushPromises, mount } from '@vue/test-utils';
 import { ref } from 'vue';
 
 // ─── Mocks ───────────────────────────────────────────────────────────
@@ -10,10 +10,16 @@ const changeLogDialog = ref({
     changeLog: '## New Features\n- Feature A\n- Feature B'
 });
 
+const isDlcBuild = ref(false);
+const currentVersion = ref('VRCX DLC 2026.09.20-dlc.10');
+const dlcChangeLogText = ref('');
+const dlcChangeLogLoaded = ref(false);
+const loadDlcChangeLogFn = vi.fn();
+
 const openExternalLinkFn = vi.fn();
 
 vi.mock('pinia', () => ({
-    storeToRefs: () => ({ changeLogDialog }),
+    storeToRefs: () => ({ changeLogDialog, currentVersion, isDlcBuild, dlcChangeLogText, dlcChangeLogLoaded }),
     defineStore: (id, fn) => fn
 }));
 
@@ -25,7 +31,7 @@ vi.mock('vue-i18n', () => ({
 }));
 
 vi.mock('../../../../stores', () => ({
-    useVRCXUpdaterStore: () => ({})
+    useVRCXUpdaterStore: () => ({ loadDlcChangeLog: loadDlcChangeLogFn })
 }));
 
 vi.mock('../../../../shared/utils', () => ({
@@ -78,6 +84,10 @@ describe('ChangelogDialog.vue', () => {
             buildName: 'VRCX 2025.1.0',
             changeLog: '## New Features\n- Feature A\n- Feature B'
         };
+        isDlcBuild.value = false;
+        currentVersion.value = 'VRCX DLC 2026.09.20-dlc.10';
+        dlcChangeLogText.value = '';
+        dlcChangeLogLoaded.value = false;
         vi.clearAllMocks();
     });
 
@@ -128,6 +138,71 @@ describe('ChangelogDialog.vue', () => {
 
             await githubBtn.trigger('click');
             expect(openExternalLinkFn).toHaveBeenCalledWith('https://github.com/vrcx-team/VRCX/releases');
+        });
+    });
+
+    describe('DLC build', () => {
+        beforeEach(() => {
+            isDlcBuild.value = true;
+            // 模拟 store 的 loadDlcChangeLog 实现: 读取本地 changelog.txt, 失败静默
+            loadDlcChangeLogFn.mockImplementation(async () => {
+                try {
+                    const response = await fetch(`changelog.txt?t=${Date.now()}`);
+                    if (!response.ok) {
+                        return;
+                    }
+                    const text = await response.text();
+                    if (!text.trim() || /<!doctype html|<html[\s>]/i.test(text)) {
+                        return;
+                    }
+                    dlcChangeLogText.value = text;
+                    dlcChangeLogLoaded.value = true;
+                } catch {
+                    // store 静默失败: text 保持 '', loaded 保持 false
+                }
+            });
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        test('loads local changelog on open and renders current version title', async () => {
+            const fetchMock = vi.fn().mockResolvedValue({
+                ok: true,
+                text: async () => '## DLC Fixes\n- fix A'
+            });
+            vi.stubGlobal('fetch', fetchMock);
+
+            changeLogDialog.value.visible = false;
+            const wrapper = mountComponent();
+            expect(loadDlcChangeLogFn).not.toHaveBeenCalled();
+
+            // 打开对话框触发按需加载
+            changeLogDialog.value.visible = true;
+            await flushPromises();
+            await flushPromises();
+
+            expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('changelog.txt?t='));
+            expect(wrapper.text()).toContain('VRCX DLC 2026.09.20-dlc.10');
+            expect(wrapper.text()).toContain('- fix A');
+            expect(wrapper.text()).not.toContain('dialog.change_log.load_failed');
+            // DLC 构建 footer 不显示 GitHub releases 按钮
+            expect(wrapper.text()).not.toContain('dialog.change_log.github');
+        });
+
+        test('shows load_failed text when fetch fails', async () => {
+            vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+
+            changeLogDialog.value.visible = false;
+            const wrapper = mountComponent();
+            changeLogDialog.value.visible = true;
+            await flushPromises();
+            await flushPromises();
+
+            expect(dlcChangeLogText.value).toBe('');
+            expect(dlcChangeLogLoaded.value).toBe(false);
+            expect(wrapper.text()).toContain('dialog.change_log.load_failed');
         });
     });
 });
