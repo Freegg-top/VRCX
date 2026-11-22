@@ -83,7 +83,8 @@
         "help_support": "協助與支援",
         "expand_menu": "展開選單",
         "collapse_menu": "收起選單",
-        "toggle_theme": "切換主題"
+        "toggle_theme": "切換主題",
+        "oversee": "雲端監察"
     },
     "nav_menu": {
         "freegg": "訪問 FREEGG",
@@ -734,6 +735,89 @@
             "refresh_tooltip": "重新整理",
             "clear_results_tooltip": "清除結果"
         },
+        "oversee": {
+            "header": "Oversee 雲端監察",
+            "description": "來自 Oversee 雲端的全站觀測資料，並與本地紀錄合併展示。",
+            "tab_trace": "觀測軌跡",
+            "tab_encounters": "偶遇回溯",
+            "tab_room": "進房查房",
+            "tab_network": "關係網",
+            "all_disabled": "全部功能已在設定中停用。請前往設定啟用至少一項功能後再使用本頁。",
+            "guide": {
+                "notConfigured": "未設定 Oversee License",
+                "notConfigured_description": "請前往「設定 → Oversee」填寫 License Key 以解鎖雲端監察功能。未設定時雲端請求會被拒絕，本頁內容不可見。",
+                "invalid": "License Key 無效",
+                "invalid_description": "雲端拒絕了目前 License Key（401）。請前往「設定 → Oversee」更換有效的 Key。",
+                "expired": "License 已過期",
+                "expired_description": "License 已過期或被撤銷（403）。請前往「設定 → Oversee」續期或更換 Key。",
+                "retry_probe": "重試探測",
+                "local_only_hint": "License 恢復前僅可使用「偶遇回溯」（本地模式）。"
+            },
+            "query": "查詢",
+            "watch_add": "加入關注名單",
+            "watch_remove": "移出關注名單",
+            "open_user_dialog": "開啟用戶對話框",
+            "not_logged_in": "請先登入 VRChat，本功能需要目前帳號的用戶 ID。",
+            "error": {
+                "invalidId": "未識別到有效的 usr_ 用戶 ID，請貼上 ID 或包含 ID 的連結。",
+                "notConfigured": "未設定 License Key，請前往「設定 → Oversee」填寫。",
+                "unauthorized": "License Key 無效（401），請前往設定更換。",
+                "forbidden": "License 已過期或被撤銷（403），請前往設定更換。",
+                "notFound": "雲端無此用戶紀錄。",
+                "server": "雲端請求失敗，請稍後重試。",
+                "network": "無法連線 Oversee 雲端服務，請檢查網路後重試。"
+            },
+            "trace": {
+                "input_placeholder": "用戶 ID 或包含 usr_ 的連結",
+                "hint": "輸入用戶 ID，查詢其雲端觀測位置歷史。",
+                "empty": "該用戶暫無觀測歷史。雲端恢復採集後，資料會出現在這裡。",
+                "first_seen": "首次觀測：",
+                "last_seen": "最近觀測：",
+                "visits": "出現 {count} 次"
+            },
+            "encounters": {
+                "hint": "從本地紀錄與 Oversee 雲端載入你的同處（偶遇）關係。",
+                "empty": "本地紀錄與雲端均未發現同處紀錄。",
+                "cloud_pending": "雲端資料待同步，目前僅展示本地結果。",
+                "source_local": "本地",
+                "source_cloud": "雲端",
+                "source_both": "本地+雲端",
+                "co_seen": "同處 {count} 次",
+                "last_seen": "最近同處："
+            },
+            "room": {
+                "input_placeholder": "完整 location，如 wrld_xxx:12345~region(...)",
+                "fill_current": "查目前實例",
+                "invalid_location": "請輸入完整的 location（wrld_xxx:實例 ID）。",
+                "roster_count": "在場 {count} 人",
+                "empty": "該實例暫無觀測名單。",
+                "hint": "輸入 location 查詢該實例的雲端觀測名單。"
+            },
+            "network": {
+                "input_placeholder": "用戶 ID 或包含 usr_ 的連結",
+                "hint": "查詢中心用戶的同處關係網，點擊關聯用戶可逐跳展開。",
+                "neighbors": "關聯 {count} 人",
+                "empty": "該用戶暫無任何同處關係。"
+            },
+            "push": {
+                "watch_title": "{name} 出現在 {world}",
+                "watch_with": "與 {names} 同房",
+                "watch_with_more": "與 {names} 等 {count} 人同房",
+                "block_title": "黑名單用戶出現：{name}",
+                "block_world": "位置：{world}",
+                "block_roster": "在場：{names}",
+                "license_invalid": "Oversee License 無效（401），即時流已停止",
+                "license_expired": "Oversee License 已過期或被撤銷（403），即時流已停止",
+                "sse_live": "SSE 流：已連線",
+                "sse_connecting": "SSE 流：連線中",
+                "sse_reconnecting": "SSE 流：重連中",
+                "sse_error": "SSE 流：連線異常",
+                "sse_expired": "SSE 流：License 已過期",
+                "sse_invalid": "SSE 流：License 無效",
+                "sse_off": "SSE 流：未啟用",
+                "sse_notConfigured": "SSE 流：未設定"
+            }
+        },
         "settings": {
             "header": "設定",
             "category": {
@@ -749,7 +833,71 @@
                 "social": "社交",
                 "vr": "VR",
                 "media": "媒體",
-                "integrations": "整合"
+                "integrations": "整合",
+                "oversee": "Oversee 監察"
+            },
+            "oversee": {
+                "license": {
+                    "header": "Oversee 授權",
+                    "description": "使用 Oversee 授權金鑰存取雲端觀測 API。",
+                    "key_label": "授權金鑰",
+                    "key_description": "作為 Bearer Token 用於所有 Oversee 雲端請求。",
+                    "key_placeholder": "貼上授權金鑰",
+                    "save": "儲存",
+                    "test": "測試連線",
+                    "status_label": "金鑰狀態",
+                    "status_unknown": "未驗證",
+                    "status_checking": "檢測中...",
+                    "status_ok": "有效",
+                    "status_invalid": "無效 (401)",
+                    "status_expired": "已過期 (403)",
+                    "status_offline": "離線",
+                    "saved": "授權金鑰已儲存",
+                    "not_configured": "請先填寫授權金鑰",
+                    "result_ok": "連線成功：授權有效",
+                    "result_invalid": "授權被拒絕：金鑰無效 (401)",
+                    "result_expired": "授權已撤銷或過期 (403)",
+                    "result_offline": "無法連線 Oversee 雲端服務"
+                },
+                "endpoint": {
+                    "header": "雲端地址",
+                    "base_label": "API 地址",
+                    "base_description": "留空回復預設地址。",
+                    "save": "儲存",
+                    "saved": "雲端地址已儲存",
+                    "invalid": "API 位址無效（需為合法的 http(s) 位址）"
+                },
+                "watchlist": {
+                    "header": "關注名單",
+                    "description": "持續關注的用戶；雲端觀測到命中用戶時推送即時提醒。",
+                    "add_label": "新增用戶",
+                    "add_placeholder": "usr_...",
+                    "add": "新增",
+                    "empty": "關注名單為空",
+                    "remove": "移出關注名單",
+                    "invalid_id": "用戶 ID 需以 usr_ 開頭",
+                    "duplicate_id": "該用戶已在關注名單中"
+                },
+                "push": {
+                    "header": "即時推送",
+                    "enable": "SSE 人口資料流",
+                    "enable_description": "透過 Server-Sent Events 訂閱全站人口資料流。關閉後不訂閱全站流。"
+                },
+                "features": {
+                    "header": "功能開關",
+                    "trace": "觀測歷史",
+                    "trace_description": "查詢用戶在全站被觀測到的地點紀錄。",
+                    "encounters": "同處紀錄",
+                    "encounters_description": "顯示用戶之間的同房相遇關係。",
+                    "watch_push": "關注提醒",
+                    "watch_push_description": "關注名單中的用戶被觀測到時推送提醒。",
+                    "room_lookup": "房間查詢",
+                    "room_lookup_description": "查詢執行實例內的觀測名單。",
+                    "network": "關係網絡",
+                    "network_description": "基於同處資料建構關係網絡圖。",
+                    "block_alerts": "黑名單提醒",
+                    "block_alerts_description": "被封鎖的用戶出現在附近時提醒。"
+                }
             },
             "social": {
                 "interaction": {
@@ -1587,6 +1735,9 @@
                 "preparing_data": "準備活動資料...",
                 "preparing_data_hint": "第一次載入時可能需要一些時間。",
                 "data_ready": "活動資料已準備就緒"
+            },
+            "oversee_trace": {
+                "header": "雲端軌跡"
             },
             "note_memo": {
                 "header": "編輯備註與備忘",

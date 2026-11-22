@@ -29,6 +29,7 @@ import { useModalStore } from './modal';
 import { useModerationStore } from './moderation';
 import { useNotificationStore } from './notification';
 import { useNotificationsSettingsStore } from './settings/notifications';
+import { useOverseeSettingsStore } from './settings/oversee';
 import { usePhotonStore } from './photon';
 import { useSearchStore } from './search';
 import { useSharedFeedStore } from './sharedFeed';
@@ -128,6 +129,7 @@ export function createGlobalStores() {
         discordPresenceSettings: useDiscordPresenceSettingsStore(),
         generalSettings: useGeneralSettingsStore(),
         notificationsSettings: useNotificationsSettingsStore(),
+        overseeSettings: useOverseeSettingsStore(),
         wristOverlaySettings: useWristOverlaySettingsStore(),
         avatarProvider: useAvatarProviderStore(),
         externalLink: useExternalLinkStore(),
@@ -195,6 +197,7 @@ export {
     useDiscordPresenceSettingsStore,
     useGeneralSettingsStore,
     useNotificationsSettingsStore,
+    useOverseeSettingsStore,
     useWristOverlaySettingsStore,
     useToolsStore,
     useUiStore,

@@ -88,7 +88,8 @@
         "friend_network": "Friends' Friends",
         "friend_groups": "Friends in Groups",
         "friend_avatars": "Friends' Avatars",
-        "friend_worlds": "Friends' Worlds"
+        "friend_worlds": "Friends' Worlds",
+        "oversee": "Oversee"
     },
     "nav_menu": {
         "freegg": "Visit FREEGG",
@@ -806,6 +807,89 @@
             "refresh_tooltip": "Refresh",
             "clear_results_tooltip": "Clear results"
         },
+        "oversee": {
+            "header": "Oversee Cloud Intelligence",
+            "description": "Site-wide observation data from the Oversee cloud, merged with your local logs.",
+            "tab_trace": "Observation Trace",
+            "tab_encounters": "Encounters",
+            "tab_room": "Room Lookup",
+            "tab_network": "Connection Network",
+            "all_disabled": "All Oversee features have been disabled in Settings. Enable at least one feature to continue.",
+            "guide": {
+                "notConfigured": "Oversee license is not configured",
+                "notConfigured_description": "Add your license key in Settings > Oversee to unlock the cloud observation tabs. Without a key, cloud requests are rejected and only local features work.",
+                "invalid": "Oversee license key is invalid",
+                "invalid_description": "The cloud rejected your license key (401). Replace it in Settings > Oversee to restore access.",
+                "expired": "Oversee license has expired",
+                "expired_description": "Your license has expired or was revoked (403). Renew or replace it in Settings > Oversee to restore access.",
+                "retry_probe": "Retry Probe",
+                "local_only_hint": "Only Encounters (local mode) is available until the license works."
+            },
+            "query": "Query",
+            "watch_add": "Add to Watchlist",
+            "watch_remove": "Remove from Watchlist",
+            "open_user_dialog": "Open User Dialog",
+            "not_logged_in": "Log in to VRChat first; your user ID is required for this query.",
+            "error": {
+                "invalidId": "No valid usr_ ID found. Paste a user ID or a link containing one.",
+                "notConfigured": "License key is not configured. Set it in Settings > Oversee.",
+                "unauthorized": "License key is invalid (401). Replace it in Settings > Oversee.",
+                "forbidden": "License expired or revoked (403). Replace it in Settings > Oversee.",
+                "notFound": "No cloud record for this target.",
+                "server": "Cloud request failed. Please try again.",
+                "network": "Cannot reach the Oversee cloud service. Check your network and try again."
+            },
+            "trace": {
+                "input_placeholder": "User ID or a link containing usr_...",
+                "hint": "Enter a user ID to query the observed location history.",
+                "empty": "No observation history for this user yet. Data appears once the cloud resumes collecting.",
+                "first_seen": "First seen:",
+                "last_seen": "Last seen:",
+                "visits": "{count} visits"
+            },
+            "encounters": {
+                "hint": "Load your co-seen connections from local logs and the Oversee cloud.",
+                "empty": "No co-seen connections found in local logs or the cloud.",
+                "cloud_pending": "Cloud data pending sync; showing local results.",
+                "source_local": "Local",
+                "source_cloud": "Cloud",
+                "source_both": "Local + Cloud",
+                "co_seen": "{count} co-seen",
+                "last_seen": "Last met:"
+            },
+            "room": {
+                "input_placeholder": "Location, e.g. wrld_xxx:12345~region(...)",
+                "fill_current": "Current Instance",
+                "invalid_location": "Enter a full location (wrld_xxx:instance).",
+                "roster_count": "{count} observed",
+                "empty": "No observed roster for this location yet.",
+                "hint": "Enter a location to query the observed roster of that instance."
+            },
+            "network": {
+                "input_placeholder": "User ID or a link containing usr_...",
+                "hint": "Query a center user's co-seen network. Click a neighbor to expand one hop.",
+                "neighbors": "{count} connections",
+                "empty": "No co-seen connections for this user yet."
+            },
+            "push": {
+                "watch_title": "{name} appeared in {world}",
+                "watch_with": "With {names}",
+                "watch_with_more": "With {names} and {count} more in the same instance",
+                "block_title": "Blocked user spotted: {name}",
+                "block_world": "Location: {world}",
+                "block_roster": "Roster: {names}",
+                "license_invalid": "Oversee license rejected (401); realtime stream stopped",
+                "license_expired": "Oversee license expired or revoked (403); realtime stream stopped",
+                "sse_live": "SSE stream: live",
+                "sse_connecting": "SSE stream: connecting",
+                "sse_reconnecting": "SSE stream: reconnecting",
+                "sse_error": "SSE stream: error",
+                "sse_expired": "SSE stream: license expired",
+                "sse_invalid": "SSE stream: invalid license",
+                "sse_off": "SSE stream: off",
+                "sse_notConfigured": "SSE stream: not configured"
+            }
+        },
         "settings": {
             "header": "Settings",
             "category": {
@@ -821,7 +905,71 @@
                 "social": "Social",
                 "vr": "VR",
                 "media": "Media",
-                "integrations": "Integrations"
+                "integrations": "Integrations",
+                "oversee": "Oversee"
+            },
+            "oversee": {
+                "license": {
+                    "header": "Oversee License",
+                    "description": "Your Oversee license key authorizes access to the cloud observation API.",
+                    "key_label": "License Key",
+                    "key_description": "Sent as a Bearer token on all Oversee cloud requests.",
+                    "key_placeholder": "Paste your license key",
+                    "save": "Save",
+                    "test": "Test Connection",
+                    "status_label": "License Status",
+                    "status_unknown": "Not Verified",
+                    "status_checking": "Checking...",
+                    "status_ok": "Active",
+                    "status_invalid": "Invalid (401)",
+                    "status_expired": "Expired (403)",
+                    "status_offline": "Offline",
+                    "saved": "License key saved",
+                    "not_configured": "Enter a license key first",
+                    "result_ok": "Connection OK: license is valid",
+                    "result_invalid": "License rejected: key is invalid (401)",
+                    "result_expired": "License revoked or expired (403)",
+                    "result_offline": "Cannot reach the Oversee cloud service"
+                },
+                "endpoint": {
+                    "header": "Cloud Endpoint",
+                    "base_label": "API Base URL",
+                    "base_description": "Leave blank to restore the default endpoint.",
+                    "save": "Save",
+                    "saved": "Cloud endpoint saved",
+                    "invalid": "Invalid API base URL (must be a valid http(s) origin)"
+                },
+                "watchlist": {
+                    "header": "Watchlist",
+                    "description": "Users tracked for real-time watch alerts. Alerts fire when a watchlisted user is observed by the cloud.",
+                    "add_label": "Add User",
+                    "add_placeholder": "usr_...",
+                    "add": "Add",
+                    "empty": "No users on the watchlist yet",
+                    "remove": "Remove from watchlist",
+                    "invalid_id": "User ID must start with usr_",
+                    "duplicate_id": "This user is already on the watchlist"
+                },
+                "push": {
+                    "header": "Realtime Push",
+                    "enable": "SSE Population Stream",
+                    "enable_description": "Subscribe to the site-wide population stream over Server-Sent Events. When disabled, the site-wide stream is not subscribed."
+                },
+                "features": {
+                    "header": "Feature Toggles",
+                    "trace": "Observation History",
+                    "trace_description": "Query a player's observed locations across the site.",
+                    "encounters": "Encounters",
+                    "encounters_description": "Show co-seen connections between players.",
+                    "watch_push": "Watch Alerts",
+                    "watch_push_description": "Get notified when a watchlisted user is seen.",
+                    "room_lookup": "Room Lookup",
+                    "room_lookup_description": "Look up the observed roster of an instance.",
+                    "network": "Connection Network",
+                    "network_description": "Build relationship graphs from co-seen data.",
+                    "block_alerts": "Block Alerts",
+                    "block_alerts_description": "Warn when a blocked user shows up nearby."
+                }
             },
             "social": {
                 "interaction": {
@@ -1810,6 +1958,9 @@
                 "preparing_data": "Preparing activity data...",
                 "preparing_data_hint": "This may take a moment on first load.",
                 "data_ready": "Activity data is ready"
+            },
+            "oversee_trace": {
+                "header": "Cloud Trace"
             },
             "note_memo": {
                 "header": "Edit Note And Memo",

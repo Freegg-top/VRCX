@@ -14,6 +14,9 @@
                 <template #social>
                     <SocialTab />
                 </template>
+                <template #oversee>
+                    <OverseeTab />
+                </template>
                 <template #notifications>
                     <NotificationsTab />
                 </template>
@@ -44,6 +47,7 @@
     import IntegrationsTab from './components/Tabs/IntegrationsTab.vue';
     import MediaTab from './components/Tabs/MediaTab.vue';
     import NotificationsTab from './components/Tabs/NotificationsTab.vue';
+    import OverseeTab from './components/Tabs/OverseeTab.vue';
     import SocialTab from './components/Tabs/SocialTab.vue';
     import SystemTab from './components/Tabs/SystemTab.vue';
     import VrTab from './components/Tabs/VrTab.vue';
@@ -53,6 +57,7 @@
         { value: 'system', label: t('view.settings.category.system') },
         { value: 'interface', label: t('view.settings.category.interface') },
         { value: 'social', label: t('view.settings.category.social') },
+        { value: 'oversee', label: t('view.settings.category.oversee') },
         { value: 'notifications', label: t('view.settings.category.notifications') },
         { value: 'vr', label: t('view.settings.category.vr') },
         { value: 'media', label: t('view.settings.category.media') },

@@ -30,6 +30,7 @@
         runUpdateIsGameRunningFlow,
         runUpdateIsHmdAfkFlow
     } from './coordinators/gameCoordinator';
+    import { initOverseeCoordinator } from './coordinators/overseeCoordinator';
     import { Toaster } from './components/ui/sonner';
     import { TooltipProvider } from './components/ui/tooltip';
     import { createGlobalStores } from './stores';
@@ -87,6 +88,12 @@
             store.vrcx.checkAutoBackupRestoreVrcRegistry();
         }
 
+        try {
+            initOverseeCoordinator();
+        } catch (error) {
+            // Oversee 初始化失败不阻塞主流程
+            console.warn('[oversee] coordinator init failed:', error);
+        }
         runCheckVRChatDebugLoggingFlow();
     });
 </script>

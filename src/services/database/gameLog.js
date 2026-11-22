@@ -240,6 +240,7 @@ const gameLog = {
 
     /**
      * 日志文件的身份通常在开头几行之后才出现, 所以要把该文件已写入的 unknown 行补上归属。
+     *
      * @param {string} fromAt
      * @param {string} toAt
      * @param {string} accountId
@@ -1248,6 +1249,34 @@ const gameLog = {
         return worldName;
     },
 
+    // Oversee 偶遇回溯用: 我到过的所有 location 的 join/leave 行 (含我自己),
+    // 区间折叠与共现计数在 overseeMerge.js 纯函数中完成.
+    // 带 180 天时间窗 + 行数上限, 防止无谓的全表扫描 (SQL 参数化).
+    async getLocalCoSeenRows(userId, { sinceDays = 180, limit = 50000 } = {}) {
+        var rows = [];
+        if (!userId) {
+            return rows;
+        }
+        await sqliteService.execute(
+            (dbRow) => {
+                rows.push({
+                    userId: dbRow[0] || '',
+                    displayName: dbRow[1] || '',
+                    location: dbRow[2] || '',
+                    createdAt: dbRow[3] || '',
+                    type: dbRow[4] || ''
+                });
+            },
+            "SELECT user_id, display_name, location, created_at, type FROM gamelog_join_leave WHERE created_at >= datetime('now', @sinceDays) AND location IN (SELECT DISTINCT location FROM gamelog_join_leave WHERE user_id = @userId AND created_at >= datetime('now', @sinceDays)) ORDER BY id ASC LIMIT @limit",
+            {
+                '@userId': userId,
+                '@sinceDays': `-${sinceDays} days`,
+                '@limit': limit
+            }
+        );
+        return rows;
+    },
+
     async getPreviousInstancesByUserId(input) {
         var groupingTimeTolerance = 1 * 60 * 60 * 1000; // 1 hour
         var data = new Set();
@@ -1549,6 +1578,29 @@ const gameLog = {
             params
         );
         return results;
+    },
+
+    /**
+     * Oversee D3 推送显示名解析: 取本地日志中该 user_id 最近一次使用的显示名.
+     *
+     * @param {string} userId
+     * @returns {Promise<string>} 无记录时返回空串
+     */
+    async getDisplayNameByUserId(userId) {
+        var displayName = '';
+        if (!userId) {
+            return displayName;
+        }
+        await sqliteService.execute(
+            (row) => {
+                displayName = row[0] || '';
+            },
+            `SELECT display_name FROM gamelog_join_leave WHERE user_id = @userId AND display_name != '' ORDER BY id DESC LIMIT 1`,
+            {
+                '@userId': userId
+            }
+        );
+        return displayName;
     },
 
     async getUserIdFromDisplayName(displayName) {
