@@ -66,6 +66,23 @@ class SQLiteService {
         }
     }
 
+    /**
+     * Execute a query and transfer all rows as one JSON payload.
+     *
+     * @param {string} sql
+     * @param {object | null} args
+     * @returns {Promise<any[][]>}
+     */
+    async executeJson(sql, args = null) {
+        try {
+            const queryArgs = LINUX && args ? new Map(Object.entries(args)) : args;
+            const json = await SQLite.ExecuteJson(sql, queryArgs);
+            return JSON.parse(json);
+        } catch (e) {
+            this.handleSQLiteError(e);
+        }
+    }
+
     async executeNonQuery(sql, args = null) {
         try {
             if (LINUX && args) {

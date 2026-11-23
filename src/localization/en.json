@@ -864,7 +864,9 @@
         "source_cloud": "Cloud",
         "source_both": "Local + Cloud",
         "co_seen": "{count} co-seen",
-        "last_seen": "Last met:"
+        "last_seen": "Last met:",
+        "show_more": "Show more",
+        "refresh": "Refresh encounters"
       },
       "room": {
         "input_placeholder": "Location, e.g. wrld_xxx:12345~region(...)",

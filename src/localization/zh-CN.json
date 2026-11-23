@@ -864,7 +864,9 @@
         "source_cloud": "云端",
         "source_both": "本地+云端",
         "co_seen": "同处 {count} 次",
-        "last_seen": "最近同处："
+        "last_seen": "最近同处：",
+        "show_more": "显示更多",
+        "refresh": "刷新偶遇列表"
       },
       "room": {
         "input_placeholder": "完整 location，如 wrld_xxx:12345~region(...)",

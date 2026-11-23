@@ -1249,24 +1249,43 @@ const gameLog = {
         return worldName;
     },
 
+    /**
+     * Get local world names for multiple world IDs with bounded IN batches.
+     *
+     * @param {string[]} worldIds
+     * @returns {Promise<Map<string, string>>}
+     */
+    async getGameLogWorldNamesByWorldIds(worldIds) {
+        const namesByWorldId = new Map();
+        const uniqueWorldIds = [...new Set(worldIds)].filter(Boolean);
+        for (let offset = 0; offset < uniqueWorldIds.length; offset += 100) {
+            const batch = uniqueWorldIds.slice(offset, offset + 100);
+            const placeholders = [];
+            const args = {};
+            batch.forEach((worldId, index) => {
+                const key = `@worldId_${index}`;
+                placeholders.push(key);
+                args[key] = worldId;
+            });
+            await sqliteService.execute(
+                (dbRow) => {
+                    namesByWorldId.set(dbRow[0], dbRow[1] || '');
+                },
+                `SELECT world_id, world_name FROM gamelog_location WHERE world_id IN (${placeholders.join(', ')}) GROUP BY world_id`,
+                args
+            );
+        }
+        return namesByWorldId;
+    },
+
     // Oversee 偶遇回溯用: 我到过的所有 location 的 join/leave 行 (含我自己),
     // 区间折叠与共现计数在 overseeMerge.js 纯函数中完成.
     // 带 180 天时间窗 + 行数上限, 防止无谓的全表扫描 (SQL 参数化).
     async getLocalCoSeenRows(userId, { sinceDays = 180, limit = 50000 } = {}) {
-        var rows = [];
         if (!userId) {
-            return rows;
+            return [];
         }
-        await sqliteService.execute(
-            (dbRow) => {
-                rows.push({
-                    userId: dbRow[0] || '',
-                    displayName: dbRow[1] || '',
-                    location: dbRow[2] || '',
-                    createdAt: dbRow[3] || '',
-                    type: dbRow[4] || ''
-                });
-            },
+        const dbRows = await sqliteService.executeJson(
             "SELECT user_id, display_name, location, created_at, type FROM gamelog_join_leave WHERE created_at >= datetime('now', @sinceDays) AND location IN (SELECT DISTINCT location FROM gamelog_join_leave WHERE user_id = @userId AND created_at >= datetime('now', @sinceDays)) ORDER BY id ASC LIMIT @limit",
             {
                 '@userId': userId,
@@ -1274,7 +1293,13 @@ const gameLog = {
                 '@limit': limit
             }
         );
-        return rows;
+        return dbRows.map((dbRow) => ({
+            userId: dbRow[0] || '',
+            displayName: dbRow[1] || '',
+            location: dbRow[2] || '',
+            createdAt: dbRow[3] || '',
+            type: dbRow[4] || ''
+        }));
     },
 
     async getPreviousInstancesByUserId(input) {

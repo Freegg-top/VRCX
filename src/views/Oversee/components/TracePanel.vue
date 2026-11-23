@@ -224,8 +224,11 @@
       lastLoadedUserId.value = id;
       profile.value = data?.user || null;
       history.value = Array.isArray(data?.history) ? data.history : [];
+      await resolveWorldNames();
+      if (!requestGate.isCurrent(token)) {
+        return;
+      }
       loaded.value = true;
-      resolveWorldNames();
     } catch (error) {
       if (!requestGate.isCurrent(token)) {
         return;
@@ -260,14 +263,15 @@
       return;
     }
     const next = new Map(worldNames.value);
-    for (const worldId of worldIds) {
-      let name = '';
-      try {
-        name = await database.getGameLogWorldNameByWorldId(worldId);
-      } catch {
-        name = '';
+    try {
+      const namesByWorldId = await database.getGameLogWorldNamesByWorldIds(worldIds);
+      for (const worldId of worldIds) {
+        next.set(worldId, String(namesByWorldId.get(worldId) || '').trim());
       }
-      next.set(worldId, String(name || '').trim());
+    } catch {
+      for (const worldId of worldIds) {
+        next.set(worldId, '');
+      }
     }
     worldNames.value = next;
   }

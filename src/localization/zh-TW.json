@@ -792,7 +792,9 @@
         "source_cloud": "雲端",
         "source_both": "本地+雲端",
         "co_seen": "同處 {count} 次",
-        "last_seen": "最近同處："
+        "last_seen": "最近同處：",
+        "show_more": "顯示更多",
+        "refresh": "重新整理偶遇列表"
       },
       "room": {
         "input_placeholder": "完整 location，如 wrld_xxx:12345~region(...)",

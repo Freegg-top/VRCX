@@ -57,24 +57,26 @@ function shortenInstanceId(instanceId) {
 }
 
 /**
- * 把 gamelog_join_leave 行流折叠成在场区间.
- * 行序须按 id ASC. join 开区间, leave 关闭同 entity 同 location 最近的未关闭区间;
- * 未关闭区间以 null 结尾 (视为持续到当前).
+ * Build presence intervals and the sorted event index in one pass over the rows.
  *
  * @param {{ userId: string; displayName: string; location: string; createdAt: string; type: string }[]} rows
  * @returns {{
- *     entityKey: string;
- *     userId: string;
- *     displayName: string;
- *     location: string;
- *     start: string;
- *     end: string | null;
- * }[]}
+ *     intervals: {
+ *         entityKey: string;
+ *         userId: string;
+ *         displayName: string;
+ *         location: string;
+ *         start: string;
+ *         end: string | null;
+ *     }[];
+ *     eventsByEntityLocation: Map<string, string[]>;
+ * }}
  */
-function buildPresenceIntervals(rows) {
+function buildPresenceData(rows) {
     const intervals = [];
     /** @type {Map<string, object>} */
     const openByEntityLocation = new Map();
+    const eventsByEntityLocation = new Map();
     for (const row of rows) {
         if (!row?.location || !row?.createdAt) {
             continue;
@@ -84,6 +86,9 @@ function buildPresenceIntervals(rows) {
             continue;
         }
         const openKey = `${entityKey}\n${row.location}`;
+        const list = eventsByEntityLocation.get(openKey) || [];
+        list.push(row.createdAt);
+        eventsByEntityLocation.set(openKey, list);
         if (row.type === 'OnPlayerJoined') {
             const interval = {
                 entityKey,
@@ -103,7 +108,29 @@ function buildPresenceIntervals(rows) {
             }
         }
     }
-    return intervals;
+    for (const list of eventsByEntityLocation.values()) {
+        list.sort();
+    }
+    return { intervals, eventsByEntityLocation };
+}
+
+/**
+ * 把 gamelog_join_leave 行流折叠成在场区间.
+ * 行序须按 id ASC. join 开区间, leave 关闭同 entity 同 location 最近的未关闭区间;
+ * 未关闭区间以 null 结尾 (视为持续到当前).
+ *
+ * @param {{ userId: string; displayName: string; location: string; createdAt: string; type: string }[]} rows
+ * @returns {{
+ *     entityKey: string;
+ *     userId: string;
+ *     displayName: string;
+ *     location: string;
+ *     start: string;
+ *     end: string | null;
+ * }[]}
+ */
+function buildPresenceIntervals(rows) {
+    return buildPresenceData(rows).intervals;
 }
 
 /**
@@ -120,7 +147,17 @@ function nextEventAfter(eventsByEntityLocation, entityKey, location, start) {
     if (!list) {
         return undefined;
     }
-    return list.find((createdAt) => createdAt > start);
+    let low = 0;
+    let high = list.length;
+    while (low < high) {
+        const mid = (low + high) >>> 1;
+        if (list[mid] > start) {
+            high = mid;
+        } else {
+            low = mid + 1;
+        }
+    }
+    return list[low];
 }
 
 /**
@@ -187,28 +224,14 @@ function resolveOpenIntervalEnd(interval, nextEventAt, selfLeaveAt) {
  * @returns {Map<string, { userId: string; displayName: string; count: number; lastSeen: string }>}
  */
 function computeLocalCoSeen(rows, selfId) {
-    const intervals = buildPresenceIntervals(rows);
+    const { intervals, eventsByEntityLocation } = buildPresenceData(rows);
     const selfIntervals = intervals.filter((interval) => interval.entityKey === selfId);
     /** @type {Map<string, { userId: string; displayName: string; count: number; lastSeen: string }>} */
     const result = new Map();
     if (!selfIntervals.length) {
         return result;
     }
-    // 实体+location → 全部事件时间 (升序), 用于截断未关闭区间
-    const eventsByEntityLocation = new Map();
-    for (const row of rows) {
-        const entityKey = row?.userId || row?.displayName;
-        if (!entityKey || !row.location || !row.createdAt) {
-            continue;
-        }
-        const key = `${entityKey}\n${row.location}`;
-        const list = eventsByEntityLocation.get(key) || [];
-        list.push(row.createdAt);
-        eventsByEntityLocation.set(key, list);
-    }
-    for (const list of eventsByEntityLocation.values()) {
-        list.sort();
-    }
+    // 实体+location → 全部事件时间 (升序), 已在单遍构建中完成, 用于截断未关闭区间
     // self 在某 location 的离开时间 (取最早一条 leave / 已闭合 self 区间终点)
     const selfLeaveByLocation = new Map();
     for (const interval of selfIntervals) {
