@@ -58,13 +58,6 @@ const navDefinitions = [
         routeName: 'friend-worlds'
     },
     {
-        key: 'oversee',
-        icon: 'ri-radar-line',
-        tooltip: 'nav_tooltip.oversee',
-        labelKey: 'nav_tooltip.oversee',
-        routeName: 'oversee'
-    },
-    {
         key: 'search',
         icon: 'ri-search-line',
         tooltip: 'nav_tooltip.search',

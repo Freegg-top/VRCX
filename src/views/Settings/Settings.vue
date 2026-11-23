@@ -4,7 +4,7 @@
             <div class="shrink-0 p-1.5">
                 <span class="text-lg font-semibold text-foreground">{{ t('view.settings.header') }}</span>
             </div>
-            <TabsUnderline default-value="system" :items="settingsTabs" :unmount-on-hide="false" fill>
+            <TabsUnderline v-model="activeTab" :items="settingsTabs" :unmount-on-hide="false" fill>
                 <template #system>
                     <SystemTab />
                 </template>
@@ -39,6 +39,7 @@
 
 <script setup>
     import { computed, onBeforeMount } from 'vue';
+    import { useRoute, useRouter } from 'vue-router';
     import { TabsUnderline } from '@/components/ui/tabs';
     import { useI18n } from 'vue-i18n';
 
@@ -53,6 +54,8 @@
     import VrTab from './components/Tabs/VrTab.vue';
 
     const { t } = useI18n();
+    const route = useRoute();
+    const router = useRouter();
     const settingsTabs = computed(() => [
         { value: 'system', label: t('view.settings.category.system') },
         { value: 'interface', label: t('view.settings.category.interface') },
@@ -64,6 +67,16 @@
         { value: 'integrations', label: t('view.settings.category.integrations') },
         { value: 'advanced', label: t('view.settings.category.advanced') }
     ]);
+
+    const activeTab = computed({
+        get() {
+            const requestedTab = typeof route.query.tab === 'string' ? route.query.tab : '';
+            return settingsTabs.value.some((tab) => tab.value === requestedTab) ? requestedTab : 'system';
+        },
+        set(tab) {
+            router.replace({ query: { ...route.query, tab } });
+        }
+    });
 
     onBeforeMount(() => {
         const menuItem = document.querySelector('li[role="menuitem"].is-active');

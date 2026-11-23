@@ -4,6 +4,7 @@ import {
     defaultVisibility,
     formatAppUptime,
     formatUtcHour,
+    getOverseeStatus,
     loadClockCount,
     loadClocks,
     loadVisibility,
@@ -304,6 +305,28 @@ describe('formatAppUptime', () => {
 
     test('floors fractional seconds', () => {
         expect(formatAppUptime(59.9)).toBe('00:00:59');
+    });
+});
+
+describe('getOverseeStatus', () => {
+    const configured = { licenseKey: 'key', licenseStatus: 'ok', sseEnabled: true, connState: 'live' };
+
+    test('hides the indicator without a configured license', () => {
+        expect(getOverseeStatus()).toBeNull();
+        expect(getOverseeStatus({ ...configured, licenseKey: '  ' })).toBeNull();
+    });
+
+    test.each(['invalid', 'expired'])('prioritizes %s license state', (licenseStatus) => {
+        expect(getOverseeStatus({ ...configured, licenseStatus })).toBe(licenseStatus);
+    });
+
+    test('maps stream and pause states', () => {
+        expect(getOverseeStatus(configured)).toBe('live');
+        expect(getOverseeStatus({ ...configured, connState: 'connecting' })).toBe('connecting');
+        expect(getOverseeStatus({ ...configured, connState: 'reconnecting' })).toBe('connecting');
+        expect(getOverseeStatus({ ...configured, connState: 'error' })).toBe('error');
+        expect(getOverseeStatus({ ...configured, sseEnabled: false })).toBe('paused');
+        expect(getOverseeStatus({ ...configured, connState: 'off' })).toBe('paused');
     });
 });
 

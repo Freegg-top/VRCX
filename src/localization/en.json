@@ -88,8 +88,7 @@
     "friend_network": "Friends' Friends",
     "friend_groups": "Friends in Groups",
     "friend_avatars": "Friends' Avatars",
-    "friend_worlds": "Friends' Worlds",
-    "oversee": "Oversee"
+    "friend_worlds": "Friends' Worlds"
   },
   "nav_menu": {
     "freegg": "Visit FREEGG",
@@ -811,21 +810,6 @@
       "clear_results_tooltip": "Clear results"
     },
     "oversee": {
-      "header": "Oversee Cloud Intelligence",
-      "description": "Site-wide observation data from the Oversee cloud, merged with your local logs.",
-      "tab_trace": "Observation Trace",
-      "tab_room": "Room Lookup",
-      "all_disabled": "All Oversee features have been disabled in Settings. Enable at least one feature to continue.",
-      "guide": {
-        "notConfigured": "Oversee license is not configured",
-        "notConfigured_description": "Add your license key in Settings > Oversee to unlock the cloud observation tabs. Without a key, cloud requests are rejected and only local features work.",
-        "invalid": "Oversee license key is invalid",
-        "invalid_description": "The cloud rejected your license key (401). Replace it in Settings > Oversee to restore access.",
-        "expired": "Oversee license has expired",
-        "expired_description": "Your license has expired or was revoked (403). Renew or replace it in Settings > Oversee to restore access.",
-        "retry_probe": "Retry Probe"
-      },
-      "query": "Query",
       "player_input": {
         "source_local": "Local",
         "source_friend": "Friend",
@@ -835,33 +819,8 @@
         "vrc_unavailable": "VRChat user search is unavailable. Local matches are shown; log in or try again later.",
         "not_found_vrc_unavailable": "No local match. VRChat user search is unavailable; log in or try again later."
       },
-      "watch_add": "Add to Watchlist",
-      "watch_remove": "Remove from Watchlist",
       "error": {
-        "invalidId": "No valid usr_ ID found. Paste a user ID or a link containing one.",
-        "notConfigured": "License key is not configured. Set it in Settings > Oversee.",
-        "unauthorized": "License key is invalid (401). Replace it in Settings > Oversee.",
-        "forbidden": "License expired or revoked (403). Replace it in Settings > Oversee.",
-        "notFound": "No cloud record for this target.",
-        "server": "Cloud request failed. Please try again.",
-        "network": "Cannot reach the Oversee cloud service. Check your network and try again."
-      },
-      "trace": {
-        "input_placeholder": "User ID, display name, or a link containing usr_...",
-        "hint": "Enter a user ID to query the observed location history.",
-        "empty": "No observation history for this user yet. Data appears once the cloud resumes collecting.",
-        "first_seen": "First seen:",
-        "last_seen": "Last seen:",
-        "visits": "{count} visits",
-        "show_more": "Show more"
-      },
-      "room": {
-        "input_placeholder": "Location, e.g. wrld_xxx:12345~region(...)",
-        "fill_current": "Current Instance",
-        "invalid_location": "Enter a full location (wrld_xxx:instance).",
-        "roster_count": "{count} observed",
-        "empty": "No observed roster for this location yet.",
-        "hint": "Enter a location to query the observed roster of that instance."
+        "invalidId": "No valid usr_ ID found. Paste a user ID or a link containing one."
       },
       "push": {
         "watch_title": "{name} appeared in {world}",
@@ -871,15 +830,7 @@
         "block_world": "Location: {world}",
         "block_roster": "Roster: {names}",
         "license_invalid": "Oversee license rejected (401); realtime stream stopped",
-        "license_expired": "Oversee license expired or revoked (403); realtime stream stopped",
-        "sse_live": "SSE stream: live",
-        "sse_connecting": "SSE stream: connecting",
-        "sse_reconnecting": "SSE stream: reconnecting",
-        "sse_error": "SSE stream: error",
-        "sse_expired": "SSE stream: license expired",
-        "sse_invalid": "SSE stream: invalid license",
-        "sse_off": "SSE stream: off",
-        "sse_notConfigured": "SSE stream: not configured"
+        "license_expired": "Oversee license expired or revoked (403); realtime stream stopped"
       }
     },
     "settings": {
@@ -952,11 +903,9 @@
         "features": {
           "header": "Feature Toggles",
           "trace": "Observation History",
-          "trace_description": "Query a player's observed locations across the site.",
+          "trace_description": "Show cloud observation details in user cards.",
           "watch_push": "Watch Alerts",
           "watch_push_description": "Get notified when a watchlisted user is seen.",
-          "room_lookup": "Room Lookup",
-          "room_lookup_description": "Look up the observed roster of an instance.",
           "block_alerts": "Block Alerts",
           "block_alerts_description": "Warn when a blocked user shows up nearby."
         }
@@ -1957,9 +1906,6 @@
         "preparing_data": "Preparing activity data...",
         "preparing_data_hint": "This may take a moment on first load.",
         "data_ready": "Activity data is ready"
-      },
-      "oversee_trace": {
-        "header": "Cloud Trace"
       },
       "note_memo": {
         "header": "Edit Note And Memo",
@@ -4024,6 +3970,14 @@
     "steamvr_running": "SteamVR is running",
     "steamvr_stopped": "SteamVR is not running",
     "proxy": "Proxy",
+    "oversee": "Cloud",
+    "oversee_invalid": "Cloud: Invalid license",
+    "oversee_expired": "Cloud: License expired",
+    "oversee_live": "Cloud: Live",
+    "oversee_connecting": "Cloud: Connecting",
+    "oversee_paused": "Cloud: Paused",
+    "oversee_error": "Cloud: Connection failed",
+    "oversee_api": "Oversee API: {apiBase}",
     "ws_connected": "Connected",
     "ws_disconnected": "Disconnected",
     "ws_avg_per_minute": "{count} avg/min",

@@ -21,7 +21,6 @@ import MainLayout from '../views/Layout/MainLayout.vue';
 import Moderation from './../views/Moderation/Moderation.vue';
 import MyAvatars from './../views/MyAvatars/MyAvatars.vue';
 import Notification from './../views/Notifications/Notification.vue';
-import Oversee from './../views/Oversee/Oversee.vue';
 import PlayerList from './../views/PlayerList/PlayerList.vue';
 import ScreenshotMetadata from './../views/Tools/ScreenshotMetadata.vue';
 import Search from './../views/Search/Search.vue';
@@ -98,7 +97,6 @@ const routes = [
                 name: 'friend-worlds',
                 component: FriendWorlds
             },
-            { path: 'oversee', name: 'oversee', component: Oversee },
             {
                 path: 'social/moderation',
                 name: 'moderation',

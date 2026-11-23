@@ -14,7 +14,6 @@ const OVERSEE_CONFIG_KEYS = Object.freeze({
     sseEnabled: 'VRCX_oversee_sseEnabled',
     enableTrace: 'VRCX_oversee_enableTrace',
     enableWatchPush: 'VRCX_oversee_enableWatchPush',
-    enableRoomLookup: 'VRCX_oversee_enableRoomLookup',
     enableBlockAlerts: 'VRCX_oversee_enableBlockAlerts'
 });
 

@@ -51,6 +51,20 @@
                             </div>
                         </TooltipWrapper>
 
+                        <TooltipWrapper v-if="visibility.oversee && overseeStatus" :content="overseeTooltip" side="top">
+                            <div
+                                class="flex items-center gap-1 px-2 h-[22px] whitespace-nowrap border-r border-border cursor-pointer hover:bg-accent"
+                                data-testid="oversee-status"
+                                @click="handleOverseeClick">
+                                <span
+                                    class="inline-block size-2 rounded-full shrink-0"
+                                    :class="overseeStatusColorClass" />
+                                <span class="text-foreground text-[11px]">{{
+                                    t(`status_bar.oversee_${overseeStatus}`)
+                                }}</span>
+                            </div>
+                        </TooltipWrapper>
+
                         <HoverCard
                             v-if="!isMacOS && visibility.vrchat"
                             v-model:open="gameHoverOpen"
@@ -324,6 +338,13 @@
                     {{ t('status_bar.proxy') }}
                 </ContextMenuCheckboxItem>
                 <ContextMenuCheckboxItem
+                    v-if="overseeConfigured"
+                    :model-value="visibility.oversee"
+                    @select.prevent
+                    @update:model-value="toggleVisibility('oversee')">
+                    {{ t('status_bar.oversee') }}
+                </ContextMenuCheckboxItem>
+                <ContextMenuCheckboxItem
                     :model-value="visibility.ws"
                     @select.prevent
                     @update:model-value="toggleVisibility('ws')">
@@ -408,6 +429,7 @@
         useGameLogStore,
         useGameStore,
         useGeneralSettingsStore,
+        useOverseeSettingsStore,
         useUserStore,
         useVrcStatusStore,
         useVrcxStore
@@ -418,8 +440,10 @@
     import { useIntervalFn, useNow } from '@vueuse/core';
     import { TooltipWrapper } from '@/components/ui/tooltip';
     import { useI18n } from 'vue-i18n';
+    import { useRouter } from 'vue-router';
     import { openExternalLink } from '@/shared/utils/appActions';
     import { wsState } from '@/services/websocket';
+    import { sseConnState } from '@/services/overseeWatch';
 
     import dayjs from 'dayjs';
     import timezone from 'dayjs/plugin/timezone';
@@ -428,6 +452,7 @@
     import {
         defaultVisibility,
         formatAppUptime,
+        getOverseeStatus,
         formatUtcHour,
         normalizeClock,
         normalizeUtcHour,
@@ -440,6 +465,7 @@
     dayjs.extend(timezone);
 
     const { t } = useI18n();
+    const router = useRouter();
 
     const isMacOS = computed(() => navigator.platform.includes('Mac'));
     const isLinux = computed(() => LINUX);
@@ -450,6 +476,40 @@
     const vrcxStore = useVrcxStore();
     const vrcStatusStore = useVrcStatusStore();
     const generalSettingsStore = useGeneralSettingsStore();
+    const overseeSettingsStore = useOverseeSettingsStore();
+    const { licenseKey, licenseStatus, apiBase, sseEnabled } = storeToRefs(overseeSettingsStore);
+
+    const overseeConfigured = computed(() => Boolean(String(licenseKey.value || '').trim()));
+    const overseeStatus = computed(() =>
+        getOverseeStatus({
+            licenseKey: licenseKey.value,
+            licenseStatus: licenseStatus.value,
+            sseEnabled: sseEnabled.value,
+            connState: sseConnState.value
+        })
+    );
+    const overseeStatusColorClass = computed(() => {
+        if (overseeStatus.value === 'live') {
+            return 'bg-status-online';
+        }
+        if (overseeStatus.value === 'connecting') {
+            return 'bg-status-askme';
+        }
+        if (overseeStatus.value === 'invalid' || overseeStatus.value === 'expired' || overseeStatus.value === 'error') {
+            return 'bg-destructive';
+        }
+        return 'bg-status-offline-alt';
+    });
+    const overseeTooltip = computed(() => {
+        if (!overseeStatus.value) {
+            return '';
+        }
+        return `${t(`status_bar.oversee_${overseeStatus.value}`)}\n${t('status_bar.oversee_api', { apiBase: apiBase.value })}`;
+    });
+
+    function handleOverseeClick() {
+        router.push({ name: 'settings', query: { tab: 'oversee' } });
+    }
 
     const { nowPlaying } = storeToRefs(gameLogStore);
 

@@ -49,24 +49,3 @@ describe('gameLog.getMyTopWorlds', () => {
         });
     });
 });
-
-describe('gameLog Oversee queries', () => {
-    test('batch world-name lookup uses at most 100 IDs per query', async () => {
-        const worldIds = Array.from({ length: 205 }, (_, index) => `wrld_${index}`);
-        mocks.execute.mockImplementation(async (callback, _sql, args) => {
-            for (const worldId of Object.values(args)) {
-                callback([worldId, `World ${worldId}`]);
-            }
-        });
-
-        const result = await gameLog.getGameLogWorldNamesByWorldIds(worldIds);
-
-        expect(mocks.execute).toHaveBeenCalledTimes(3);
-        expect(mocks.execute.mock.calls.map((call) => Object.keys(call[2]).length)).toEqual([100, 100, 5]);
-        for (const call of mocks.execute.mock.calls) {
-            expect(call[1]).toContain('GROUP BY world_id');
-        }
-        expect(result.size).toBe(205);
-        expect(result.get('wrld_204')).toBe('World wrld_204');
-    });
-});

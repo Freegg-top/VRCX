@@ -53,10 +53,6 @@
                     <UserDialogActivityTab ref="activityTabRef" />
                 </template>
 
-                <template v-if="showOverseeTraceTab" #overseeTrace>
-                    <OverseeTracePanel :user-id="userDialog.id" ref="overseeTraceTabRef" />
-                </template>
-
                 <template #JSON>
                     <DialogJsonTab
                         class="rounded-xl bg-(--profile-card) p-2"
@@ -101,7 +97,6 @@
         useNotificationStore,
         useUserStore
     } from '../../../stores';
-    import { useOverseeSettingsStore } from '@/stores';
     import { copyToClipboard } from '../../../shared/utils';
     import { formatJsonVars } from '../../../shared/utils/base/ui';
     import { miscRequest } from '../../../api';
@@ -119,7 +114,6 @@
     import UserDialogInfoTab from './UserDialogInfoTab.vue';
     import UserDialogMutualFriendsTab from './UserDialogMutualFriendsTab.vue';
     import UserDialogWorldsTab from './UserDialogWorldsTab.vue';
-    import OverseeTracePanel from '@/views/Oversee/components/TracePanel.vue';
     import UserSummaryHeader from './UserSummaryHeader.vue';
 
     import ModerateGroupDialog from '../ModerateGroupDialog.vue';
@@ -137,19 +131,6 @@
     });
 
     const { t } = useI18n();
-    const {
-        enableTrace: overseeEnableTrace,
-        licenseKey: overseeLicenseKey,
-        licenseStatus: overseeLicenseStatus
-    } = storeToRefs(useOverseeSettingsStore());
-    const showOverseeTraceTab = computed(
-        () =>
-            userDialog.value.id !== currentUser.value.id &&
-            overseeEnableTrace.value &&
-            Boolean(String(overseeLicenseKey.value || '').trim()) &&
-            overseeLicenseStatus.value !== 'invalid' &&
-            overseeLicenseStatus.value !== 'expired'
-    );
     const userDialogTabs = computed(() => {
         const tabs = [
             { value: 'Info', label: t('dialog.user.info.header') },
@@ -165,18 +146,10 @@
         // Insert Activity before JSON
         const jsonIdx = tabs.findIndex((tab) => tab.value === 'JSON');
         tabs.splice(jsonIdx, 0, { value: 'Activity', label: t('dialog.user.activity.header') });
-        if (showOverseeTraceTab.value) {
-            const jsonIdxAfter = tabs.findIndex((tab) => tab.value === 'JSON');
-            tabs.splice(jsonIdxAfter, 0, {
-                value: 'overseeTrace',
-                label: t('dialog.user.oversee_trace.header')
-            });
-        }
         return tabs;
     });
     const infoTabRef = ref(null);
     const activityTabRef = ref(null);
-    const overseeTraceTabRef = ref(null);
     const favoriteWorldsTabRef = ref(null);
     const mutualFriendsTabRef = ref(null);
     const worldsTabRef = ref(null);
@@ -366,15 +339,15 @@
             }
         } else if (tabName === 'Activity') {
             activityTabRef.value?.loadOnlineFrequency(userId);
-        } else if (tabName === 'overseeTrace') {
-            overseeTraceTabRef.value?.load(userId);
         } else if (tabName === 'JSON') {
             refreshUserDialogTreeData();
         }
     }
 
     function loadLastActiveTab() {
-        const tab = userDialog.value.lastActiveTab;
+        const tab = userDialog.value.lastActiveTab === 'overseeTrace' ? 'Info' : userDialog.value.lastActiveTab;
+        userDialog.value.activeTab = tab;
+        userDialog.value.lastActiveTab = tab;
         handleUserDialogTab(tab);
     }
 

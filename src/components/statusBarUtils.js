@@ -12,8 +12,37 @@ export const defaultVisibility = {
     uptime: true,
     clocks: true,
     zoom: true,
-    servers: true
+    servers: true,
+    oversee: true
 };
+
+/**
+ * Resolve the single cloud indicator state without triggering requests.
+ *
+ * @param {{ licenseKey?: unknown; licenseStatus?: string; sseEnabled?: boolean; connState?: string }} input
+ * @returns {'invalid' | 'expired' | 'live' | 'connecting' | 'paused' | 'error' | null}
+ */
+export function getOverseeStatus({ licenseKey, licenseStatus, sseEnabled, connState } = {}) {
+    if (!String(licenseKey ?? '').trim()) {
+        return null;
+    }
+    if (licenseStatus === 'invalid' || licenseStatus === 'expired') {
+        return licenseStatus;
+    }
+    if (!sseEnabled) {
+        return 'paused';
+    }
+    if (connState === 'live') {
+        return 'live';
+    }
+    if (connState === 'connecting' || connState === 'reconnecting') {
+        return 'connecting';
+    }
+    if (connState === 'error') {
+        return 'error';
+    }
+    return 'paused';
+}
 
 /**
  * Clamp and round a numeric value to a valid UTC offset range [-12, 14].

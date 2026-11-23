@@ -6,6 +6,12 @@ import { ref } from 'vue';
 
 import StatusBar from '../StatusBar.vue';
 import en from '../../localization/en.json';
+import { sseConnState } from '../../services/overseeWatch';
+
+const routerMocks = vi.hoisted(() => ({
+    push: vi.fn(),
+    replace: vi.fn()
+}));
 
 // --- Mocks ---
 
@@ -86,8 +92,8 @@ vi.mock('vue-router', async (importOriginal) => {
     return {
         ...actual,
         useRouter: vi.fn(() => ({
-            push: vi.fn(),
-            replace: vi.fn(),
+            push: routerMocks.push,
+            replace: routerMocks.replace,
             currentRoute: ref({ path: '/', name: '', meta: {} })
         }))
     };
@@ -197,6 +203,13 @@ function mountStatusBar(storeOverrides = {}) {
                         },
                         GeneralSettings: {
                             ...storeOverrides.GeneralSettings
+                        },
+                        OverseeSettings: {
+                            licenseKey: '',
+                            licenseStatus: 'unknown',
+                            apiBase: 'https://api.freegg.top',
+                            sseEnabled: true,
+                            ...storeOverrides.OverseeSettings
                         }
                     }
                 })
@@ -274,5 +287,49 @@ describe('StatusBar.vue - Servers indicator', () => {
 
         expect(wrapper.text()).toContain('Last Session');
         expect(wrapper.text()).toContain('Offline Since');
+    });
+});
+
+describe('StatusBar.vue - Oversee indicator', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        sseConnState.value = 'off';
+    });
+
+    test('renders nothing when license is not configured', () => {
+        const wrapper = mountStatusBar();
+        expect(wrapper.find('[data-testid="oversee-status"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Cloud:');
+    });
+
+    test.each([
+        [{ licenseStatus: 'invalid' }, 'Cloud: Invalid license', 'bg-destructive'],
+        [{ licenseStatus: 'expired' }, 'Cloud: License expired', 'bg-destructive'],
+        [{}, 'Cloud: Paused', 'bg-status-offline-alt'],
+        [{ sseEnabled: false }, 'Cloud: Paused', 'bg-status-offline-alt']
+    ])('maps license and paused states', (overrides, label, colorClass) => {
+        const wrapper = mountStatusBar({ OverseeSettings: { licenseKey: 'key', ...overrides } });
+        const indicator = wrapper.find('[data-testid="oversee-status"]');
+        expect(indicator.text()).toBe(label);
+        expect(indicator.find(`.${colorClass}`).exists()).toBe(true);
+    });
+
+    test.each([
+        ['live', 'Cloud: Live', 'bg-status-online'],
+        ['connecting', 'Cloud: Connecting', 'bg-status-askme'],
+        ['reconnecting', 'Cloud: Connecting', 'bg-status-askme'],
+        ['error', 'Cloud: Connection failed', 'bg-destructive']
+    ])('maps SSE state %s', (connState, label, colorClass) => {
+        sseConnState.value = connState;
+        const wrapper = mountStatusBar({ OverseeSettings: { licenseKey: 'key', licenseStatus: 'ok' } });
+        const indicator = wrapper.find('[data-testid="oversee-status"]');
+        expect(indicator.text()).toBe(label);
+        expect(indicator.find(`.${colorClass}`).exists()).toBe(true);
+    });
+
+    test('opens the Oversee settings tab on click', async () => {
+        const wrapper = mountStatusBar({ OverseeSettings: { licenseKey: 'key', licenseStatus: 'ok' } });
+        await wrapper.find('[data-testid="oversee-status"]').trigger('click');
+        expect(routerMocks.push).toHaveBeenCalledWith({ name: 'settings', query: { tab: 'oversee' } });
     });
 });

@@ -59,7 +59,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
     // 功能开关 D1~D6
     const enableTrace = ref(true);
     const enableWatchPush = ref(true);
-    const enableRoomLookup = ref(true);
     const enableBlockAlerts = ref(true);
     // 非持久化: license 校验状态, 由 overseeApi 探测/回写
     const licenseStatus = ref('unknown');
@@ -73,7 +72,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
             sseEnabledConfig,
             enableTraceConfig,
             enableWatchPushConfig,
-            enableRoomLookupConfig,
             enableBlockAlertsConfig
         ] = await Promise.all([
             configRepository.getString(OVERSEE_CONFIG_KEYS.licenseKey, ''),
@@ -83,7 +81,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
             configRepository.getBool(OVERSEE_CONFIG_KEYS.sseEnabled, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableTrace, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableWatchPush, true),
-            configRepository.getBool(OVERSEE_CONFIG_KEYS.enableRoomLookup, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableBlockAlerts, true)
         ]);
 
@@ -94,7 +91,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         sseEnabled.value = sseEnabledConfig;
         enableTrace.value = enableTraceConfig;
         enableWatchPush.value = enableWatchPushConfig;
-        enableRoomLookup.value = enableRoomLookupConfig;
         enableBlockAlerts.value = enableBlockAlertsConfig;
     }
 
@@ -162,11 +158,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
     function setEnableWatchPush() {
         enableWatchPush.value = !enableWatchPush.value;
         configRepository.setBool(OVERSEE_CONFIG_KEYS.enableWatchPush, enableWatchPush.value);
-    }
-
-    function setEnableRoomLookup() {
-        enableRoomLookup.value = !enableRoomLookup.value;
-        configRepository.setBool(OVERSEE_CONFIG_KEYS.enableRoomLookup, enableRoomLookup.value);
     }
 
     function setEnableBlockAlerts() {
@@ -273,7 +264,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         sseEnabled,
         enableTrace,
         enableWatchPush,
-        enableRoomLookup,
         enableBlockAlerts,
         licenseStatus,
 
@@ -286,7 +276,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         setSseEnabled,
         setEnableTrace,
         setEnableWatchPush,
-        setEnableRoomLookup,
         setEnableBlockAlerts,
         persistWatchlist,
         addWatch,

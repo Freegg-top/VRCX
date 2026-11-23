@@ -83,8 +83,7 @@
     "help_support": "協助與支援",
     "expand_menu": "展開選單",
     "collapse_menu": "收起選單",
-    "toggle_theme": "切換主題",
-    "oversee": "雲端監察"
+    "toggle_theme": "切換主題"
   },
   "nav_menu": {
     "freegg": "訪問 FREEGG",
@@ -743,21 +742,6 @@
       "clear_results_tooltip": "清除結果"
     },
     "oversee": {
-      "header": "Oversee 雲端監察",
-      "description": "來自 Oversee 雲端的全站觀測資料，並與本地紀錄合併展示。",
-      "tab_trace": "觀測軌跡",
-      "tab_room": "進房查房",
-      "all_disabled": "全部功能已在設定中停用。請前往設定啟用至少一項功能後再使用本頁。",
-      "guide": {
-        "notConfigured": "未設定 Oversee License",
-        "notConfigured_description": "請前往「設定 → Oversee」填寫 License Key 以解鎖雲端監察功能。未設定時雲端請求會被拒絕，本頁內容不可見。",
-        "invalid": "License Key 無效",
-        "invalid_description": "雲端拒絕了目前 License Key（401）。請前往「設定 → Oversee」更換有效的 Key。",
-        "expired": "License 已過期",
-        "expired_description": "License 已過期或被撤銷（403）。請前往「設定 → Oversee」續期或更換 Key。",
-        "retry_probe": "重試探測"
-      },
-      "query": "查詢",
       "player_input": {
         "source_local": "本地",
         "source_friend": "好友",
@@ -767,33 +751,8 @@
         "vrc_unavailable": "VRChat 用戶搜尋不可用，目前僅顯示本地匹配；請登入或稍後重試。",
         "not_found_vrc_unavailable": "本地找不到該玩家，且 VRChat 用戶搜尋不可用；請登入或稍後重試。"
       },
-      "watch_add": "加入關注名單",
-      "watch_remove": "移出關注名單",
       "error": {
-        "invalidId": "未識別到有效的 usr_ 用戶 ID，請貼上 ID 或包含 ID 的連結。",
-        "notConfigured": "未設定 License Key，請前往「設定 → Oversee」填寫。",
-        "unauthorized": "License Key 無效（401），請前往設定更換。",
-        "forbidden": "License 已過期或被撤銷（403），請前往設定更換。",
-        "notFound": "雲端無此用戶紀錄。",
-        "server": "雲端請求失敗，請稍後重試。",
-        "network": "無法連線 Oversee 雲端服務，請檢查網路後重試。"
-      },
-      "trace": {
-        "input_placeholder": "用戶 ID、玩家名字或包含 usr_ 的連結",
-        "hint": "輸入用戶 ID，查詢其雲端觀測位置歷史。",
-        "empty": "該用戶暫無觀測歷史。雲端恢復採集後，資料會出現在這裡。",
-        "first_seen": "首次觀測：",
-        "last_seen": "最近觀測：",
-        "visits": "出現 {count} 次",
-        "show_more": "顯示更多"
-      },
-      "room": {
-        "input_placeholder": "完整 location，如 wrld_xxx:12345~region(...)",
-        "fill_current": "查目前實例",
-        "invalid_location": "請輸入完整的 location（wrld_xxx:實例 ID）。",
-        "roster_count": "在場 {count} 人",
-        "empty": "該實例暫無觀測名單。",
-        "hint": "輸入 location 查詢該實例的雲端觀測名單。"
+        "invalidId": "未識別到有效的 usr_ 用戶 ID，請貼上 ID 或包含 ID 的連結。"
       },
       "push": {
         "watch_title": "{name} 出現在 {world}",
@@ -803,15 +762,7 @@
         "block_world": "位置：{world}",
         "block_roster": "在場：{names}",
         "license_invalid": "Oversee License 無效（401），即時流已停止",
-        "license_expired": "Oversee License 已過期或被撤銷（403），即時流已停止",
-        "sse_live": "SSE 流：已連線",
-        "sse_connecting": "SSE 流：連線中",
-        "sse_reconnecting": "SSE 流：重連中",
-        "sse_error": "SSE 流：連線異常",
-        "sse_expired": "SSE 流：License 已過期",
-        "sse_invalid": "SSE 流：License 無效",
-        "sse_off": "SSE 流：未啟用",
-        "sse_notConfigured": "SSE 流：未設定"
+        "license_expired": "Oversee License 已過期或被撤銷（403），即時流已停止"
       }
     },
     "settings": {
@@ -884,11 +835,9 @@
         "features": {
           "header": "功能開關",
           "trace": "觀測歷史",
-          "trace_description": "查詢用戶在全站被觀測到的地點紀錄。",
+          "trace_description": "控制用戶卡中雲端觀測資訊的展示。",
           "watch_push": "關注提醒",
           "watch_push_description": "關注名單中的用戶被觀測到時推送提醒。",
-          "room_lookup": "房間查詢",
-          "room_lookup_description": "查詢執行實例內的觀測名單。",
           "block_alerts": "黑名單提醒",
           "block_alerts_description": "被封鎖的用戶出現在附近時提醒。"
         }
@@ -1736,9 +1685,6 @@
         "preparing_data": "準備活動資料...",
         "preparing_data_hint": "第一次載入時可能需要一些時間。",
         "data_ready": "活動資料已準備就緒"
-      },
-      "oversee_trace": {
-        "header": "雲端軌跡"
       },
       "note_memo": {
         "header": "編輯備註與備忘",
@@ -3570,6 +3516,14 @@
     "steamvr_running": "SteamVR 正在執行",
     "steamvr_stopped": "SteamVR 未在執行",
     "proxy": "代理",
+    "oversee": "雲端",
+    "oversee_invalid": "雲端: 金鑰無效",
+    "oversee_expired": "雲端: 授權過期",
+    "oversee_live": "雲端: 即時線上",
+    "oversee_connecting": "雲端: 連線中",
+    "oversee_paused": "雲端: 已暫停",
+    "oversee_error": "雲端: 連線失敗",
+    "oversee_api": "Oversee API: {apiBase}",
     "ws_connected": "已連線",
     "ws_disconnected": "未連線",
     "ws_avg_per_minute": "平均 {count}/分鐘",

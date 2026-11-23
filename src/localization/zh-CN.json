@@ -88,8 +88,7 @@
     "friend_network": "好友的好友",
     "friend_groups": "群组中的好友",
     "friend_avatars": "好友的模型",
-    "friend_worlds": "好友的世界",
-    "oversee": "云端监察"
+    "friend_worlds": "好友的世界"
   },
   "nav_menu": {
     "freegg": "访问 FREEGG",
@@ -811,21 +810,6 @@
       "clear_results_tooltip": "清除结果"
     },
     "oversee": {
-      "header": "Oversee 云端监察",
-      "description": "来自 Oversee 云端的全站观测数据，并与本地日志合并展示。",
-      "tab_trace": "观测轨迹",
-      "tab_room": "进房查房",
-      "all_disabled": "全部功能已在设置中停用。请前往设置启用至少一项功能后再使用本页。",
-      "guide": {
-        "notConfigured": "未配置 Oversee License",
-        "notConfigured_description": "请前往「设置 → Oversee」填写 License Key 以解锁云端监察功能。未配置时云端请求会被拒绝，本页内容不可见。",
-        "invalid": "License Key 无效",
-        "invalid_description": "云端拒绝了当前 License Key（401）。请前往「设置 → Oversee」更换有效的 Key。",
-        "expired": "License 已过期",
-        "expired_description": "License 已过期或被吊销（403）。请前往「设置 → Oversee」续期或更换 Key。",
-        "retry_probe": "重试探测"
-      },
-      "query": "查询",
       "player_input": {
         "source_local": "本地",
         "source_friend": "好友",
@@ -835,33 +819,8 @@
         "vrc_unavailable": "VRChat 用户搜索不可用，当前仅显示本地匹配；请登录或稍后重试。",
         "not_found_vrc_unavailable": "本地未找到该玩家，且 VRChat 用户搜索不可用；请登录或稍后重试。"
       },
-      "watch_add": "加入关注名单",
-      "watch_remove": "移出关注名单",
       "error": {
-        "invalidId": "未识别到有效的 usr_ 用户 ID，请粘贴 ID 或包含 ID 的链接。",
-        "notConfigured": "未配置 License Key，请前往「设置 → Oversee」填写。",
-        "unauthorized": "License Key 无效（401），请前往设置更换。",
-        "forbidden": "License 已过期或被吊销（403），请前往设置更换。",
-        "notFound": "云端无此用户记录。",
-        "server": "云端请求失败，请稍后重试。",
-        "network": "无法连接 Oversee 云端服务，请检查网络后重试。"
-      },
-      "trace": {
-        "input_placeholder": "用户 ID、玩家名字或包含 usr_ 的链接",
-        "hint": "输入用户 ID，查询其云端观测位置历史。",
-        "empty": "该用户暂无观测历史。云端恢复采集后，数据会出现在这里。",
-        "first_seen": "首次观测：",
-        "last_seen": "最近观测：",
-        "visits": "出现 {count} 次",
-        "show_more": "显示更多"
-      },
-      "room": {
-        "input_placeholder": "完整 location，如 wrld_xxx:12345~region(...)",
-        "fill_current": "查当前实例",
-        "invalid_location": "请输入完整的 location（wrld_xxx:实例 ID）。",
-        "roster_count": "在场 {count} 人",
-        "empty": "该实例暂无观测名单。",
-        "hint": "输入 location 查询该实例的云端观测名单。"
+        "invalidId": "未识别到有效的 usr_ 用户 ID，请粘贴 ID 或包含 ID 的链接。"
       },
       "push": {
         "watch_title": "{name} 出现在 {world}",
@@ -871,15 +830,7 @@
         "block_world": "位置：{world}",
         "block_roster": "在场：{names}",
         "license_invalid": "Oversee License 无效（401），实时流已停止",
-        "license_expired": "Oversee License 已过期或被吊销（403），实时流已停止",
-        "sse_live": "SSE 流：已连接",
-        "sse_connecting": "SSE 流：连接中",
-        "sse_reconnecting": "SSE 流：重连中",
-        "sse_error": "SSE 流：连接异常",
-        "sse_expired": "SSE 流：License 已过期",
-        "sse_invalid": "SSE 流：License 无效",
-        "sse_off": "SSE 流：未启用",
-        "sse_notConfigured": "SSE 流：未配置"
+        "license_expired": "Oversee License 已过期或被吊销（403），实时流已停止"
       }
     },
     "settings": {
@@ -952,11 +903,9 @@
         "features": {
           "header": "功能开关",
           "trace": "观测历史",
-          "trace_description": "查询玩家在全站被观测到的地点记录。",
+          "trace_description": "控制用户卡中云端观测信息的展示。",
           "watch_push": "关注提醒",
           "watch_push_description": "关注名单中的用户被观测到时推送提醒。",
-          "room_lookup": "房间查询",
-          "room_lookup_description": "查询实例内的观测名单。",
           "block_alerts": "黑名单提醒",
           "block_alerts_description": "被拉黑的用户出现在附近时提醒。"
         }
@@ -1955,9 +1904,6 @@
         "preparing_data": "正在准备活动数据...",
         "preparing_data_hint": "首次加载时可能需要一些时间。",
         "data_ready": "已准备好活动数据"
-      },
-      "oversee_trace": {
-        "header": "云端轨迹"
       },
       "note_memo": {
         "header": "编辑线上备注和本地备注",
@@ -4022,6 +3968,14 @@
     "steamvr_running": "SteamVR 目前正在运行",
     "steamvr_stopped": "SteamVR 目前没有运行",
     "proxy": "代理服务器",
+    "oversee": "云端",
+    "oversee_invalid": "云端: 密钥无效",
+    "oversee_expired": "云端: 授权过期",
+    "oversee_live": "云端: 实时在线",
+    "oversee_connecting": "云端: 连接中",
+    "oversee_paused": "云端: 已暂停",
+    "oversee_error": "云端: 连接失败",
+    "oversee_api": "Oversee API: {apiBase}",
     "ws_connected": "已连接",
     "ws_disconnected": "已断开",
     "ws_avg_per_minute": "平均 {count} 次/分钟",

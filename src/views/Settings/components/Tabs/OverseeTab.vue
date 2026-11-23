@@ -124,16 +124,6 @@
             </SettingsItem>
 
             <SettingsItem
-                :label="t('view.settings.oversee.features.room_lookup')"
-                :description="t('view.settings.oversee.features.room_lookup_description')"
-                toggle>
-                <Switch
-                    :model-value="enableRoomLookup"
-                    :ariaLabel="t('view.settings.oversee.features.room_lookup')"
-                    @update:modelValue="setEnableRoomLookup" />
-            </SettingsItem>
-
-            <SettingsItem
                 :label="t('view.settings.oversee.features.block_alerts')"
                 :description="t('view.settings.oversee.features.block_alerts_description')"
                 toggle>
@@ -157,7 +147,7 @@
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
     import { Switch } from '@/components/ui/switch';
-    import PlayerInput from '@/views/Oversee/components/PlayerInput.vue';
+    import PlayerInput from '../PlayerInput.vue';
     import { useOverseeSettingsStore } from '@/stores';
     import { OVERSEE_API_BASE } from '@/shared/constants/oversee';
     import { probeLicense } from '@/services/overseeApi';
@@ -177,7 +167,6 @@
         sseEnabled,
         enableTrace,
         enableWatchPush,
-        enableRoomLookup,
         enableBlockAlerts,
         licenseStatus
     } = storeToRefs(overseeSettingsStore);
@@ -189,7 +178,6 @@
         setSseEnabled,
         setEnableTrace,
         setEnableWatchPush,
-        setEnableRoomLookup,
         setEnableBlockAlerts,
         addWatch,
         removeWatch

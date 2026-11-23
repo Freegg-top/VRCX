@@ -10,7 +10,6 @@ export function createBaseDefaultNavLayout(t) {
         { type: 'item', key: 'friend-groups' },
         { type: 'item', key: 'friend-avatars' },
         { type: 'item', key: 'friend-worlds' },
-        { type: 'item', key: 'oversee' },
         { type: 'item', key: 'search' },
         {
             type: 'folder',

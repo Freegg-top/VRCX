@@ -1249,35 +1249,6 @@ const gameLog = {
         return worldName;
     },
 
-    /**
-     * Get local world names for multiple world IDs with bounded IN batches.
-     *
-     * @param {string[]} worldIds
-     * @returns {Promise<Map<string, string>>}
-     */
-    async getGameLogWorldNamesByWorldIds(worldIds) {
-        const namesByWorldId = new Map();
-        const uniqueWorldIds = [...new Set(worldIds)].filter(Boolean);
-        for (let offset = 0; offset < uniqueWorldIds.length; offset += 100) {
-            const batch = uniqueWorldIds.slice(offset, offset + 100);
-            const placeholders = [];
-            const args = {};
-            batch.forEach((worldId, index) => {
-                const key = `@worldId_${index}`;
-                placeholders.push(key);
-                args[key] = worldId;
-            });
-            await sqliteService.execute(
-                (dbRow) => {
-                    namesByWorldId.set(dbRow[0], dbRow[1] || '');
-                },
-                `SELECT world_id, world_name FROM gamelog_location WHERE world_id IN (${placeholders.join(', ')}) GROUP BY world_id`,
-                args
-            );
-        }
-        return namesByWorldId;
-    },
-
     async getPreviousInstancesByUserId(input) {
         var groupingTimeTolerance = 1 * 60 * 60 * 1000; // 1 hour
         var data = new Set();
