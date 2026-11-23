@@ -20,21 +20,13 @@
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Button
-                        :disabled="metLoading || !isFriendsLoaded"
-                        @click="loadMetUsers"
-                    >
-                        {{
-                            metLoading
-                                ? t('view.friend_network.querying')
-                                : t('view.friend_network.met_load')
-                        }}
+                    <Button :disabled="metLoading || !isFriendsLoaded" @click="loadMetUsers">
+                        {{ metLoading ? t('view.friend_network.querying') : t('view.friend_network.met_load') }}
                     </Button>
                     <Button
                         variant="outline"
                         :disabled="metLoading || metAnalysis.running || !metLoaded"
-                        @click="refreshMetUsers"
-                    >
+                        @click="refreshMetUsers">
                         {{ t('view.friend_network.refresh') }}
                     </Button>
                 </div>
@@ -48,9 +40,7 @@
                             })
                         }}
                     </span>
-                    <span
-                        v-if="metAnalysis.total > 0"
-                        class="text-muted-foreground text-xs">
+                    <span v-if="metAnalysis.total > 0" class="text-muted-foreground text-xs">
                         {{
                             t('view.friend_network.met_analyzed', {
                                 done: metAnalysis.done,
@@ -59,9 +49,7 @@
                         }}
                     </span>
                 </div>
-                <div
-                    v-if="metList.length === 0"
-                    class="text-muted-foreground text-sm">
+                <div v-if="metList.length === 0" class="text-muted-foreground text-sm">
                     {{ t('view.friend_network.met_empty') }}
                 </div>
             </template>
@@ -78,9 +66,7 @@
                 :deselect-on-reselect="true">
                 <template #item="{ item, selected }">
                     <div class="flex w-full items-center p-1.5 text-[13px]">
-                        <div
-                            class="relative mr-2.5 inline-block size-9 flex-none"
-                            :class="userStatusClass(item.user)">
+                        <div class="relative mr-2.5 inline-block size-9 flex-none" :class="userStatusClass(item.user)">
                             <img
                                 v-if="item.iconUrl"
                                 class="size-full rounded-full object-cover"
@@ -93,15 +79,9 @@
                             </div>
                         </div>
                         <div class="flex-1 overflow-hidden">
-                            <span
-                                class="block truncate font-medium leading-[18px]"
-                                v-text="item.label"></span>
+                            <span class="block truncate font-medium leading-[18px]" v-text="item.label"></span>
                         </div>
-                        <CheckIcon
-                            :class="[
-                                'ml-auto size-4',
-                                selected ? 'opacity-100' : 'opacity-0'
-                            ]" />
+                        <CheckIcon :class="['ml-auto size-4', selected ? 'opacity-100' : 'opacity-0']" />
                     </div>
                 </template>
                 <template #empty>
@@ -109,9 +89,7 @@
                 </template>
             </VirtualCombobox>
 
-            <span
-                v-if="!metLoaded"
-                class="text-muted-foreground text-sm">
+            <span v-if="!metLoaded" class="text-muted-foreground text-sm">
                 {{ t('view.friend_network.met_need_pool') }}
             </span>
             <template v-else-if="selectedFriendId">
@@ -123,9 +101,7 @@
                         })
                     }}
                 </span>
-                <div
-                    v-if="pagedResult.length === 0"
-                    class="text-muted-foreground py-2 text-center text-sm">
+                <div v-if="pagedResult.length === 0" class="text-muted-foreground py-2 text-center text-sm">
                     {{ t('view.friend_network.metfof_empty') }}
                 </div>
                 <div v-else class="flex flex-col">
@@ -136,9 +112,7 @@
                         @click="openUserDialog(item.row.userId)">
                         <ItemMedia class="relative size-10">
                             <Avatar class="size-full">
-                                <AvatarImage
-                                    :src="userImage(item.display, true)"
-                                    loading="lazy" />
+                                <AvatarImage :src="userImage(item.display, true)" loading="lazy" />
                                 <AvatarFallback>
                                     <User class="text-muted-foreground size-5" />
                                 </AvatarFallback>
@@ -168,6 +142,12 @@
                                     class="flags shrink-0"
                                     :class="languageClass(language.key)"
                                     :title="language.value" />
+                                <Badge
+                                    v-if="item.row.cloud"
+                                    variant="outline"
+                                    class="shrink-0 border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                                    {{ t('view.friend_network.cloud_badge') }}
+                                </Badge>
                             </ItemTitle>
                             <ItemDescription class="line-clamp-1 text-xs!">
                                 {{ metSubLabel(item.row) }}
@@ -175,13 +155,9 @@
                         </ItemContent>
                     </Item>
                 </div>
-                <div
-                    v-if="queryResult.length > 0"
-                    class="mt-1 flex w-full items-center gap-3">
-                    <div
-                        class="inline-flex flex-1 items-center justify-end gap-2">
-                        <span
-                            class="text-muted-foreground truncate text-xs">
+                <div v-if="queryResult.length > 0" class="mt-1 flex w-full items-center gap-3">
+                    <div class="inline-flex flex-1 items-center justify-end gap-2">
+                        <span class="text-muted-foreground truncate text-xs">
                             {{ t('table.pagination.rows_per_page') }}
                         </span>
                         <Select v-model="pageSizeModel">
@@ -189,10 +165,7 @@
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem
-                                    v-for="size in pageSizes"
-                                    :key="String(size)"
-                                    :value="String(size)">
+                                <SelectItem v-for="size in pageSizes" :key="String(size)" :value="String(size)">
                                     {{ size }}
                                 </SelectItem>
                             </SelectContent>
@@ -209,11 +182,7 @@
                             <PaginationPrevious />
                             <template
                                 v-for="(item, index) in items"
-                                :key="
-                                    item.type === 'page'
-                                        ? `page-${item.value}`
-                                        : `ellipsis-${index}`
-                                ">
+                                :key="item.type === 'page' ? `page-${item.value}` : `ellipsis-${index}`">
                                 <PaginationItem
                                     v-if="item.type === 'page'"
                                     :value="item.value"
@@ -243,19 +212,10 @@
     import { CheckIcon, User } from 'lucide-vue-next';
 
     import IconFrame from '../../components/IconFrame.vue';
-    import {
-        Avatar,
-        AvatarFallback,
-        AvatarImage
-    } from '../../components/ui/avatar';
+    import { Badge } from '../../components/ui/badge';
+    import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
     import { Button } from '../../components/ui/button';
-    import {
-        Item,
-        ItemContent,
-        ItemDescription,
-        ItemMedia,
-        ItemTitle
-    } from '../../components/ui/item';
+    import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '../../components/ui/item';
     import {
         Pagination,
         PaginationContent,
@@ -264,18 +224,13 @@
         PaginationNext,
         PaginationPrevious
     } from '../../components/ui/pagination';
-    import {
-        Select,
-        SelectContent,
-        SelectItem,
-        SelectTrigger,
-        SelectValue
-    } from '../../components/ui/select';
+    import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
     import { VirtualCombobox } from '../../components/ui/virtual-combobox';
     import { useAppearanceSettingsStore, useFriendStore, useUserStore } from '../../stores';
     import { useModalStore } from '../../stores/modal';
     import { showUserDialog } from '../../coordinators/userCoordinator';
     import { watchState } from '../../services/watchState';
+    import { getMyCloudConnections, invalidateMyCloudConnections } from '../../services/overseeUserData';
     import {
         forceRefreshAnalysis,
         getMetUsers,
@@ -289,6 +244,7 @@
     import { createRateLimiter } from '../../shared/utils/throttle';
     import { useUserDisplay } from '../../composables/useUserDisplay';
     import { languageClass } from '../../shared/utils';
+    import { mergeCloudIntoMetPool } from './friendNetworkCloud';
 
     const { t } = useI18n();
 
@@ -303,13 +259,24 @@
 
     const metLoaded = ref(false);
     const metLoading = ref(false);
-    const metList = ref([]);
+    const localMetList = ref([]);
+    const cloudConnections = ref(null);
+    let cloudRequestVersion = 0;
+
+    const knownFriendIds = computed(() => {
+        const ids = new Set();
+        for (const ctx of friends.value.values()) {
+            if (ctx?.id) {
+                ids.add(ctx.id);
+            }
+        }
+        return ids;
+    });
+    const metList = computed(() => mergeCloudIntoMetPool(localMetList.value, cloudConnections.value));
 
     const pageNum = ref(1);
     const pageSize = ref(50);
-    const pageSizes = computed(
-        () => appearanceSettingsStore.tablePageSizes || [20, 50, 100, 200]
-    );
+    const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes || [20, 50, 100, 200]);
 
     const allFriends = computed(() => {
         const list = [];
@@ -319,9 +286,7 @@
                 list.push(friendRef);
             }
         }
-        list.sort((a, b) =>
-            String(a.displayName).localeCompare(String(b.displayName))
-        );
+        list.sort((a, b) => String(a.displayName).localeCompare(String(b.displayName)));
         return list;
     });
 
@@ -339,9 +304,7 @@
     ]);
 
     const selectedFriendName = computed(() => {
-        const friend = allFriends.value.find(
-            (friend) => friend.id === selectedFriendId.value
-        );
+        const friend = allFriends.value.find((friend) => friend.id === selectedFriendId.value);
         return friend?.displayName || '';
     });
 
@@ -353,27 +316,27 @@
         const result = [];
         for (const user of metList.value) {
             const entry = metAnalysis.results.get(user.userId);
-            if (entry?.state === 'some' && entry.friendIds.has(friendId)) {
+            if (user.friendIds) {
+                if (user.friendIds.has(friendId)) {
+                    result.push(user);
+                }
+            } else if (entry?.state === 'some' && entry.friendIds.has(friendId)) {
                 result.push(user);
             }
         }
         return result;
     });
 
-    const totalPage = computed(() =>
-        Math.max(1, Math.ceil(queryResult.value.length / pageSize.value))
-    );
+    const totalPage = computed(() => Math.max(1, Math.ceil(queryResult.value.length / pageSize.value)));
 
     const pagedResult = computed(() => {
         const start = (pageNum.value - 1) * pageSize.value;
-        return queryResult.value
-            .slice(start, start + pageSize.value)
-            .map((row) => ({
-                row,
-                // prefer the cached user ref so avatar/trust info shows when
-                // we already know the player (e.g. they were in our instance)
-                display: userStore.cachedUsers.get(row.userId) || row
-            }));
+        return queryResult.value.slice(start, start + pageSize.value).map((row) => ({
+            row,
+            // prefer the cached user ref so avatar/trust info shows when
+            // we already know the player (e.g. they were in our instance)
+            display: userStore.cachedUsers.get(row.userId) || row
+        }));
     });
 
     const pageSizeModel = computed({
@@ -402,10 +365,7 @@
         pagedResult,
         (items) => {
             for (const { row } of items) {
-                if (
-                    userStore.cachedUsers.has(row.userId) ||
-                    avatarFetchRequested.has(row.userId)
-                ) {
+                if (userStore.cachedUsers.has(row.userId) || avatarFetchRequested.has(row.userId)) {
                     continue;
                 }
                 avatarFetchRequested.add(row.userId);
@@ -415,11 +375,7 @@
                         await userRequest.getUser({ userId: row.userId });
                     } catch (err) {
                         // unavailable profile: the row keeps log-only data
-                        console.error(
-                            '[friend-network] failed to prefetch user:',
-                            row.userId,
-                            err?.status
-                        );
+                        console.error('[friend-network] failed to prefetch user:', row.userId, err?.status);
                     }
                 })();
             }
@@ -428,7 +384,6 @@
     );
 
     /**
-     *
      * @param user
      */
     function metSubLabel(user) {
@@ -436,10 +391,18 @@
         if (user.isOwner) {
             parts.push(t('view.friend_network.owner_signal'));
         }
-        if (user.lastSeen) {
+        const lastSeen = user.cloud?.lastSeen || user.lastSeen;
+        if (lastSeen) {
             parts.push(
                 t('view.friend_network.last_met', {
-                    time: dayjs(user.lastSeen).format('YYYY-MM-DD HH:mm')
+                    time: dayjs(lastSeen).format('YYYY-MM-DD HH:mm')
+                })
+            );
+        }
+        if (user.cloud) {
+            parts.push(
+                t('view.friend_network.cloud_seen', {
+                    count: user.cloud.count
                 })
             );
         }
@@ -451,19 +414,23 @@
         return parts.join(' · ');
     }
 
+    function loadCloudConnections() {
+        const version = ++cloudRequestVersion;
+        getMyCloudConnections().then((connections) => {
+            if (version === cloudRequestVersion) {
+                cloudConnections.value = connections;
+            }
+        });
+    }
+
     async function loadMetUsers() {
         if (metLoading.value) {
             return;
         }
         metLoading.value = true;
+        loadCloudConnections();
         try {
             const logRows = await getMetUsers();
-            const friendIds = new Set();
-            for (const ctx of friends.value.values()) {
-                if (ctx?.id) {
-                    friendIds.add(ctx.id);
-                }
-            }
             // 实例房主信号: 未在本地日志出现过的好友的好友候选
             const ownerRows = (await getOwnerCandidates()).map((row) => ({
                 userId: row.userId,
@@ -482,26 +449,19 @@
                     existing.isOwner = true;
                     existing.joinCount = row.joinCount;
                     existing.lastSeen = row.lastSeen;
-                    if (
-                        !existing.displayName ||
-                        existing.displayName === existing.userId
-                    ) {
+                    if (!existing.displayName || existing.displayName === existing.userId) {
                         existing.displayName = row.displayName;
                     }
                 } else {
                     merged.set(row.userId, row);
                 }
             }
-            metList.value = [...merged.values()]
-                .filter((row) => !friendIds.has(row.userId))
-                .sort((a, b) =>
-                    String(b.lastSeen || '').localeCompare(
-                        String(a.lastSeen || '')
-                    )
-                );
+            localMetList.value = [...merged.values()]
+                .filter((row) => !knownFriendIds.value.has(row.userId))
+                .sort((a, b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
             await seedPersistedAnalysis();
             metLoaded.value = true;
-            startMetAnalysis(metList.value.map((user) => user.userId));
+            startMetAnalysis(localMetList.value.map((user) => user.userId));
         } catch (err) {
             console.error('[friend-network] failed to load met users:', err);
         } finally {
@@ -516,7 +476,7 @@
         if (metLoading.value || metAnalysis.running) {
             return;
         }
-        const count = metList.value.length;
+        const count = localMetList.value.length;
         const minutes = Math.max(1, Math.ceil(count / 60));
         const modalStore = useModalStore();
         try {
@@ -533,9 +493,21 @@
         } catch {
             return;
         }
+        cloudConnections.value = null;
+        invalidateMyCloudConnections();
         await loadMetUsers();
-        forceRefreshAnalysis(metList.value.map((user) => user.userId));
+        forceRefreshAnalysis(localMetList.value.map((user) => user.userId));
     }
+
+    watch(
+        () => watchState.isLoggedIn,
+        (loggedIn) => {
+            if (!loggedIn) {
+                cloudRequestVersion++;
+                cloudConnections.value = null;
+            }
+        }
+    );
 
     // 好友列表同步完成后重建 metList (修复好友未载入时被误判为陌生人)
     watch(
@@ -552,17 +524,14 @@
         try {
             persisted = await getPersistedAnalysis();
         } catch (err) {
-            console.error(
-                '[friend-network] failed to load saved analysis:',
-                err
-            );
+            console.error('[friend-network] failed to load saved analysis:', err);
             return;
         }
         if (!persisted.size) {
             return;
         }
         const now = Date.now();
-        for (const user of metList.value) {
+        for (const user of localMetList.value) {
             if (metAnalysis.results.has(user.userId)) {
                 continue;
             }
@@ -588,7 +557,6 @@
     }
 
     /**
-     *
      * @param userId
      */
     function openUserDialog(userId) {

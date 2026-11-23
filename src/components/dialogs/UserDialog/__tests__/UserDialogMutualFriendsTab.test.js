@@ -4,6 +4,14 @@ import { mount } from '@vue/test-utils';
 
 // ─── Mocks ───────────────────────────────────────────────────────────
 
+const overseeMocks = vi.hoisted(() => ({
+    getUserConnections: vi.fn()
+}));
+
+vi.mock('../../../../services/overseeApi', () => ({
+    getUserConnections: overseeMocks.getUserConnections
+}));
+
 vi.mock('vue-i18n', () => ({
     useI18n: () => ({
         t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
@@ -100,7 +108,7 @@ vi.mock('../../../../coordinators/userCoordinator', async (importOriginal) => {
 });
 
 import UserDialogMutualFriendsTab from '../UserDialogMutualFriendsTab.vue';
-import { useFriendStore, useUserStore } from '../../../../stores';
+import { useFriendStore, useOverseeSettingsStore, useUserStore } from '../../../../stores';
 import { userDialogMutualFriendSortingOptions } from '../../../../shared/constants';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -132,6 +140,13 @@ const MOCK_MUTUAL_FRIENDS = [
 function mountComponent(overrides = {}) {
     const pinia = createTestingPinia({
         stubActions: false
+    });
+
+    const overseeSettingsStore = useOverseeSettingsStore(pinia);
+    overseeSettingsStore.$patch({
+        licenseKey: '',
+        licenseStatus: 'unknown',
+        ...overrides.oversee
     });
 
     const userStore = useUserStore(pinia);
@@ -177,6 +192,7 @@ describe('UserDialogMutualFriendsTab.vue', () => {
         databaseMockHandlers.updateMutualsForFriend.mockReset().mockResolvedValue(undefined);
         databaseMockHandlers.upsertMutualGraphMeta.mockReset().mockResolvedValue(undefined);
         processBulk.mockReset();
+        overseeMocks.getUserConnections.mockReset().mockResolvedValue({ results: [] });
     });
 
     describe('rendering', () => {
@@ -266,8 +282,9 @@ describe('UserDialogMutualFriendsTab.vue', () => {
     describe('retrospective mutuals (opted-out target)', () => {
         /**
          * 模拟抓取流程: 触发 getUserMutualFriends 并让 processBulk 立即回调 handle/done
-         * @param {boolean} success
+         *
          * @param {ReturnType<typeof mount>} wrapper
+         * @param {boolean} success
          * @param {Array} fetched 抓取返回的 mutual 列表 (success 时经 handle 回填)
          */
         async function runFetch(wrapper, success, fetched = []) {
@@ -293,7 +310,12 @@ describe('UserDialogMutualFriendsTab.vue', () => {
 
         test('shows retrospective list when target opted out (DB meta)', async () => {
             databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
-                new Map([['usr_target', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-01-15T00:00:00.000Z' }]])
+                new Map([
+                    [
+                        'usr_target',
+                        { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-01-15T00:00:00.000Z' }
+                    ]
+                ])
             );
             databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_1', 'usr_2']);
             const wrapper = mountComponent({ mutualFriends: [] });
@@ -322,7 +344,9 @@ describe('UserDialogMutualFriendsTab.vue', () => {
         test('renders hidden mutuals section for members that vanished and opted out', async () => {
             // 旧快照含 usr_1..usr_4; 新抓取只剩 usr_1..usr_3; usr_4 optedOut -> Hidden Mutual
             databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
-                new Map([['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]])
+                new Map([
+                    ['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]
+                ])
             );
             databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_1', 'usr_2', 'usr_3', 'usr_4']);
             const wrapper = mountComponent({ mutualFriends: [] });
@@ -356,7 +380,9 @@ describe('UserDialogMutualFriendsTab.vue', () => {
                 callOrder.push('updateMutualsForFriend');
             });
             databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
-                new Map([['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]])
+                new Map([
+                    ['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]
+                ])
             );
             const wrapper = mountComponent({ mutualFriends: [] });
             await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
@@ -375,7 +401,9 @@ describe('UserDialogMutualFriendsTab.vue', () => {
                 db.set(id, ids);
             });
             databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
-                new Map([['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]])
+                new Map([
+                    ['usr_4', { lastFetchedAt: null, optedOut: true, optOutDetectedAt: '2026-02-01T00:00:00.000Z' }]
+                ])
             );
             const wrapper = mountComponent({ mutualFriends: [] });
             await runFetch(wrapper, true, [...MOCK_MUTUAL_FRIENDS]);
@@ -505,6 +533,68 @@ describe('UserDialogMutualFriendsTab.vue', () => {
 
             expect(wrapper.text()).not.toContain('opted_out_notice');
             expect(wrapper.text()).toContain('Charlie');
+        });
+
+        test('renders cloud connections only after official and snapshot sources are empty', async () => {
+            overseeMocks.getUserConnections.mockResolvedValue({
+                results: [
+                    {
+                        other_id: 'usr_cloud',
+                        display_name: '',
+                        avatar_url: 'https://img/cloud.png',
+                        co_seen_count: 4,
+                        last_seen: '2026-11-22T00:00:00.000Z'
+                    }
+                ]
+            });
+            const wrapper = mountComponent({
+                mutualFriends: [],
+                oversee: { licenseKey: 'key', licenseStatus: 'unknown' }
+            });
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            useOverseeSettingsStore().$patch({ licenseKey: 'key', licenseStatus: 'unknown' });
+
+            await runFetch(wrapper, false);
+
+            expect(overseeMocks.getUserConnections).toHaveBeenCalledWith('usr_target', 50);
+            expect(wrapper.text()).toContain('dialog.user.mutual_friends.fetch_failed_notice');
+            expect(wrapper.text()).toContain('dialog.user.mutual_friends.cloud_fallback_hint');
+            expect(wrapper.text()).toContain('dialog.user.mutual_friends.cloud_badge');
+            expect(wrapper.text()).toContain('usr_cloud');
+            expect(wrapper.find('img[src="https://img/cloud.png"]').exists()).toBe(true);
+
+            const showUserDialogSpy = vi.spyOn(userCoordinatorModule, 'showUserDialog').mockImplementation(() => {});
+            await wrapper.find('li').trigger('click');
+            expect(showUserDialogSpy).toHaveBeenCalledWith('usr_cloud');
+        });
+
+        test('keeps the historical snapshot ahead of the cloud fallback', async () => {
+            databaseMockHandlers.getMutualGraphMeta.mockResolvedValue(
+                new Map([['usr_target', { optedOut: true, lastFetchedAt: '2026-01-01T00:00:00.000Z' }]])
+            );
+            databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_snapshot']);
+            const wrapper = mountComponent({
+                mutualFriends: [],
+                oversee: { licenseKey: 'key', licenseStatus: 'ok' }
+            });
+
+            await runFetch(wrapper, false);
+
+            expect(wrapper.text()).toContain('usr_snapshot');
+            expect(wrapper.text()).not.toContain('cloud_fallback_hint');
+            expect(overseeMocks.getUserConnections).not.toHaveBeenCalled();
+        });
+
+        test.each(['invalid', 'expired', 'offline'])('hides the cloud fallback for %s licenses', async (status) => {
+            const wrapper = mountComponent({
+                mutualFriends: [],
+                oversee: { licenseKey: 'key', licenseStatus: status }
+            });
+
+            await runFetch(wrapper, false);
+
+            expect(overseeMocks.getUserConnections).not.toHaveBeenCalled();
+            expect(wrapper.text()).not.toContain('cloud_fallback_hint');
         });
     });
 });

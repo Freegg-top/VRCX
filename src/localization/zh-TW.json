@@ -273,6 +273,9 @@
         "MutualOptOut": "關閉共同好友顯示"
       },
       "photon_event_logging": "Photon 事件記錄",
+      "watched": {
+        "synced": "已開推送"
+      },
       "mutual_and": " 與 ",
       "mutual_friendship_end_predicate": " 不再是好友",
       "mutual_friendship_start_predicate": " 成為好友",
@@ -540,6 +543,10 @@
       "load_mutual_friends": "載入共同好友",
       "mutual_loading_hint": "在共同好友圖表頁面查看進度"
     },
+    "friend_network": {
+      "cloud_badge": "雲端",
+      "cloud_seen": "雲端同處 {count} 次"
+    },
     "friend_groups": {
       "page_info": "第 {page} / {total} 頁"
     },
@@ -739,9 +746,7 @@
       "header": "Oversee 雲端監察",
       "description": "來自 Oversee 雲端的全站觀測資料，並與本地紀錄合併展示。",
       "tab_trace": "觀測軌跡",
-      "tab_encounters": "偶遇回溯",
       "tab_room": "進房查房",
-      "tab_network": "關係網",
       "all_disabled": "全部功能已在設定中停用。請前往設定啟用至少一項功能後再使用本頁。",
       "guide": {
         "notConfigured": "未設定 Oversee License",
@@ -750,8 +755,7 @@
         "invalid_description": "雲端拒絕了目前 License Key（401）。請前往「設定 → Oversee」更換有效的 Key。",
         "expired": "License 已過期",
         "expired_description": "License 已過期或被撤銷（403）。請前往「設定 → Oversee」續期或更換 Key。",
-        "retry_probe": "重試探測",
-        "local_only_hint": "License 恢復前僅可使用「偶遇回溯」（本地模式）。"
+        "retry_probe": "重試探測"
       },
       "query": "查詢",
       "player_input": {
@@ -765,8 +769,6 @@
       },
       "watch_add": "加入關注名單",
       "watch_remove": "移出關注名單",
-      "open_user_dialog": "開啟用戶對話框",
-      "not_logged_in": "請先登入 VRChat，本功能需要目前帳號的用戶 ID。",
       "error": {
         "invalidId": "未識別到有效的 usr_ 用戶 ID，請貼上 ID 或包含 ID 的連結。",
         "notConfigured": "未設定 License Key，請前往「設定 → Oversee」填寫。",
@@ -782,19 +784,8 @@
         "empty": "該用戶暫無觀測歷史。雲端恢復採集後，資料會出現在這裡。",
         "first_seen": "首次觀測：",
         "last_seen": "最近觀測：",
-        "visits": "出現 {count} 次"
-      },
-      "encounters": {
-        "hint": "從本地紀錄與 Oversee 雲端載入你的同處（偶遇）關係。",
-        "empty": "本地紀錄與雲端均未發現同處紀錄。",
-        "cloud_pending": "雲端資料待同步，目前僅展示本地結果。",
-        "source_local": "本地",
-        "source_cloud": "雲端",
-        "source_both": "本地+雲端",
-        "co_seen": "同處 {count} 次",
-        "last_seen": "最近同處：",
-        "show_more": "顯示更多",
-        "refresh": "重新整理偶遇列表"
+        "visits": "出現 {count} 次",
+        "show_more": "顯示更多"
       },
       "room": {
         "input_placeholder": "完整 location，如 wrld_xxx:12345~region(...)",
@@ -803,12 +794,6 @@
         "roster_count": "在場 {count} 人",
         "empty": "該實例暫無觀測名單。",
         "hint": "輸入 location 查詢該實例的雲端觀測名單。"
-      },
-      "network": {
-        "input_placeholder": "用戶 ID、玩家名字或包含 usr_ 的連結",
-        "hint": "查詢中心用戶的同處關係網，點擊關聯用戶可逐跳展開。",
-        "neighbors": "關聯 {count} 人",
-        "empty": "該用戶暫無任何同處關係。"
       },
       "push": {
         "watch_title": "{name} 出現在 {world}",
@@ -892,20 +877,18 @@
         "push": {
           "header": "即時推送",
           "enable": "SSE 人口資料流",
-          "enable_description": "透過 Server-Sent Events 訂閱全站人口資料流。關閉後不訂閱全站流。"
+          "enable_description": "透過 Server-Sent Events 訂閱全站人口資料流。關閉後不訂閱全站流。",
+          "sync_watched": "本地關注自動推送",
+          "sync_watched_description": "本地關注的用戶自動獲得雲端上線提醒；取消關注會移除由本功能自動加入的條目。"
         },
         "features": {
           "header": "功能開關",
           "trace": "觀測歷史",
           "trace_description": "查詢用戶在全站被觀測到的地點紀錄。",
-          "encounters": "同處紀錄",
-          "encounters_description": "顯示用戶之間的同房相遇關係。",
           "watch_push": "關注提醒",
           "watch_push_description": "關注名單中的用戶被觀測到時推送提醒。",
           "room_lookup": "房間查詢",
           "room_lookup_description": "查詢執行實例內的觀測名單。",
-          "network": "關係網絡",
-          "network_description": "基於同處資料建構關係網絡圖。",
           "block_alerts": "黑名單提醒",
           "block_alerts_description": "被封鎖的用戶出現在附近時提醒。"
         }
@@ -1602,6 +1585,10 @@
         "represented_group": "代表群組",
         "bio": "自我介紹",
         "last_seen": "最後上線",
+        "cloud_observation": "雲端觀測",
+        "cloud_observation_summary": "首次出現 {first} · 最近出現 {last}",
+        "cloud_observation_first": "首次出現 {first}",
+        "cloud_observation_last": "最近出現 {last}",
         "join_count": "加入次數",
         "time_together": "一起遊玩時長",
         "play_time": "遊玩時長",
@@ -1699,7 +1686,10 @@
         "opted_out_snapshot_hint": "根據 {date} 的快照記錄，其當時的共同好友共 {count} 人（歷史推測資料）",
         "opted_out_detected_hint": "檢測到關閉：{date}",
         "hidden_mutuals_hint": "隱藏的共同好友（推測，據 {date} 快照）",
-        "fetch_failed_notice": "無法載入共同好友，請稍後重試。"
+        "fetch_failed_notice": "無法載入共同好友，請稍後重試。",
+        "cloud_fallback_hint": "雲端推斷的同處關係（非官方好友資料）",
+        "cloud_badge": "雲端",
+        "cloud_connection_stats": "同處 {count} 次 · {lastSeen}"
       },
       "activity": {
         "header": "活動",
@@ -3334,7 +3324,8 @@
       "date": "時間",
       "user": "用戶",
       "type": "種類",
-      "detail": "詳細"
+      "detail": "詳細",
+      "cloud_last_seen": "上次同處：{time} · 累計 {count} 次"
     },
     "friendLog": {
       "date": "時間",

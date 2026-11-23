@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createTestingPinia } from '@pinia/testing';
 import { flushPromises, shallowMount } from '@vue/test-utils';
 
+const overseeMocks = vi.hoisted(() => ({
+    getUserHistory: vi.fn()
+}));
+
+vi.mock('../../../../services/overseeApi', () => ({
+    getUserHistory: overseeMocks.getUserHistory
+}));
+
 vi.mock('vue-i18n', () => ({
     useI18n: () => {
         const { ref } = require('vue');
@@ -96,8 +104,10 @@ import {
     useAppearanceSettingsStore,
     useLocationStore,
     useModalStore,
+    useOverseeSettingsStore,
     useUserStore
 } from '../../../../stores';
+import { clearCloudObservationCache } from '../../../../services/overseeUserCardData';
 
 /**
  * @param overrides
@@ -121,6 +131,14 @@ function mountComponent(overrides = {}) {
     });
     const advancedSettings = advancedSettingsStore;
     advancedSettings.translateText = vi.fn().mockResolvedValue('');
+
+    const overseeSettingsStore = useOverseeSettingsStore(pinia);
+    overseeSettingsStore.$patch({
+        licenseKey: '',
+        licenseStatus: 'unknown',
+        enableTrace: true,
+        ...overrides.oversee
+    });
 
     const userStore = useUserStore(pinia);
     userStore.$patch({
@@ -219,6 +237,8 @@ function mountComponent(overrides = {}) {
 describe('UserDialogInfoTab.vue', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        clearCloudObservationCache();
+        overseeMocks.getUserHistory.mockReset().mockResolvedValue({ user: null, history: [] });
     });
 
     describe('unit behavior', () => {
@@ -232,7 +252,77 @@ describe('UserDialogInfoTab.vue', () => {
             await flushPromises();
 
             expect(creditsSpy).toHaveBeenCalledTimes(0);
+            expect(overseeMocks.getUserHistory).not.toHaveBeenCalled();
         });
+
+        test('renders the cloud observation row for a trace-enabled other user', async () => {
+            overseeMocks.getUserHistory.mockResolvedValue({
+                user: {
+                    first_seen: '2026-01-01T00:00:00.000Z',
+                    last_seen: '2026-11-22T00:00:00.000Z'
+                },
+                history: []
+            });
+            const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'unknown' } });
+            await flushPromises();
+            useOverseeSettingsStore().$patch({
+                licenseKey: 'key',
+                licenseStatus: 'unknown',
+                enableTrace: true
+            });
+
+            wrapper.vm.onTabActivated();
+            await flushPromises();
+
+            expect(overseeMocks.getUserHistory).toHaveBeenCalledWith('usr_target', 1);
+            expect(wrapper.text()).toContain('dialog.user.info.cloud_observation');
+            expect(wrapper.text()).toContain('dialog.user.info.cloud_observation_summary');
+        });
+
+        test('renders only the available side of a partial cloud observation', async () => {
+            overseeMocks.getUserHistory.mockResolvedValue({
+                user: { first_seen: '2026-01-01T00:00:00.000Z', last_seen: '' },
+                history: []
+            });
+            const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'ok' } });
+            await flushPromises();
+            useOverseeSettingsStore().$patch({
+                licenseKey: 'key',
+                licenseStatus: 'ok',
+                enableTrace: true
+            });
+
+            wrapper.vm.onTabActivated();
+            await flushPromises();
+
+            expect(wrapper.text()).toContain('dialog.user.info.cloud_observation_first');
+            expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation_summary');
+            expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation_last');
+        });
+
+        test('hides the cloud observation row for empty or failed cloud data', async () => {
+            const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'ok' } });
+            wrapper.vm.onTabActivated();
+            await flushPromises();
+            expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation');
+
+            const failedWrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'ok' } });
+            overseeMocks.getUserHistory.mockRejectedValueOnce(new Error('offline'));
+            failedWrapper.vm.onTabActivated();
+            await flushPromises();
+            expect(failedWrapper.text()).not.toContain('dialog.user.info.cloud_observation');
+        });
+
+        test.each(['invalid', 'expired', 'offline'])(
+            'stays invisible without requests for %s licenses',
+            async (status) => {
+                const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: status } });
+                wrapper.vm.onTabActivated();
+                await flushPromises();
+                expect(overseeMocks.getUserHistory).not.toHaveBeenCalled();
+                expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation');
+            }
+        );
     });
 
     describe('dom rendering', () => {

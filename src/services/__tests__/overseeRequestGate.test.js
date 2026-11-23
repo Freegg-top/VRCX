@@ -1,4 +1,4 @@
-// LatestRequestGate: TracePanel / NetworkPanel 的"只接受最新请求"令牌逻辑.
+// LatestRequestGate: TracePanel 的"只接受最新请求"令牌逻辑.
 
 import { describe, expect, it } from 'vitest';
 

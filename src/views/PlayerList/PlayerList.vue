@@ -194,6 +194,7 @@
         useGalleryStore,
         useInstanceStore,
         useLocationStore,
+        useOverseeSettingsStore,
         usePhotonStore,
         useUserStore
     } from '../../stores';
@@ -207,6 +208,9 @@
     import Timer from '../../components/Timer.vue';
     import { showUserDialog, lookupUser } from '../../coordinators/userCoordinator';
     import { showWorldDialog } from '../../coordinators/worldCoordinator';
+    import { getMyCloudConnections } from '../../services/overseeUserData';
+    import { watchState } from '../../services/watchState';
+    import { isOverseeLicenseAvailable, stampCloudConnectionsOnPlayers } from '../../services/overseeUserCardData';
 
     import PhotonEventTable from './components/PhotonEventTable.vue';
     import { useUserDisplay } from '../../composables/useUserDisplay';
@@ -218,6 +222,7 @@
     const { saveChatboxUserBlacklist } = photonStore;
 
     const { lastLocation } = storeToRefs(useLocationStore());
+    const overseeSettingsStore = useOverseeSettingsStore();
     const { currentInstanceLocation, currentInstanceWorld, currentInstanceUsersData } = storeToRefs(useInstanceStore());
 
     const worldImageError = ref(false);
@@ -291,6 +296,49 @@
         return a[field].toLowerCase().localeCompare(b[field].toLowerCase());
     }
 
+    const cloudConnectionsEnabled = computed(() => isOverseeLicenseAvailable(overseeSettingsStore));
+    let cloudConnectionsRequestSeq = 0;
+
+    async function loadCloudConnectionsForPlayers() {
+        const seq = ++cloudConnectionsRequestSeq;
+        if (!cloudConnectionsEnabled.value) {
+            if (stampCloudConnectionsOnPlayers(currentInstanceUsersData.value, null)) {
+                getCurrentInstanceUserList();
+            }
+            return;
+        }
+        let connections = null;
+        try {
+            connections = await getMyCloudConnections();
+        } catch {
+            // The shared service already degrades silently; keep this guard for
+            // unexpected adapter failures without disturbing the local table.
+        }
+        if (seq !== cloudConnectionsRequestSeq) {
+            return;
+        }
+        if (stampCloudConnectionsOnPlayers(currentInstanceUsersData.value, connections)) {
+            // Rebuild rows once so TanStack Table sees the newly stamped refs.
+            // The shared TTL cache makes the resulting watcher run request-free.
+            getCurrentInstanceUserList();
+        }
+    }
+
+    watch([currentInstanceUsersData, cloudConnectionsEnabled], loadCloudConnectionsForPlayers, {
+        immediate: true
+    });
+    watch(
+        () => watchState.isLoggedIn,
+        (loggedIn) => {
+            if (!loggedIn) {
+                cloudConnectionsRequestSeq++;
+                if (stampCloudConnectionsOnPlayers(currentInstanceUsersData.value, null)) {
+                    getCurrentInstanceUserList();
+                }
+            }
+        }
+    );
+
     const playerListColumns = computed(() =>
         createColumns({
             randomUserColours,
@@ -298,7 +346,8 @@
             onBlockChatbox: addChatboxUserBlacklist,
             onUnblockChatbox: deleteChatboxUserBlacklist,
             sortAlphabetically,
-            userImage
+            userImage,
+            showCloudConnections: cloudConnectionsEnabled
         })
     );
 

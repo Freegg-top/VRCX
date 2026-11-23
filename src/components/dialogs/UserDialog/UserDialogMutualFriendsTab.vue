@@ -86,10 +86,7 @@
                 </ul>
             </template>
             <template v-else>
-                <div
-                    v-if="hasMutualFetchFailed"
-                    class="mt-2 text-sm text-muted-foreground"
-                    style="padding: 4px 6px">
+                <div v-if="hasMutualFetchFailed" class="mt-2 text-sm text-muted-foreground" style="padding: 4px 6px">
                     {{ t('dialog.user.mutual_friends.fetch_failed_notice') }}
                 </div>
                 <ul class="flex flex-wrap items-start" style="margin-top: 8px; min-width: 130px">
@@ -148,12 +145,48 @@
                     </ul>
                 </template>
             </template>
+            <template v-if="cloudMutuals.length">
+                <div class="mt-3 mb-1 flex items-center gap-2 text-sm text-muted-foreground" style="padding: 4px 6px">
+                    <span>{{ t('dialog.user.mutual_friends.cloud_fallback_hint') }}</span>
+                    <Badge variant="secondary" class="shrink-0 text-[10px]">
+                        {{ t('dialog.user.mutual_friends.cloud_badge') }}
+                    </Badge>
+                </div>
+                <ul class="flex flex-wrap items-start" style="min-width: 130px">
+                    <li
+                        v-for="user in filteredCloudMutuals"
+                        :key="user.id"
+                        class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-[200px] hover:rounded-[25px_5px_5px_25px]"
+                        @click="showUserDialog(user.id)">
+                        <div class="relative inline-block flex-none size-9 mr-2.5">
+                            <Avatar class="size-9">
+                                <AvatarImage :src="userImage(user)" class="object-cover" />
+                                <AvatarFallback>
+                                    <User class="size-4 text-muted-foreground" />
+                                </AvatarFallback>
+                            </Avatar>
+                        </div>
+                        <div class="flex-1 overflow-hidden">
+                            <span class="block truncate font-medium leading-[18px]" v-text="user.displayName"></span>
+                            <span class="block truncate text-xs text-muted-foreground">
+                                {{
+                                    t('dialog.user.mutual_friends.cloud_connection_stats', {
+                                        count: user.coSeenCount,
+                                        lastSeen: timeAgo(user.lastSeen)
+                                    })
+                                }}
+                            </span>
+                        </div>
+                    </li>
+                </ul>
+            </template>
         </div>
     </div>
 </template>
 
 <script setup>
     import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+    import { Badge } from '@/components/ui/badge';
     import IconFrame from '@/components/IconFrame.vue';
     import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
     import { Button } from '@/components/ui/button';
@@ -168,15 +201,18 @@
         compareByDisplayName,
         compareByFriendOrder,
         compareByLastActiveRef,
-        formatDateFilter
+        formatDateFilter,
+        timeAgo
     } from '../../../shared/utils';
     import { useUserDisplay } from '../../../composables/useUserDisplay';
     import { database } from '../../../services/database';
     import { processBulk } from '../../../services/request';
     import { useOptionKeySelect } from '../../../composables/useOptionKeySelect';
-    import { useFriendStore, useUserStore } from '../../../stores';
+    import { useFriendStore, useOverseeSettingsStore, useUserStore } from '../../../stores';
     import { userDialogMutualFriendSortingOptions } from '../../../shared/constants';
     import { userRequest } from '../../../api';
+    import { getUserConnections } from '../../../services/overseeApi';
+    import { shouldLoadCloudMutualFallback } from '../../../services/overseeUserCardData';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
 
     const { t } = useI18n();
@@ -184,6 +220,7 @@
 
     const userStore = useUserStore();
     const friendStore = useFriendStore();
+    const overseeSettingsStore = useOverseeSettingsStore();
     const { userDialog, currentUser } = storeToRefs(userStore);
     const { cachedUsers } = userStore;
 
@@ -221,12 +258,18 @@
     // 抓取失败且没有 opt-out 证据时，明确提示而不是静默显示空列表
     const hasMutualFetchFailed = ref(false);
 
+    // 官方接口与历史快照都不可用时展示的第三级云端回退
+    const cloudMutuals = ref([]);
+
     // 标题计数与当前实际渲染的数据源保持一致
-    const displayedCount = computed(() =>
-        isTargetOptedOut.value
+    const displayedCount = computed(() => {
+        if (cloudMutuals.value.length) {
+            return cloudMutuals.value.length;
+        }
+        return isTargetOptedOut.value
             ? retrospectiveMutuals.value.length
-            : userDialog.value.mutualFriends.length + hiddenMutuals.value.length
-    );
+            : userDialog.value.mutualFriends.length + hiddenMutuals.value.length;
+    });
 
     const filteredRetrospectiveMutuals = computed(() => {
         const query = searchQuery.value.trim().toLowerCase();
@@ -240,8 +283,15 @@
         return hiddenMutuals.value.filter((u) => (u.displayName || '').toLowerCase().includes(query));
     });
 
+    const filteredCloudMutuals = computed(() => {
+        const query = searchQuery.value.trim().toLowerCase();
+        if (!query) return cloudMutuals.value;
+        return cloudMutuals.value.filter((u) => (u.displayName || '').toLowerCase().includes(query));
+    });
+
     /**
-     * mutual id 列表 -> user ref 列表 (优先 cachedUsers, 无缓存时构造最小 ref)
+     * Mutual id 列表 -> user ref 列表 (优先 cachedUsers, 无缓存时构造最小 ref)
+     *
      * @param {string[]} ids
      * @returns {object[]}
      */
@@ -268,9 +318,10 @@
 
     /**
      * 刷新回溯/hidden 分区数据
+     *
      * @param {string} userId
      * @param {boolean} fetchSucceeded 本次 API 抓取是否成功 (false 可能为 403)
-     * @param {string[]|null} oldMutualIds 写库前读到的旧快照 (P1-2: 避免先覆盖后读取)
+     * @param {string[] | null} oldMutualIds 写库前读到的旧快照 (P1-2: 避免先覆盖后读取)
      * @param {Array} fetchedMutuals 本次抓取到的 mutual 列表 (P1-3: 不再从共享 userDialog 读)
      * @param {number} seq 请求序号令牌
      */
@@ -357,6 +408,43 @@
     let mutualReqSeq = 0;
 
     /**
+     * @param {string} userId
+     * @param {boolean} officialSucceeded
+     * @param {number} seq
+     */
+    async function loadCloudMutualFallback(userId, officialSucceeded, seq) {
+        if (
+            !shouldLoadCloudMutualFallback({
+                officialSucceeded,
+                historicalCount: retrospectiveMutuals.value.length,
+                licenseKey: overseeSettingsStore.licenseKey,
+                licenseStatus: overseeSettingsStore.licenseStatus
+            })
+        ) {
+            return;
+        }
+        try {
+            const payload = await getUserConnections(userId, 50);
+            if (!isCurrentMutualRequest(seq, userId)) {
+                return;
+            }
+            cloudMutuals.value = (payload?.results || [])
+                .filter((row) => row?.other_id && row.other_id !== userId)
+                .map((row) => ({
+                    id: row.other_id,
+                    displayName: row.display_name || row.other_id,
+                    currentAvatarThumbnailImageUrl: row.avatar_url || '',
+                    coSeenCount: Number.isFinite(Number(row.co_seen_count))
+                        ? Math.max(0, Number(row.co_seen_count))
+                        : 0,
+                    lastSeen: row.last_seen || ''
+                }));
+        } catch {
+            // 云端只是静默回退；保留官方失败或 opt-out 的原有提示。
+        }
+    }
+
+    /**
      * @param userId
      */
     async function getUserMutualFriends(userId) {
@@ -365,6 +453,7 @@
         isTargetOptedOut.value = false;
         retrospectiveMutuals.value = [];
         hiddenMutuals.value = [];
+        cloudMutuals.value = [];
         hasMutualFetchFailed.value = false;
         if (currentUser.value.hasSharedConnectionsOptOut) {
             return;
@@ -429,7 +518,9 @@
                     }
                 }
                 // 回溯数据依赖抓取结果做 diff; 旧快照与本次抓取列表都作为参数传入
-                loadRetrospectiveData(userId, success, oldMutualIds, userDialog.value.mutualFriends, seq);
+                loadRetrospectiveData(userId, success, oldMutualIds, userDialog.value.mutualFriends, seq).then(() =>
+                    loadCloudMutualFallback(userId, success, seq)
+                );
             }
         });
     }

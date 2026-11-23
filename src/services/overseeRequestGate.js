@@ -1,5 +1,5 @@
 // Oversee 面板共用"只接受最新请求"门控 (纯逻辑, 便于单测).
-// 场景: 查询进行中用户切换目标 (TracePanel / NetworkPanel), 旧响应不得覆盖新目标.
+// 场景: 查询进行中用户切换目标 (TracePanel), 旧响应不得覆盖新目标.
 
 class LatestRequestGate {
     constructor() {

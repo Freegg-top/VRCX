@@ -37,17 +37,29 @@ function parseWatchlist(raw) {
     return Array.from(new Set(parsed.map((id) => normalizeWatchId(id)).filter((id) => id)));
 }
 
+function invalidateCloudUserDataCaches() {
+    // Dynamic imports keep the one-way store -> service dependency explicit and
+    // avoid the services barrel re-entering this store during module setup.
+    void Promise.all([import('../../services/overseeUserData'), import('../../services/overseeUserCardData')])
+        .then(([userData, userCardData]) => {
+            userData.invalidateMyCloudConnections();
+            userCardData.clearCloudObservationCache();
+        })
+        .catch((error) => {
+            console.error('[oversee] failed to invalidate cloud user data caches:', error);
+        });
+}
+
 export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
     const licenseKey = ref('');
     const apiBase = ref(OVERSEE_API_BASE);
     const watchlist = ref([]);
+    const syncWatched = ref(true);
     const sseEnabled = ref(true);
     // 功能开关 D1~D6
     const enableTrace = ref(true);
-    const enableEncounters = ref(true);
     const enableWatchPush = ref(true);
     const enableRoomLookup = ref(true);
-    const enableNetwork = ref(true);
     const enableBlockAlerts = ref(true);
     // 非持久化: license 校验状态, 由 overseeApi 探测/回写
     const licenseStatus = ref('unknown');
@@ -57,39 +69,45 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
             licenseKeyConfig,
             apiBaseConfig,
             watchlistConfig,
+            syncWatchedConfig,
             sseEnabledConfig,
             enableTraceConfig,
-            enableEncountersConfig,
             enableWatchPushConfig,
             enableRoomLookupConfig,
-            enableNetworkConfig,
             enableBlockAlertsConfig
         ] = await Promise.all([
             configRepository.getString(OVERSEE_CONFIG_KEYS.licenseKey, ''),
             configRepository.getString(OVERSEE_CONFIG_KEYS.apiBase, OVERSEE_API_BASE),
             configRepository.getString(OVERSEE_CONFIG_KEYS.watchlist, '[]'),
+            configRepository.getBool(OVERSEE_CONFIG_KEYS.syncWatched, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.sseEnabled, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableTrace, true),
-            configRepository.getBool(OVERSEE_CONFIG_KEYS.enableEncounters, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableWatchPush, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableRoomLookup, true),
-            configRepository.getBool(OVERSEE_CONFIG_KEYS.enableNetwork, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableBlockAlerts, true)
         ]);
 
         licenseKey.value = licenseKeyConfig || '';
         apiBase.value = String(apiBaseConfig || '').trim() || OVERSEE_API_BASE;
         watchlist.value = parseWatchlist(watchlistConfig);
+        syncWatched.value = syncWatchedConfig;
         sseEnabled.value = sseEnabledConfig;
         enableTrace.value = enableTraceConfig;
-        enableEncounters.value = enableEncountersConfig;
         enableWatchPush.value = enableWatchPushConfig;
         enableRoomLookup.value = enableRoomLookupConfig;
-        enableNetwork.value = enableNetworkConfig;
         enableBlockAlerts.value = enableBlockAlertsConfig;
     }
 
-    initOverseeSettings();
+    const readyPromise = initOverseeSettings();
+
+    /**
+     * 等待异步配置加载完成, 供依赖已持久化开关/名单的协调器使用.
+     *
+     * @returns {Promise<void>}
+     */
+    function ensureOverseeSettingsReady() {
+        return readyPromise;
+    }
 
     /**
      * @param {string} status
@@ -109,6 +127,7 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
     function setLicenseKey(value) {
         licenseKey.value = String(value ?? '').trim();
         configRepository.setString(OVERSEE_CONFIG_KEYS.licenseKey, licenseKey.value);
+        invalidateCloudUserDataCaches();
     }
 
     /**
@@ -122,6 +141,12 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
             .replace(/\/+$/, '');
         apiBase.value = base || OVERSEE_API_BASE;
         configRepository.setString(OVERSEE_CONFIG_KEYS.apiBase, apiBase.value);
+        invalidateCloudUserDataCaches();
+    }
+
+    function setSyncWatched() {
+        syncWatched.value = !syncWatched.value;
+        configRepository.setBool(OVERSEE_CONFIG_KEYS.syncWatched, syncWatched.value);
     }
 
     function setSseEnabled() {
@@ -134,11 +159,6 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         configRepository.setBool(OVERSEE_CONFIG_KEYS.enableTrace, enableTrace.value);
     }
 
-    function setEnableEncounters() {
-        enableEncounters.value = !enableEncounters.value;
-        configRepository.setBool(OVERSEE_CONFIG_KEYS.enableEncounters, enableEncounters.value);
-    }
-
     function setEnableWatchPush() {
         enableWatchPush.value = !enableWatchPush.value;
         configRepository.setBool(OVERSEE_CONFIG_KEYS.enableWatchPush, enableWatchPush.value);
@@ -149,37 +169,70 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         configRepository.setBool(OVERSEE_CONFIG_KEYS.enableRoomLookup, enableRoomLookup.value);
     }
 
-    function setEnableNetwork() {
-        enableNetwork.value = !enableNetwork.value;
-        configRepository.setBool(OVERSEE_CONFIG_KEYS.enableNetwork, enableNetwork.value);
-    }
-
     function setEnableBlockAlerts() {
         enableBlockAlerts.value = !enableBlockAlerts.value;
         configRepository.setBool(OVERSEE_CONFIG_KEYS.enableBlockAlerts, enableBlockAlerts.value);
     }
 
     /**
+     * Await the full watchlist write and verify it by reading the value back.
+     * A failed write or mismatched readback is retried once and then logged.
+     *
+     * @returns {Promise<boolean>}
+     */
+    async function persistWatchlist() {
+        let lastError = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const serialized = JSON.stringify(watchlist.value);
+            try {
+                await configRepository.setString(OVERSEE_CONFIG_KEYS.watchlist, serialized);
+                const stored = await configRepository.getString(OVERSEE_CONFIG_KEYS.watchlist, '[]');
+                if (stored === JSON.stringify(watchlist.value)) {
+                    return true;
+                }
+                lastError = new Error('Oversee watchlist readback did not match the in-memory list');
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        console.error('[oversee] failed to persist watchlist:', lastError);
+        return false;
+    }
+
+    /**
      * 加入关注名单: 校验 usr_ 前缀、转小写、去重.
+     * 批量对账传 persist=false 抑制逐条写库, 末尾统一 persistWatchlist.
      *
      * @param {string} id
+     * @param {boolean} [persist]
      * @returns {boolean} 是否新增成功 (非法 ID 或已存在返回 false)
      */
-    function addWatch(id) {
+    function addWatch(id, persist = true) {
         const userId = normalizeWatchId(id);
         if (!userId || watchlist.value.includes(userId)) {
             return false;
         }
         watchlist.value = [...watchlist.value, userId];
-        configRepository.setString(OVERSEE_CONFIG_KEYS.watchlist, JSON.stringify(watchlist.value));
+        if (persist) {
+            configRepository.setString(OVERSEE_CONFIG_KEYS.watchlist, JSON.stringify(watchlist.value));
+        }
         return true;
     }
 
     /**
      * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    async function addWatchPersisted(id) {
+        return addWatch(id, false) ? persistWatchlist() : false;
+    }
+
+    /**
+     * @param {string} id
+     * @param {boolean} [persist]
      * @returns {boolean} 是否移除了条目
      */
-    function removeWatch(id) {
+    function removeWatch(id, persist = true) {
         const userId = String(id ?? '')
             .trim()
             .toLowerCase();
@@ -187,8 +240,18 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
             return false;
         }
         watchlist.value = watchlist.value.filter((watchId) => watchId !== userId);
-        configRepository.setString(OVERSEE_CONFIG_KEYS.watchlist, JSON.stringify(watchlist.value));
+        if (persist) {
+            configRepository.setString(OVERSEE_CONFIG_KEYS.watchlist, JSON.stringify(watchlist.value));
+        }
         return true;
+    }
+
+    /**
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    async function removeWatchPersisted(id) {
+        return removeWatch(id, false) ? persistWatchlist() : false;
     }
 
     /**
@@ -206,28 +269,30 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         licenseKey,
         apiBase,
         watchlist,
+        syncWatched,
         sseEnabled,
         enableTrace,
-        enableEncounters,
         enableWatchPush,
         enableRoomLookup,
-        enableNetwork,
         enableBlockAlerts,
         licenseStatus,
 
         initOverseeSettings,
+        ensureOverseeSettingsReady,
         setLicenseStatus,
         setLicenseKey,
         setApiBase,
+        setSyncWatched,
         setSseEnabled,
         setEnableTrace,
-        setEnableEncounters,
         setEnableWatchPush,
         setEnableRoomLookup,
-        setEnableNetwork,
         setEnableBlockAlerts,
+        persistWatchlist,
         addWatch,
+        addWatchPersisted,
         removeWatch,
+        removeWatchPersisted,
         isWatched
     };
 });

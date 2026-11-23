@@ -9,7 +9,7 @@
             </p>
         </div>
 
-        <template v-if="licenseBlocked && !encountersAvailable">
+        <template v-if="licenseBlocked">
             <div class="mx-auto mt-8 flex max-w-md flex-col items-center gap-3 rounded-lg border p-6 text-center">
                 <ShieldAlert class="text-muted-foreground size-8" />
                 <div class="text-sm font-medium">
@@ -42,33 +42,14 @@
                     class="inline-block size-2 shrink-0 rounded-full"
                     :class="sseDotClass"
                     :title="t(`view.oversee.push.sse_${sseConnState}`)"></span>
-                <Button
-                    v-if="licenseBlocked && licenseKey"
-                    size="sm"
-                    variant="outline"
-                    :disabled="probing"
-                    @click="retryProbe">
-                    {{ t('view.oversee.guide.retry_probe') }}
-                </Button>
-            </div>
-
-            <div v-if="licenseBlocked" class="rounded-lg border p-3 text-sm">
-                <span class="font-medium">{{ licenseBlockedTitle }}</span>
-                <span class="text-muted-foreground"> · {{ t('view.oversee.guide.local_only_hint') }}</span>
             </div>
 
             <TabsUnderline v-model="activeTab" :items="tabs" class="h-full min-h-0">
                 <template #trace>
                     <TracePanel />
                 </template>
-                <template #encounters>
-                    <EncountersPanel ref="encountersPanelRef" />
-                </template>
                 <template #room>
                     <RoomLookupPanel />
-                </template>
-                <template #network>
-                    <NetworkPanel ref="networkPanelRef" />
                 </template>
             </TabsUnderline>
         </template>
@@ -76,7 +57,7 @@
 </template>
 
 <script setup>
-    import { computed, onMounted, ref, watch } from 'vue';
+    import { computed, ref, watch } from 'vue';
     import { storeToRefs } from 'pinia';
     import { useI18n } from 'vue-i18n';
 
@@ -90,18 +71,13 @@
     import { sseConnState } from '../../services/overseeWatch';
 
     import TracePanel from './components/TracePanel.vue';
-    import EncountersPanel from './components/EncountersPanel.vue';
     import RoomLookupPanel from './components/RoomLookupPanel.vue';
-    import NetworkPanel from './components/NetworkPanel.vue';
 
     const { t } = useI18n();
 
     const overseeSettingsStore = useOverseeSettingsStore();
-    const { licenseKey, licenseStatus, enableTrace, enableEncounters, enableRoomLookup, enableNetwork } =
-        storeToRefs(overseeSettingsStore);
+    const { licenseKey, licenseStatus, enableTrace, enableRoomLookup } = storeToRefs(overseeSettingsStore);
 
-    const encountersPanelRef = ref(null);
-    const networkPanelRef = ref(null);
     const probing = ref(false);
 
     // licenseBlocked 被 tabs(下方 immediate watch 会立即求值)引用, 必须先于 tabs 定义
@@ -112,23 +88,14 @@
         return licenseStatus.value === 'invalid' || licenseStatus.value === 'expired';
     });
 
-    const encountersAvailable = computed(() => enableEncounters.value);
-
     const tabs = computed(() => {
         /** @type {{ value: string; label: string }[]} */
         const list = [];
         if (enableTrace.value && !licenseBlocked.value) {
             list.push({ value: 'trace', label: t('view.oversee.tab_trace') });
         }
-        if (enableEncounters.value) {
-            // encounters 本地模式: 无 key/失效也渲染, 由面板显示 cloud_pending 提示
-            list.push({ value: 'encounters', label: t('view.oversee.tab_encounters') });
-        }
         if (enableRoomLookup.value && !licenseBlocked.value) {
             list.push({ value: 'room', label: t('view.oversee.tab_room') });
-        }
-        if (enableNetwork.value && !licenseBlocked.value) {
-            list.push({ value: 'network', label: t('view.oversee.tab_network') });
         }
         return list;
     });
@@ -145,19 +112,6 @@
         },
         { immediate: true }
     );
-
-    // encounters 首次激活时自动加载一次, 之后保持已加载内容
-    const encountersLoadedOnce = ref(false);
-
-    function tryLoadEncountersOnce() {
-        if (activeTab.value === 'encounters' && !encountersLoadedOnce.value) {
-            encountersLoadedOnce.value = true;
-            encountersPanelRef.value?.load();
-        }
-    }
-
-    watch(activeTab, tryLoadEncountersOnce);
-    onMounted(tryLoadEncountersOnce);
 
     // offline 状态下可手动重跑 license 探测 (自动退避不做)
     async function retryProbe() {

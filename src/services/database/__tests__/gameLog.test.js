@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    execute: vi.fn(),
-    executeJson: vi.fn()
+    execute: vi.fn()
 }));
 
 vi.mock('../../sqlite.js', () => ({
     default: {
         execute: mocks.execute,
-        executeJson: mocks.executeJson,
         executeNonQuery: vi.fn()
     }
 }));
@@ -23,7 +21,6 @@ import { gameLog } from '../gameLog.js';
 
 beforeEach(() => {
     mocks.execute.mockReset();
-    mocks.executeJson.mockReset();
 });
 
 describe('gameLog.getMyTopWorlds', () => {
@@ -54,33 +51,6 @@ describe('gameLog.getMyTopWorlds', () => {
 });
 
 describe('gameLog Oversee queries', () => {
-    test('loads all local co-seen rows through one executeJson call', async () => {
-        mocks.executeJson.mockResolvedValue([
-            ['usr_a', 'A', 'wrld_a:1', '2026-01-01T00:00:00Z', 'OnPlayerJoined'],
-            [null, null, null, null, null]
-        ]);
-
-        const result = await gameLog.getLocalCoSeenRows('usr_self');
-
-        expect(mocks.executeJson).toHaveBeenCalledTimes(1);
-        expect(mocks.execute).not.toHaveBeenCalled();
-        expect(mocks.executeJson.mock.calls[0][1]).toMatchObject({
-            '@userId': 'usr_self',
-            '@sinceDays': '-180 days',
-            '@limit': 50000
-        });
-        expect(result).toEqual([
-            {
-                userId: 'usr_a',
-                displayName: 'A',
-                location: 'wrld_a:1',
-                createdAt: '2026-01-01T00:00:00Z',
-                type: 'OnPlayerJoined'
-            },
-            { userId: '', displayName: '', location: '', createdAt: '', type: '' }
-        ]);
-    });
-
     test('batch world-name lookup uses at most 100 IDs per query', async () => {
         const worldIds = Array.from({ length: 205 }, (_, index) => `wrld_${index}`);
         mocks.execute.mockImplementation(async (callback, _sql, args) => {

@@ -8,12 +8,13 @@ const OVERSEE_CONFIG_KEYS = Object.freeze({
     licenseKey: 'VRCX_oversee_licenseKey',
     apiBase: 'VRCX_oversee_apiBase',
     watchlist: 'VRCX_oversee_watchlist',
+    watchedSync: 'VRCX_oversee_watchedSync',
+    watchedIgnore: 'VRCX_oversee_watched_ignore',
+    syncWatched: 'VRCX_oversee_syncWatched',
     sseEnabled: 'VRCX_oversee_sseEnabled',
     enableTrace: 'VRCX_oversee_enableTrace',
-    enableEncounters: 'VRCX_oversee_enableEncounters',
     enableWatchPush: 'VRCX_oversee_enableWatchPush',
     enableRoomLookup: 'VRCX_oversee_enableRoomLookup',
-    enableNetwork: 'VRCX_oversee_enableNetwork',
     enableBlockAlerts: 'VRCX_oversee_enableBlockAlerts'
 });
 

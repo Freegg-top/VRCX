@@ -293,6 +293,9 @@
       "photon_event_logging": "Photon 事件日志",
       "watched_users": "已关注",
       "watched_users_tooltip": "已关注的非好友玩家",
+      "watched": {
+        "synced": "已开推送"
+      },
       "group_change_joined": "加入了群组",
       "group_change_left": "退出了群组",
       "mutual_and": " 与 ",
@@ -811,9 +814,7 @@
       "header": "Oversee 云端监察",
       "description": "来自 Oversee 云端的全站观测数据，并与本地日志合并展示。",
       "tab_trace": "观测轨迹",
-      "tab_encounters": "偶遇回溯",
       "tab_room": "进房查房",
-      "tab_network": "关系网",
       "all_disabled": "全部功能已在设置中停用。请前往设置启用至少一项功能后再使用本页。",
       "guide": {
         "notConfigured": "未配置 Oversee License",
@@ -822,8 +823,7 @@
         "invalid_description": "云端拒绝了当前 License Key（401）。请前往「设置 → Oversee」更换有效的 Key。",
         "expired": "License 已过期",
         "expired_description": "License 已过期或被吊销（403）。请前往「设置 → Oversee」续期或更换 Key。",
-        "retry_probe": "重试探测",
-        "local_only_hint": "License 恢复前仅可使用「偶遇回溯」（本地模式）。"
+        "retry_probe": "重试探测"
       },
       "query": "查询",
       "player_input": {
@@ -837,8 +837,6 @@
       },
       "watch_add": "加入关注名单",
       "watch_remove": "移出关注名单",
-      "open_user_dialog": "打开用户对话框",
-      "not_logged_in": "请先登录 VRChat，本功能需要当前账号的用户 ID。",
       "error": {
         "invalidId": "未识别到有效的 usr_ 用户 ID，请粘贴 ID 或包含 ID 的链接。",
         "notConfigured": "未配置 License Key，请前往「设置 → Oversee」填写。",
@@ -854,19 +852,8 @@
         "empty": "该用户暂无观测历史。云端恢复采集后，数据会出现在这里。",
         "first_seen": "首次观测：",
         "last_seen": "最近观测：",
-        "visits": "出现 {count} 次"
-      },
-      "encounters": {
-        "hint": "从本地日志与 Oversee 云端加载你的同处（偶遇）关系。",
-        "empty": "本地日志与云端均未发现同处记录。",
-        "cloud_pending": "云端数据待同步，当前仅展示本地结果。",
-        "source_local": "本地",
-        "source_cloud": "云端",
-        "source_both": "本地+云端",
-        "co_seen": "同处 {count} 次",
-        "last_seen": "最近同处：",
-        "show_more": "显示更多",
-        "refresh": "刷新偶遇列表"
+        "visits": "出现 {count} 次",
+        "show_more": "显示更多"
       },
       "room": {
         "input_placeholder": "完整 location，如 wrld_xxx:12345~region(...)",
@@ -875,12 +862,6 @@
         "roster_count": "在场 {count} 人",
         "empty": "该实例暂无观测名单。",
         "hint": "输入 location 查询该实例的云端观测名单。"
-      },
-      "network": {
-        "input_placeholder": "用户 ID、玩家名字或包含 usr_ 的链接",
-        "hint": "查询中心用户的同处关系网，点击关联用户可逐跳展开。",
-        "neighbors": "关联 {count} 人",
-        "empty": "该用户暂无任何同处关系。"
       },
       "push": {
         "watch_title": "{name} 出现在 {world}",
@@ -964,20 +945,18 @@
         "push": {
           "header": "实时推送",
           "enable": "SSE 人口数据流",
-          "enable_description": "通过 Server-Sent Events 订阅全站人口数据流。关闭后不订阅全站流。"
+          "enable_description": "通过 Server-Sent Events 订阅全站人口数据流。关闭后不订阅全站流。",
+          "sync_watched": "本地关注自动推送",
+          "sync_watched_description": "本地关注的用户自动获得云端上线提醒；取消关注会移除由本功能自动加入的条目。"
         },
         "features": {
           "header": "功能开关",
           "trace": "观测历史",
           "trace_description": "查询玩家在全站被观测到的地点记录。",
-          "encounters": "同处记录",
-          "encounters_description": "展示玩家之间的同房间相遇关系。",
           "watch_push": "关注提醒",
           "watch_push_description": "关注名单中的用户被观测到时推送提醒。",
           "room_lookup": "房间查询",
           "room_lookup_description": "查询实例内的观测名单。",
-          "network": "关系网络",
-          "network_description": "基于同处数据构建关系网络图。",
           "block_alerts": "黑名单提醒",
           "block_alerts_description": "被拉黑的用户出现在附近时提醒。"
         }
@@ -1628,7 +1607,9 @@
       "metfof_empty": "还没有分析到结果。分析会随时间推进，请稍后再试。",
       "page_size": "每页",
       "page_info": "第 {page} / {total} 页",
-      "owner_signal": "实例房主"
+      "owner_signal": "实例房主",
+      "cloud_badge": "云端",
+      "cloud_seen": "云端同处 {count} 次"
     },
     "friend_groups": {
       "header": "群组中的好友",
@@ -1805,6 +1786,10 @@
         "represented_group": "展示群组",
         "bio": "个人简介",
         "last_seen": "最后见面时间",
+        "cloud_observation": "云端观测",
+        "cloud_observation_summary": "首次出现 {first} · 最近出现 {last}",
+        "cloud_observation_first": "首次出现 {first}",
+        "cloud_observation_last": "最近出现 {last}",
         "join_count": "见面的次数",
         "time_together": "一起游玩的时长",
         "play_time": "总在线时长",
@@ -1916,7 +1901,10 @@
         "opted_out_snapshot_hint": "根据 {date} 的快照记录，其当时的共同好友共 {count} 人（历史推测数据）",
         "opted_out_detected_hint": "检测到关闭：{date}",
         "hidden_mutuals_hint": "隐藏的共同好友（推测，据 {date} 快照）",
-        "fetch_failed_notice": "无法加载共同好友，请稍后重试。"
+        "fetch_failed_notice": "无法加载共同好友，请稍后重试。",
+        "cloud_fallback_hint": "云端推断的同处关系（非官方好友数据）",
+        "cloud_badge": "云端",
+        "cloud_connection_stats": "同处 {count} 次 · {lastSeen}"
       },
       "activity": {
         "header": "活动记录",
@@ -3788,7 +3776,8 @@
       "type": "种类",
       "detail": "详细信息",
       "mutual_friends": "{count} 位共同好友",
-      "mutual_groups": "{count} 个共同群组"
+      "mutual_groups": "{count} 个共同群组",
+      "cloud_last_seen": "上次同处：{time} · 累计 {count} 次"
     },
     "friendLog": {
       "date": "时间",

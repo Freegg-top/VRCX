@@ -1,9 +1,9 @@
 import Timer from '../../components/Timer.vue';
 import { Button } from '../../components/ui/button';
 import { TooltipWrapper } from '../../components/ui/tooltip';
-import { Apple, ArrowUpDown, Flag, IdCard, User, Monitor, Smartphone } from 'lucide-vue-next';
+import { Apple, ArrowUpDown, Clock, Flag, IdCard, User, Monitor, Smartphone } from 'lucide-vue-next';
 
-import { getFaviconUrl, languageClass, openExternalLink, statusClass } from '../../shared/utils';
+import { getFaviconUrl, languageClass, openExternalLink, statusClass, timeAgo } from '../../shared/utils';
 import { i18n } from '../../plugins/i18n';
 
 const { t } = i18n.global;
@@ -58,7 +58,8 @@ export const createColumns = ({
     onBlockChatbox,
     onUnblockChatbox,
     sortAlphabetically,
-    userImage
+    userImage,
+    showCloudConnections
 }) => {
     const cols = [
         {
@@ -249,8 +250,22 @@ export const createColumns = ({
                                 side="left"
                                 content={t('table.playerList.mutual_friends', {
                                     count: r.ref.$mutualCount
-                                })}>
+                                })}
+                            >
                                 <span>👥{r.ref.$mutualCount}</span>
+                            </TooltipWrapper>
+                        ) : null}
+                        {showCloudConnections?.value && !r?.isFriend && r?.ref?.$cloudLastSeen ? (
+                            <TooltipWrapper
+                                side="left"
+                                content={t('table.playerList.cloud_last_seen', {
+                                    time: timeAgo(r.ref.$cloudLastSeen),
+                                    count: r.ref.$cloudCoSeenCount ?? 0
+                                })}
+                            >
+                                <span class="inline-flex items-center text-muted-foreground" aria-hidden="true">
+                                    <Clock class="h-3.5 w-3.5" />
+                                </span>
                             </TooltipWrapper>
                         ) : null}
                         {r?.ref?.$mutualGroupCount > 0 ? (
@@ -258,7 +273,8 @@ export const createColumns = ({
                                 side="left"
                                 content={t('table.playerList.mutual_groups', {
                                     count: r.ref.$mutualGroupCount
-                                })}>
+                                })}
+                            >
                                 <span class="inline-flex items-center gap-0.5">
                                     <Flag class="h-3.5 w-3.5" />
                                     {r.ref.$mutualGroupCount}

@@ -22,7 +22,8 @@ vi.mock('../../../shared/utils', () => ({
     userImage: (...args) => mocks.userImage(...args),
     getFaviconUrl: (...args) => mocks.getFaviconUrl(...args),
     statusClass: () => 'status-online',
-    languageClass: (lang) => `lang-${lang}`
+    languageClass: (lang) => `lang-${lang}`,
+    timeAgo: (value) => `ago:${value}`
 }));
 
 vi.mock('../../../components/Timer.vue', () => ({ default: 'Timer' }));
@@ -35,7 +36,8 @@ vi.mock('lucide-vue-next', () => ({
     Monitor: 'Monitor',
     Smartphone: 'Smartphone',
     Apple: 'Apple',
-    IdCard: 'IdCard'
+    IdCard: 'IdCard',
+    Clock: 'Clock'
 }));
 
 import { createColumns } from '../columns.jsx';
@@ -168,5 +170,36 @@ describe('views/PlayerList/columns.jsx', () => {
         const friend = { original: { isFriend: true } };
 
         expect(iconCol.sortFn(master, friend, 'icon')).toBeGreaterThan(0);
+    });
+
+    test('renders the cloud clock only for enabled non-friend matches', () => {
+        const cols = createColumns({
+            randomUserColours: { value: false, __v_isRef: true },
+            chatboxUserBlacklist: { value: new Map(), __v_isRef: true },
+            onBlockChatbox: mocks.onBlockChatbox,
+            onUnblockChatbox: mocks.onUnblockChatbox,
+            sortAlphabetically: mocks.sortAlphabetically,
+            showCloudConnections: { value: true, __v_isRef: true }
+        });
+        const iconCol = cols.find((c) => c.id === 'icon');
+        const row = makeRow();
+        row.original.ref.$cloudLastSeen = '2026-11-22T00:00:00.000Z';
+        row.original.ref.$cloudCoSeenCount = 3;
+
+        expect(findNode(iconCol.cell({ row }), (node) => node.type === 'Clock')).not.toBeNull();
+        row.original.isFriend = true;
+        expect(findNode(iconCol.cell({ row }), (node) => node.type === 'Clock')).toBeNull();
+
+        row.original.isFriend = false;
+        const disabledCols = createColumns({
+            randomUserColours: { value: false, __v_isRef: true },
+            chatboxUserBlacklist: { value: new Map(), __v_isRef: true },
+            onBlockChatbox: mocks.onBlockChatbox,
+            onUnblockChatbox: mocks.onUnblockChatbox,
+            sortAlphabetically: mocks.sortAlphabetically,
+            showCloudConnections: { value: false, __v_isRef: true }
+        });
+        const disabledIconCol = disabledCols.find((c) => c.id === 'icon');
+        expect(findNode(disabledIconCol.cell({ row }), (node) => node.type === 'Clock')).toBeNull();
     });
 });

@@ -12,6 +12,18 @@ vi.mock('../../../services/config', () => ({
     default: configMock
 }));
 
+const cacheMocks = vi.hoisted(() => ({
+    invalidateMyCloudConnections: vi.fn(),
+    clearCloudObservationCache: vi.fn()
+}));
+
+vi.mock('../../../services/overseeUserData', () => ({
+    invalidateMyCloudConnections: cacheMocks.invalidateMyCloudConnections
+}));
+vi.mock('../../../services/overseeUserCardData', () => ({
+    clearCloudObservationCache: cacheMocks.clearCloudObservationCache
+}));
+
 const webApiMock = vi.hoisted(() => ({
     execute: vi.fn()
 }));
@@ -65,6 +77,10 @@ describe('oversee settings store', () => {
         store.setSseEnabled();
         expect(store.sseEnabled).toBe(false);
         expect(configMock.setBool).toHaveBeenCalledWith('VRCX_oversee_sseEnabled', false);
+
+        store.setSyncWatched();
+        expect(store.syncWatched).toBe(false);
+        expect(configMock.setBool).toHaveBeenCalledWith('VRCX_oversee_syncWatched', false);
     });
 
     test('setApiBase falls back to default endpoint when blank', async () => {
@@ -73,9 +89,25 @@ describe('oversee settings store', () => {
 
         store.setApiBase('https://example.test/');
         expect(store.apiBase).toBe('https://example.test');
+        await flushPromises();
 
         store.setApiBase('  ');
         expect(store.apiBase).toBe('https://api.freegg.top');
+        await vi.waitFor(() => {
+            expect(cacheMocks.invalidateMyCloudConnections).toHaveBeenCalledTimes(2);
+            expect(cacheMocks.clearCloudObservationCache).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    test('changing the license invalidates both cloud user-data caches', async () => {
+        const store = useOverseeSettingsStore();
+        await flushPromises();
+
+        store.setLicenseKey('new-key');
+        await flushPromises();
+
+        expect(cacheMocks.invalidateMyCloudConnections).toHaveBeenCalledTimes(1);
+        expect(cacheMocks.clearCloudObservationCache).toHaveBeenCalledTimes(1);
     });
 
     test('probeLicense maps API statuses to license states', async () => {
@@ -117,20 +149,34 @@ describe('oversee settings store', () => {
 
         // 未配置 license 直接抛 notConfigured, 不出网
         store.setLicenseKey('');
-        await expect(getUserHistory('usr_deadbeef', 10)).rejects.toMatchObject({ kind: 'notConfigured' });
+        await expect(getUserHistory('usr_deadbeef', 10)).rejects.toMatchObject({
+            kind: 'notConfigured'
+        });
         expect(webApiMock.execute).not.toHaveBeenCalled();
 
         store.setLicenseKey('test-key');
 
         webApiMock.execute.mockResolvedValueOnce({ status: 401, data: '{"detail":"Unauthorized"}' });
-        await expect(getUserHistory('usr_deadbeef', 10)).rejects.toMatchObject({ kind: 'unauthorized', status: 401 });
+        await expect(getUserHistory('usr_deadbeef', 10)).rejects.toMatchObject({
+            kind: 'unauthorized',
+            status: 401
+        });
         expect(store.licenseStatus).toBe('invalid');
 
         webApiMock.execute.mockResolvedValueOnce({ status: 404, data: '{"detail":"Not Found"}' });
-        await expect(getUserHistory('usr_missing', 10)).rejects.toMatchObject({ kind: 'notFound', status: 404 });
+        await expect(getUserHistory('usr_missing', 10)).rejects.toMatchObject({
+            kind: 'notFound',
+            status: 404
+        });
 
-        webApiMock.execute.mockResolvedValueOnce({ status: 200, data: '{"user":{"usr_id":"usr_a"},"history":[]}' });
-        await expect(getUserHistory('usr_a', 200)).resolves.toEqual({ user: { usr_id: 'usr_a' }, history: [] });
+        webApiMock.execute.mockResolvedValueOnce({
+            status: 200,
+            data: '{"user":{"usr_id":"usr_a"},"history":[]}'
+        });
+        await expect(getUserHistory('usr_a', 200)).resolves.toEqual({
+            user: { usr_id: 'usr_a' },
+            history: []
+        });
         expect(store.licenseStatus).toBe('ok');
 
         const url = new URL(webApiMock.execute.mock.calls.at(-1)[0].url);

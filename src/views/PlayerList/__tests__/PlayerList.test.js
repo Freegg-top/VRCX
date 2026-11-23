@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
     currentInstanceWorld: null,
     currentInstanceUsersData: null,
     currentUser: null,
+    overseeSettings: null,
+    getMyCloudConnections: vi.fn(),
     saveChatboxUserBlacklist: vi.fn(),
     showUserDialog: vi.fn(),
     lookupUser: vi.fn(),
@@ -55,6 +57,7 @@ vi.mock('../../../stores', () => ({
     useUserStore: () => ({
         currentUser: mocks.currentUser
     }),
+    useOverseeSettingsStore: () => mocks.overseeSettings,
     useWorldStore: () => ({
         showWorldDialog: (...args) => mocks.showWorldDialog(...args)
     }),
@@ -82,6 +85,10 @@ vi.mock('../../../stores', () => ({
     useVrcxStore: () => ({
         ipcEnabled: ref(false)
     })
+}));
+
+vi.mock('../../../services/overseeUserData', () => ({
+    getMyCloudConnections: (...args) => mocks.getMyCloudConnections(...args)
 }));
 
 vi.mock('../../../coordinators/userCoordinator', () => ({
@@ -161,9 +168,11 @@ vi.mock('lucide-vue-next', async (importOriginal) => {
 });
 
 import PlayerList from '../PlayerList.vue';
+import { watchState } from '../../../services/watchState';
 
 describe('PlayerList.vue', () => {
     beforeEach(() => {
+        watchState.isLoggedIn = false;
         mocks.randomUserColours = ref(false);
         mocks.photonLoggingEnabled = ref(false);
         mocks.chatboxUserBlacklist = ref(new Map([['usr_blocked', 'Blocked User']]));
@@ -194,8 +203,13 @@ describe('PlayerList.vue', () => {
             id: 'usr_me',
             $homeLocation: null
         });
+        mocks.overseeSettings = {
+            licenseKey: '',
+            licenseStatus: 'unknown'
+        };
 
         mocks.saveChatboxUserBlacklist.mockReset();
+        mocks.getMyCloudConnections.mockReset().mockResolvedValue(new Map());
         mocks.showUserDialog.mockReset();
         mocks.lookupUser.mockReset();
         mocks.showWorldDialog.mockReset();
@@ -288,5 +302,77 @@ describe('PlayerList.vue', () => {
         expect(mocks.chatboxUserBlacklist.value.has('usr_blocked')).toBe(false);
         expect(mocks.saveChatboxUserBlacklist).toHaveBeenCalledTimes(1);
         expect(mocks.getCurrentInstanceUserList).toHaveBeenCalledTimes(2);
+    });
+
+    test('stamps cloud matches on non-friend players without per-row requests', async () => {
+        const matchedRef = { id: 'usr_match' };
+        const friendRef = { id: 'usr_friend' };
+        mocks.currentInstanceUsersData = ref([
+            { ref: matchedRef, isFriend: false },
+            { ref: friendRef, isFriend: true }
+        ]);
+        mocks.overseeSettings.licenseKey = 'key';
+        mocks.overseeSettings.licenseStatus = 'ok';
+        mocks.getMyCloudConnections.mockResolvedValue(
+            new Map([
+                ['usr_match', { count: 4, lastSeen: '2026-11-22T00:00:00.000Z' }],
+                ['usr_friend', { count: 9, lastSeen: '2026-11-22T00:00:00.000Z' }]
+            ])
+        );
+
+        mount(PlayerList, {
+            global: {
+                stubs: {
+                    TooltipWrapper: { template: '<div><slot /></div>' },
+                    LocationWorld: { template: '<div />' }
+                }
+            }
+        });
+        await nextTick();
+        await Promise.resolve();
+
+        expect(mocks.getMyCloudConnections).toHaveBeenCalledTimes(1);
+        expect(matchedRef.$cloudLastSeen).toBe('2026-11-22T00:00:00.000Z');
+        expect(matchedRef.$cloudCoSeenCount).toBe(4);
+        expect(friendRef.$cloudLastSeen).toBe('');
+    });
+
+    test('does not request cloud connections when the license is unavailable', () => {
+        mocks.overseeSettings.licenseStatus = 'invalid';
+        mocks.overseeSettings.licenseKey = 'key';
+
+        mount(PlayerList, {
+            global: {
+                stubs: {
+                    TooltipWrapper: { template: '<div><slot /></div>' },
+                    LocationWorld: { template: '<div />' }
+                }
+            }
+        });
+
+        expect(mocks.getMyCloudConnections).not.toHaveBeenCalled();
+    });
+
+    test('clears in-memory cloud badges on logout', async () => {
+        const playerRef = { id: 'usr_match' };
+        mocks.currentInstanceUsersData = ref([{ ref: playerRef, isFriend: false }]);
+        watchState.isLoggedIn = true;
+        const wrapper = mount(PlayerList, {
+            global: {
+                stubs: {
+                    TooltipWrapper: { template: '<div><slot /></div>' },
+                    LocationWorld: { template: '<div />' }
+                }
+            }
+        });
+        playerRef.$cloudLastSeen = '2026-11-22T00:00:00.000Z';
+        playerRef.$cloudCoSeenCount = 4;
+
+        watchState.isLoggedIn = false;
+        await nextTick();
+
+        expect(playerRef.$cloudLastSeen).toBe('');
+        expect(playerRef.$cloudCoSeenCount).toBe(0);
+        wrapper.unmount();
     });
 });

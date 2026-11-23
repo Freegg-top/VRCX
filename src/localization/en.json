@@ -293,6 +293,9 @@
       "photon_event_logging": "Photon Event Logging",
       "watched_users": "Watched",
       "watched_users_tooltip": "Watched non-friend players",
+      "watched": {
+        "synced": "Push enabled"
+      },
       "group_change_joined": "Joined group",
       "group_change_left": "Left group",
       "mutual_and": " and ",
@@ -811,9 +814,7 @@
       "header": "Oversee Cloud Intelligence",
       "description": "Site-wide observation data from the Oversee cloud, merged with your local logs.",
       "tab_trace": "Observation Trace",
-      "tab_encounters": "Encounters",
       "tab_room": "Room Lookup",
-      "tab_network": "Connection Network",
       "all_disabled": "All Oversee features have been disabled in Settings. Enable at least one feature to continue.",
       "guide": {
         "notConfigured": "Oversee license is not configured",
@@ -822,8 +823,7 @@
         "invalid_description": "The cloud rejected your license key (401). Replace it in Settings > Oversee to restore access.",
         "expired": "Oversee license has expired",
         "expired_description": "Your license has expired or was revoked (403). Renew or replace it in Settings > Oversee to restore access.",
-        "retry_probe": "Retry Probe",
-        "local_only_hint": "Only Encounters (local mode) is available until the license works."
+        "retry_probe": "Retry Probe"
       },
       "query": "Query",
       "player_input": {
@@ -837,8 +837,6 @@
       },
       "watch_add": "Add to Watchlist",
       "watch_remove": "Remove from Watchlist",
-      "open_user_dialog": "Open User Dialog",
-      "not_logged_in": "Log in to VRChat first; your user ID is required for this query.",
       "error": {
         "invalidId": "No valid usr_ ID found. Paste a user ID or a link containing one.",
         "notConfigured": "License key is not configured. Set it in Settings > Oversee.",
@@ -854,19 +852,8 @@
         "empty": "No observation history for this user yet. Data appears once the cloud resumes collecting.",
         "first_seen": "First seen:",
         "last_seen": "Last seen:",
-        "visits": "{count} visits"
-      },
-      "encounters": {
-        "hint": "Load your co-seen connections from local logs and the Oversee cloud.",
-        "empty": "No co-seen connections found in local logs or the cloud.",
-        "cloud_pending": "Cloud data pending sync; showing local results.",
-        "source_local": "Local",
-        "source_cloud": "Cloud",
-        "source_both": "Local + Cloud",
-        "co_seen": "{count} co-seen",
-        "last_seen": "Last met:",
-        "show_more": "Show more",
-        "refresh": "Refresh encounters"
+        "visits": "{count} visits",
+        "show_more": "Show more"
       },
       "room": {
         "input_placeholder": "Location, e.g. wrld_xxx:12345~region(...)",
@@ -875,12 +862,6 @@
         "roster_count": "{count} observed",
         "empty": "No observed roster for this location yet.",
         "hint": "Enter a location to query the observed roster of that instance."
-      },
-      "network": {
-        "input_placeholder": "User ID, display name, or a link containing usr_...",
-        "hint": "Query a center user's co-seen network. Click a neighbor to expand one hop.",
-        "neighbors": "{count} connections",
-        "empty": "No co-seen connections for this user yet."
       },
       "push": {
         "watch_title": "{name} appeared in {world}",
@@ -964,20 +945,18 @@
         "push": {
           "header": "Realtime Push",
           "enable": "SSE Population Stream",
-          "enable_description": "Subscribe to the site-wide population stream over Server-Sent Events. When disabled, the site-wide stream is not subscribed."
+          "enable_description": "Subscribe to the site-wide population stream over Server-Sent Events. When disabled, the site-wide stream is not subscribed.",
+          "sync_watched": "Sync Watched Users to Push",
+          "sync_watched_description": "Locally watched users automatically receive cloud online alerts; unwatching removes only entries added by this feature."
         },
         "features": {
           "header": "Feature Toggles",
           "trace": "Observation History",
           "trace_description": "Query a player's observed locations across the site.",
-          "encounters": "Encounters",
-          "encounters_description": "Show co-seen connections between players.",
           "watch_push": "Watch Alerts",
           "watch_push_description": "Get notified when a watchlisted user is seen.",
           "room_lookup": "Room Lookup",
           "room_lookup_description": "Look up the observed roster of an instance.",
-          "network": "Connection Network",
-          "network_description": "Build relationship graphs from co-seen data.",
           "block_alerts": "Block Alerts",
           "block_alerts_description": "Warn when a blocked user shows up nearby."
         }
@@ -1630,7 +1609,9 @@
       "metfof_empty": "No results analyzed yet. The analysis progresses over time, please check back in a moment.",
       "page_size": "Per page",
       "page_info": "Page {page} / {total}",
-      "owner_signal": "Instance host"
+      "owner_signal": "Instance host",
+      "cloud_badge": "Cloud",
+      "cloud_seen": "Cloud: {count} times together"
     },
     "friend_groups": {
       "header": "Friends in Groups",
@@ -1807,6 +1788,10 @@
         "represented_group": "Represented Group",
         "bio": "Bio",
         "last_seen": "Last Seen",
+        "cloud_observation": "Cloud Observed",
+        "cloud_observation_summary": "First {first} · Last {last}",
+        "cloud_observation_first": "First {first}",
+        "cloud_observation_last": "Last {last}",
         "join_count": "Join Count",
         "time_together": "Time Together",
         "play_time": "Play Time",
@@ -1918,7 +1903,10 @@
         "opted_out_snapshot_hint": "Based on the snapshot from {date}, they had {count} mutual friends then (historical estimate)",
         "opted_out_detected_hint": "Opt-out detected: {date}",
         "hidden_mutuals_hint": "Hidden mutual friends (estimated from the {date} snapshot)",
-        "fetch_failed_notice": "Could not load mutual friends. Please try again."
+        "fetch_failed_notice": "Could not load mutual friends. Please try again.",
+        "cloud_fallback_hint": "Co-seen relationships inferred from cloud observations (not official friend data)",
+        "cloud_badge": "Cloud",
+        "cloud_connection_stats": "{count} times together · {lastSeen}"
       },
       "activity": {
         "header": "Activity",
@@ -3790,7 +3778,8 @@
       "type": "Type",
       "detail": "Detail",
       "mutual_friends": "{count} mutual friends",
-      "mutual_groups": "{count} mutual groups"
+      "mutual_groups": "{count} mutual groups",
+      "cloud_last_seen": "Last together: {time} · {count} times total"
     },
     "friendLog": {
       "date": "Date",

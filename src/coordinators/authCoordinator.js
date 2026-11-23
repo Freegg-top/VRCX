@@ -1,6 +1,7 @@
 import { i18n } from '../plugins/i18n';
 import { resetFriendNetworkState } from './friendNetworkCoordinator';
 import { resetMutualCoordinator } from './mutualCoordinator';
+import { invalidateMyCloudConnections } from '../services/overseeUserData';
 
 import Noty from 'noty';
 
@@ -22,6 +23,7 @@ import webApiService from '../services/webapi';
  * Runs the shared logout side effects (including goodbye notification).
  */
 export async function runLogoutFlow() {
+    invalidateMyCloudConnections();
     resetFriendNetworkState();
     resetMutualCoordinator();
     const authStore = useAuthStore();

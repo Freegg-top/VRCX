@@ -317,6 +317,14 @@
                                     }}</span>
                                 </div>
                             </TooltipWrapper>
+                            <div v-if="cloudObservationSummary" class="flex justify-between items-start gap-2 text-xs">
+                                <span class="text-muted-foreground shrink-0">{{
+                                    t('dialog.user.info.cloud_observation')
+                                }}</span>
+                                <span class="text-right text-muted-foreground">
+                                    {{ cloudObservationText }}
+                                </span>
+                            </div>
                             <TooltipWrapper side="right" :content="t('dialog.user.info.open_previous_instance')">
                                 <div
                                     class="flex justify-between items-start gap-2 text-xs cursor-pointer hover:text-foreground"
@@ -462,7 +470,7 @@
     import { Copy, Info, Languages, Pencil, Trash2, User } from 'lucide-vue-next';
     import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
     import IconFrame from '@/components/IconFrame.vue';
-    import { ref, watch } from 'vue';
+    import { computed, ref, watch } from 'vue';
     import { Button } from '@/components/ui/button';
     import { Spinner } from '@/components/ui/spinner';
     import { storeToRefs } from 'pinia';
@@ -489,11 +497,13 @@
         useInstanceStore,
         useLocationStore,
         useModalStore,
+        useOverseeSettingsStore,
         useUserStore,
         useGalleryStore
     } from '../../../stores';
     import { showWorldDialog } from '../../../coordinators/worldCoordinator';
     import { queryRequest, userRequest } from '../../../api';
+    import { getCloudObservationSummary, isOverseeLicenseAvailable } from '../../../services/overseeUserCardData';
 
     import InstanceActionBar from '../../InstanceActionBar.vue';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
@@ -504,6 +514,7 @@
 
     const modalStore = useModalStore();
     const instanceStore = useInstanceStore();
+    const overseeSettingsStore = useOverseeSettingsStore();
 
     const { hideUserNotes, hideUserMemos } = storeToRefs(useAppearanceSettingsStore());
     const { bioLanguage, translationApi, translationApiType } = storeToRefs(useAdvancedSettingsStore());
@@ -522,6 +533,35 @@
 
     const isEditNoteAndMemoDialogVisible = ref(false);
     const translateLoading = ref(false);
+    /** @type {import('vue').Ref<{ firstSeen: string; lastSeen: string } | null>} */
+    const cloudObservation = ref(null);
+    let cloudObservationRequestSeq = 0;
+    const cloudObservationSummary = computed(() => {
+        if (
+            currentUser.value.id === userDialog.value.id ||
+            !overseeSettingsStore.enableTrace ||
+            !isOverseeLicenseAvailable(overseeSettingsStore)
+        ) {
+            return null;
+        }
+        return cloudObservation.value;
+    });
+    const cloudObservationText = computed(() => {
+        const summary = cloudObservationSummary.value;
+        if (!summary) {
+            return '';
+        }
+        if (summary.firstSeen && summary.lastSeen) {
+            return t('dialog.user.info.cloud_observation_summary', {
+                first: timeAgo(summary.firstSeen),
+                last: timeAgo(summary.lastSeen)
+            });
+        }
+        if (summary.firstSeen) {
+            return t('dialog.user.info.cloud_observation_first', { first: timeAgo(summary.firstSeen) });
+        }
+        return t('dialog.user.info.cloud_observation_last', { last: timeAgo(summary.lastSeen) });
+    });
 
     watch(
         () => userDialog.value.loading,
@@ -537,10 +577,31 @@
         }
     );
 
+    /**
+     * @param {string} userId
+     */
+    async function loadCloudObservation(userId) {
+        const seq = ++cloudObservationRequestSeq;
+        cloudObservation.value = null;
+        if (
+            !userId ||
+            currentUser.value.id === userId ||
+            !overseeSettingsStore.enableTrace ||
+            !isOverseeLicenseAvailable(overseeSettingsStore)
+        ) {
+            return;
+        }
+        const summary = await getCloudObservationSummary(userId);
+        if (seq === cloudObservationRequestSeq && userDialog.value.id === userId) {
+            cloudObservation.value = summary;
+        }
+    }
+
     function onTabActivated() {
         if (currentUser.value.id === userDialog.value.id && currentUserCredits.value === null) {
             getVRChatCredits();
         }
+        loadCloudObservation(userDialog.value.id);
     }
 
     function showEditNoteAndMemoDialog() {

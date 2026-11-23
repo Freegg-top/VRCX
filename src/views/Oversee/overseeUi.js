@@ -24,4 +24,4 @@ function showOverseeError(error, t) {
     toast.error(overseeErrorMessage(error, t));
 }
 
-export { overseeErrorMessage, showOverseeError };
+export { showOverseeError };

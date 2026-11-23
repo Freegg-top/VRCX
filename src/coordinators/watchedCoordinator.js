@@ -5,6 +5,7 @@ import { database } from '../services/database';
 import { watchState } from '../services/watchState';
 import { useWatchedStore } from '../stores/watched';
 import { useFriendStore } from '../stores/friend';
+import { reconcileWatchedSync, syncWatchedAdd, syncWatchedRemove } from './overseeWatchedSync';
 
 const REFRESH_RATE_PER_SECOND = 1;
 const MAX_RETRY = 3;
@@ -14,6 +15,7 @@ let refreshInFlight = false;
 
 /**
  * Loads the watched user list from the database into the store.
+ *
  * @returns {Promise<void>}
  */
 export async function initWatchedUsers() {
@@ -21,10 +23,12 @@ export async function initWatchedUsers() {
     const rows = await database.getWatchedUsers();
     watchedStore.watchedUsers.clear();
     rows.forEach((row) => watchedStore.setWatchedUser(row));
+    await reconcileWatchedSync();
 }
 
 /**
  * Watches a non-friend user so their avatar/status/bio changes appear in the feed.
+ *
  * @param {string} userId
  * @param {string} displayName
  * @returns {Promise<void>}
@@ -36,13 +40,22 @@ export async function addWatchedUser(userId, displayName) {
         displayName,
         created_at: new Date().toJSON()
     };
+    let persisted = false;
     try {
         // P2-2: service 已改 async, 这里 await 后 try/catch 才真正捕获得到失败
         await database.addWatchedUser(userId, displayName);
+        persisted = true;
     } catch (err) {
         console.error('Failed to persist watched user:', userId, err);
     }
     watchedStore.setWatchedUser(user);
+    if (persisted) {
+        try {
+            await syncWatchedAdd(userId);
+        } catch (err) {
+            console.error('Failed to sync watched user to Oversee:', userId, err);
+        }
+    }
     // fetch immediately so the next change is diffed against fresh data
     try {
         await userRequest.getUser({ userId });
@@ -53,23 +66,34 @@ export async function addWatchedUser(userId, displayName) {
 
 /**
  * Stops watching a non-friend user.
+ *
  * @param {string} userId
  */
 export async function removeWatchedUser(userId) {
     const watchedStore = useWatchedStore();
+    let persisted = false;
     try {
         // P2-2: await 异步删除, 失败不再被静默吞掉
         await database.removeWatchedUser(userId);
+        persisted = true;
     } catch (err) {
         console.error('Failed to remove watched user:', userId, err);
     }
     watchedStore.removeWatchedUser(userId);
+    if (persisted) {
+        try {
+            await syncWatchedRemove(userId);
+        } catch (err) {
+            console.error('Failed to remove watched user from Oversee:', userId, err);
+        }
+    }
 }
 
 /**
  * Polls every watched user; responses flow through applyUser/applyPublicProfile
  * and generate feed entries (incl. bio via the profile snapshot diff) for
  * watched non-friends.
+ *
  * @returns {Promise<void>}
  */
 export async function refreshWatchedUsers() {
@@ -99,16 +123,11 @@ export async function refreshWatchedUsers() {
                 await executeWithBackoff(
                     // bio now lives in the public profile payload; the plain
                     // user endpoint no longer reports it
-                    () =>
-                        userRequest.getUser({ userId }).then(() =>
-                            userRequest.getPublicProfile({ userId })
-                        ),
+                    () => userRequest.getUser({ userId }).then(() => userRequest.getPublicProfile({ userId })),
                     {
                         maxRetries: MAX_RETRY,
                         baseDelay: RETRY_BASE_DELAY,
-                        shouldRetry: (err) =>
-                            err?.status === 429 ||
-                            (err?.message || '').includes('429')
+                        shouldRetry: (err) => err?.status === 429 || (err?.message || '').includes('429')
                     }
                 );
             } catch (err) {

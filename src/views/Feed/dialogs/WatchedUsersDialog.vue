@@ -5,9 +5,7 @@
                 <DialogTitle>{{ t('dialog.watched_users.header') }}</DialogTitle>
             </DialogHeader>
             <div v-if="open" style="max-height: 400px; overflow-y: auto">
-                <div
-                    v-if="watchedList.length === 0"
-                    class="text-muted-foreground text-sm py-4 text-center">
+                <div v-if="watchedList.length === 0" class="text-muted-foreground text-sm py-4 text-center">
                     {{ t('dialog.watched_users.empty') }}
                 </div>
                 <div
@@ -15,19 +13,24 @@
                     :key="user.userId"
                     class="flex items-center justify-between gap-2 py-1.5">
                     <div class="flex items-center gap-2 min-w-0">
-                        <span
-                            class="truncate cursor-pointer hover:underline"
-                            @click="openUserDialog(user.userId)">
+                        <span class="truncate cursor-pointer hover:underline" @click="openUserDialog(user.userId)">
                             {{ user.displayName }}
                         </span>
                         <span class="text-xs text-muted-foreground flex-none">
                             {{ formatDate(user.created_at) }}
                         </span>
+                        <Badge
+                            v-if="
+                                syncWatched &&
+                                Boolean(String(licenseKey || '').trim()) &&
+                                overseeSettingsStore.isWatched(user.userId)
+                            "
+                            variant="secondary"
+                            class="flex-none text-xs">
+                            {{ t('view.feed.watched.synced') }}
+                        </Badge>
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        @click="unwatch(user.userId)">
+                    <Button variant="outline" size="sm" @click="unwatch(user.userId)">
                         {{ t('dialog.watched_users.remove') }}
                     </Button>
                 </div>
@@ -44,8 +47,10 @@
     import dayjs from 'dayjs';
 
     import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
+    import { Badge } from '../../../components/ui/badge';
     import { Button } from '../../../components/ui/button';
     import { useWatchedStore } from '../../../stores/watched';
+    import { useOverseeSettingsStore } from '../../../stores/settings/oversee';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
     import { removeWatchedUser } from '../../../coordinators/watchedCoordinator';
 
@@ -61,12 +66,13 @@
     const { t } = useI18n();
 
     const watchedStore = useWatchedStore();
+    const overseeSettingsStore = useOverseeSettingsStore();
     const { watchedUsers } = storeToRefs(watchedStore);
+    const { syncWatched, licenseKey } = storeToRefs(overseeSettingsStore);
 
     const watchedList = computed(() => Array.from(watchedUsers.value.values()));
 
     /**
-     *
      * @param userId
      */
     function openUserDialog(userId) {
@@ -74,7 +80,6 @@
     }
 
     /**
-     *
      * @param userId
      */
     function unwatch(userId) {
@@ -82,7 +87,6 @@
     }
 
     /**
-     *
      * @param date
      */
     function formatDate(date) {

@@ -1278,30 +1278,6 @@ const gameLog = {
         return namesByWorldId;
     },
 
-    // Oversee 偶遇回溯用: 我到过的所有 location 的 join/leave 行 (含我自己),
-    // 区间折叠与共现计数在 overseeMerge.js 纯函数中完成.
-    // 带 180 天时间窗 + 行数上限, 防止无谓的全表扫描 (SQL 参数化).
-    async getLocalCoSeenRows(userId, { sinceDays = 180, limit = 50000 } = {}) {
-        if (!userId) {
-            return [];
-        }
-        const dbRows = await sqliteService.executeJson(
-            "SELECT user_id, display_name, location, created_at, type FROM gamelog_join_leave WHERE created_at >= datetime('now', @sinceDays) AND location IN (SELECT DISTINCT location FROM gamelog_join_leave WHERE user_id = @userId AND created_at >= datetime('now', @sinceDays)) ORDER BY id ASC LIMIT @limit",
-            {
-                '@userId': userId,
-                '@sinceDays': `-${sinceDays} days`,
-                '@limit': limit
-            }
-        );
-        return dbRows.map((dbRow) => ({
-            userId: dbRow[0] || '',
-            displayName: dbRow[1] || '',
-            location: dbRow[2] || '',
-            createdAt: dbRow[3] || '',
-            type: dbRow[4] || ''
-        }));
-    },
-
     async getPreviousInstancesByUserId(input) {
         var groupingTimeTolerance = 1 * 60 * 60 * 1000; // 1 hour
         var data = new Set();
@@ -1426,7 +1402,9 @@ const gameLog = {
 
     /**
      * @param {string} location
-     * @returns {Promise<{ created_at: string; display_name: string; user_id: string; time: number }[]>}
+     * @returns {Promise<
+     *   { created_at: string; display_name: string; user_id: string; time: number }[]
+     * >}
      */
     async getPlayerDetailFromInstance(location) {
         const entries = [];
@@ -1563,7 +1541,9 @@ const gameLog = {
      * @param {number} [limit=5] - Maximum number of worlds to return. Default is `5`
      * @param {'time' | 'count'} [sortBy='time'] - Sort by total time or visit count. Default is `'time'`
      * @param {string} [excludeWorldId=''] - Optional world ID to exclude from results. Default is `''`
-     * @returns {Promise<{ worldId: string; worldName: string; visitCount: number; totalTime: number }[]>}
+     * @returns {Promise<
+     *   { worldId: string; worldName: string; visitCount: number; totalTime: number }[]
+     * >}
      */
     async getMyTopWorlds(days = 0, limit = 5, sortBy = 'time', excludeWorldId = '') {
         const results = [];
