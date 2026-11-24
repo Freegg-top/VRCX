@@ -14,7 +14,8 @@ const OVERSEE_CONFIG_KEYS = Object.freeze({
     sseEnabled: 'VRCX_oversee_sseEnabled',
     enableTrace: 'VRCX_oversee_enableTrace',
     enableWatchPush: 'VRCX_oversee_enableWatchPush',
-    enableBlockAlerts: 'VRCX_oversee_enableBlockAlerts'
+    enableBlockAlerts: 'VRCX_oversee_enableBlockAlerts',
+    ingestEnabled: 'VRCX_oversee_ingestEnabled'
 });
 
 // license 校验状态机取值 (非持久化, 由 overseeApi 探测/回写)

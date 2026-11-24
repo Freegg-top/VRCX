@@ -900,6 +900,11 @@
           "sync_watched": "Sync Watched Users to Push",
           "sync_watched_description": "Locally watched users automatically receive cloud online alerts; unwatching removes only entries added by this feature."
         },
+        "ingest": {
+          "header": "Instance Roster Upload (Beta)",
+          "enable": "Upload Public Instance Rosters",
+          "enable_description": "Upload the roster of your current public instance, including your display name and user ID, to build the site-wide realtime roster. Private, friends, and hidden instances are never uploaded. Off by default and can be disabled at any time."
+        },
         "features": {
           "header": "Feature Toggles",
           "trace": "Observation History",

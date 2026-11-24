@@ -60,6 +60,8 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
     const enableTrace = ref(true);
     const enableWatchPush = ref(true);
     const enableBlockAlerts = ref(true);
+    // 房间名单上传涉及隐私, 仅用户显式开启后工作.
+    const ingestEnabled = ref(false);
     // 非持久化: license 校验状态, 由 overseeApi 探测/回写
     const licenseStatus = ref('unknown');
 
@@ -72,7 +74,8 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
             sseEnabledConfig,
             enableTraceConfig,
             enableWatchPushConfig,
-            enableBlockAlertsConfig
+            enableBlockAlertsConfig,
+            ingestEnabledConfig
         ] = await Promise.all([
             configRepository.getString(OVERSEE_CONFIG_KEYS.licenseKey, ''),
             configRepository.getString(OVERSEE_CONFIG_KEYS.apiBase, OVERSEE_API_BASE),
@@ -81,7 +84,8 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
             configRepository.getBool(OVERSEE_CONFIG_KEYS.sseEnabled, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableTrace, true),
             configRepository.getBool(OVERSEE_CONFIG_KEYS.enableWatchPush, true),
-            configRepository.getBool(OVERSEE_CONFIG_KEYS.enableBlockAlerts, true)
+            configRepository.getBool(OVERSEE_CONFIG_KEYS.enableBlockAlerts, true),
+            configRepository.getBool(OVERSEE_CONFIG_KEYS.ingestEnabled, false)
         ]);
 
         licenseKey.value = licenseKeyConfig || '';
@@ -92,6 +96,7 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         enableTrace.value = enableTraceConfig;
         enableWatchPush.value = enableWatchPushConfig;
         enableBlockAlerts.value = enableBlockAlertsConfig;
+        ingestEnabled.value = ingestEnabledConfig;
     }
 
     const readyPromise = initOverseeSettings();
@@ -163,6 +168,11 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
     function setEnableBlockAlerts() {
         enableBlockAlerts.value = !enableBlockAlerts.value;
         configRepository.setBool(OVERSEE_CONFIG_KEYS.enableBlockAlerts, enableBlockAlerts.value);
+    }
+
+    function setIngestEnabled() {
+        ingestEnabled.value = !ingestEnabled.value;
+        configRepository.setBool(OVERSEE_CONFIG_KEYS.ingestEnabled, ingestEnabled.value);
     }
 
     /**
@@ -265,6 +275,7 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         enableTrace,
         enableWatchPush,
         enableBlockAlerts,
+        ingestEnabled,
         licenseStatus,
 
         initOverseeSettings,
@@ -277,6 +288,7 @@ export const useOverseeSettingsStore = defineStore('OverseeSettings', () => {
         setEnableTrace,
         setEnableWatchPush,
         setEnableBlockAlerts,
+        setIngestEnabled,
         persistWatchlist,
         addWatch,
         addWatchPersisted,

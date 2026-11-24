@@ -14,10 +14,7 @@ import {
 import { i18n } from '../plugins/i18n';
 import { AppDebug, logWebRequest } from '../services/appConfig';
 import { database } from '../services/database';
-import {
-    runLastLocationResetFlow,
-    runUpdateCurrentUserLocationFlow
-} from './locationCoordinator';
+import { runLastLocationResetFlow, runUpdateCurrentUserLocationFlow } from './locationCoordinator';
 import { getGroupName } from '../shared/utils';
 import { userRequest } from '../api';
 import { watchState } from '../services/watchState';
@@ -40,6 +37,7 @@ import { useVrStore } from '../stores/vr';
 import { useVrcxStore } from '../stores/vrcx';
 
 import gameLogService from '../services/gameLog.js';
+import { notifyIngestGameLog } from '../services/overseeIngest';
 import { beginEventFile, noteEventTime } from '../services/database/gameLogAccount';
 import { handleLocalIdentity } from './gameLogIdentityCoordinator';
 
@@ -79,10 +77,7 @@ export async function tryLoadPlayerList() {
         if (ctx.type !== 'Location') {
             continue;
         }
-        if (
-            pickedLocation === null ||
-            Date.parse(ctx.created_at) > Date.parse(pickedLocation.created_at)
-        ) {
+        if (pickedLocation === null || Date.parse(ctx.created_at) > Date.parse(pickedLocation.created_at)) {
             pickedLocation = ctx;
         }
     }
@@ -122,19 +117,14 @@ export async function tryLoadPlayerList() {
             joinEvents.push(ctx);
         }
     }
-    joinEvents.sort(
-        (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)
-    );
+    joinEvents.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
     for (i = 0; i < joinEvents.length; i++) {
         ctx = joinEvents[i];
         if (ctx.type === 'OnPlayerJoined') {
             if (!ctx.userId) {
                 ctx.userId =
-                    findUserByDisplayName(
-                        userStore.cachedUsers,
-                        ctx.displayName,
-                        userStore.cachedUserIdsByDisplayName
-                    )?.id ?? '';
+                    findUserByDisplayName(userStore.cachedUsers, ctx.displayName, userStore.cachedUserIdsByDisplayName)
+                        ?.id ?? '';
             }
             const userMap = {
                 displayName: ctx.displayName,
@@ -144,10 +134,7 @@ export async function tryLoadPlayerList() {
             };
             locationStore.lastLocation.playerList.set(ctx.userId, userMap);
             if (friendStore.friends.has(ctx.userId)) {
-                locationStore.lastLocation.friendList.set(
-                    ctx.userId,
-                    userMap
-                );
+                locationStore.lastLocation.friendList.set(ctx.userId, userMap);
             }
         }
         if (ctx.type === 'OnPlayerLeft') {
@@ -178,6 +165,7 @@ export async function tryLoadPlayerList() {
 /**
  * Core game log entry processor. Dispatches game log events to the
  * appropriate stores based on type.
+ *
  * @param {object} gameLog
  * @param {string} location
  */
@@ -205,11 +193,8 @@ export async function addGameLogEntry(gameLog, location) {
     let userId = String(gameLog.userId || '');
     if (!userId && gameLog.displayName) {
         userId =
-            findUserByDisplayName(
-                userStore.cachedUsers,
-                gameLog.displayName,
-                userStore.cachedUserIdsByDisplayName
-            )?.id ?? '';
+            findUserByDisplayName(userStore.cachedUsers, gameLog.displayName, userStore.cachedUserIdsByDisplayName)
+                ?.id ?? '';
     }
     switch (gameLog.type) {
         case 'location-destination':
@@ -222,9 +207,7 @@ export async function addGameLogEntry(gameLog, location) {
                 await runLastLocationResetFlow(gameLog.dt);
                 locationStore.setLastLocationLocation('traveling');
                 locationStore.setLastLocationDestination(gameLog.location);
-                locationStore.setLastLocationDestinationTime(
-                    Date.parse(gameLog.dt)
-                );
+                locationStore.setLastLocationDestinationTime(Date.parse(gameLog.dt));
                 gameLogStore.state.lastLocationAvatarList.clear();
                 instanceStore.removeQueuedInstance(gameLog.location);
                 runUpdateCurrentUserLocationFlow();
@@ -237,10 +220,7 @@ export async function addGameLogEntry(gameLog, location) {
             }
             break;
         case 'location':
-            instanceStore.addInstanceJoinHistory(
-                locationStore.lastLocation.location,
-                gameLog.dt
-            );
+            instanceStore.addInstanceJoinHistory(locationStore.lastLocation.location, gameLog.dt);
             const worldName = replaceBioSymbols(gameLog.worldName);
             if (gameStore.isGameRunning) {
                 await runLastLocationResetFlow(gameLog.dt);
@@ -263,12 +243,7 @@ export async function addGameLogEntry(gameLog, location) {
             }
             instanceStore.addInstanceJoinHistory(gameLog.location, gameLog.dt);
             const L = parseLocation(gameLog.location);
-            entry = createLocationEntry(
-                gameLog.dt,
-                gameLog.location,
-                L.worldId,
-                worldName
-            );
+            entry = createLocationEntry(gameLog.dt, gameLog.location, L.worldId, worldName);
             getGroupName(gameLog.location).then((groupName) => {
                 entry.groupName = groupName;
             });
@@ -288,16 +263,12 @@ export async function addGameLogEntry(gameLog, location) {
                 console.error('Missing userId:', gameLog.displayName);
             } else if (userId === userStore.currentUser.id) {
                 // skip
-            } else if (
-                friendStore.friends.has(userId) &&
-                typeof ref !== 'undefined'
-            ) {
+            } else if (friendStore.friends.has(userId) && typeof ref !== 'undefined') {
                 locationStore.lastLocation.friendList.set(userId, userMap);
                 friendStore.updateFriendLastSeen(userId, gameLog.dt);
                 if (
                     ref.location !== locationStore.lastLocation.location &&
-                    ref.travelingToLocation !==
-                        locationStore.lastLocation.location
+                    ref.travelingToLocation !== locationStore.lastLocation.location
                 ) {
                     ref.$location_at = joinTime;
                 }
@@ -360,10 +331,7 @@ export async function addGameLogEntry(gameLog, location) {
             break;
         case 'resource-load-string':
         case 'resource-load-image':
-            if (
-                !generalSettingsStore.logResourceLoad ||
-                gameLogStore.lastResourceloadUrl === gameLog.resourceUrl
-            ) {
+            if (!generalSettingsStore.logResourceLoad || gameLogStore.lastResourceloadUrl === gameLog.resourceUrl) {
                 break;
             }
             gameLogStore.setLastResourceloadUrl(gameLog.resourceUrl);
@@ -378,10 +346,7 @@ export async function addGameLogEntry(gameLog, location) {
             if (advancedSettingsStore.saveInstanceEmoji) {
                 const inv = parseInventoryFromUrl(gameLog.url);
                 if (inv) {
-                    galleryStore.queueCheckInstanceInventory(
-                        inv.inventoryId,
-                        inv.userId
-                    );
+                    galleryStore.queueCheckInstanceInventory(inv.inventoryId, inv.userId);
                 }
             }
             if (advancedSettingsStore.saveInstancePrints) {
@@ -395,28 +360,17 @@ export async function addGameLogEntry(gameLog, location) {
             if (!gameStore.isGameRunning) {
                 break;
             }
-            let avatarName = gameLogStore.state.lastLocationAvatarList.get(
-                gameLog.displayName
-            );
-            if (
-                photonStore.photonLoggingEnabled ||
-                avatarName === gameLog.avatarName
-            ) {
+            let avatarName = gameLogStore.state.lastLocationAvatarList.get(gameLog.displayName);
+            if (photonStore.photonLoggingEnabled || avatarName === gameLog.avatarName) {
                 break;
             }
             if (!avatarName) {
                 avatarName = gameLog.avatarName;
-                gameLogStore.state.lastLocationAvatarList.set(
-                    gameLog.displayName,
-                    avatarName
-                );
+                gameLogStore.state.lastLocationAvatarList.set(gameLog.displayName, avatarName);
                 break;
             }
             avatarName = gameLog.avatarName;
-            gameLogStore.state.lastLocationAvatarList.set(
-                gameLog.displayName,
-                avatarName
-            );
+            gameLogStore.state.lastLocationAvatarList.set(gameLog.displayName, avatarName);
             entry = {
                 created_at: gameLog.dt,
                 type: 'AvatarChange',
@@ -484,15 +438,11 @@ export async function addGameLogEntry(gameLog, location) {
                 }
                 AppApi.QuitGame().then((processCount) => {
                     if (processCount > 1) {
-                        console.log(
-                            'QuitFix: More than 1 process running, not killing VRC'
-                        );
+                        console.log('QuitFix: More than 1 process running, not killing VRC');
                     } else if (processCount === 1) {
                         console.log('QuitFix: Killed VRC');
                     } else {
-                        console.log(
-                            'QuitFix: Nothing to kill, no VRC process running'
-                        );
+                        console.log('QuitFix: Nothing to kill, no VRC process running');
                     }
                 });
             }
@@ -516,11 +466,7 @@ export async function addGameLogEntry(gameLog, location) {
             if (!advancedSettingsStore.saveInstanceStickers) {
                 break;
             }
-            galleryStore.trySaveStickerToFile(
-                gameLog.displayName,
-                gameLog.userId,
-                gameLog.inventoryId
-            );
+            galleryStore.trySaveStickerToFile(gameLog.displayName, gameLog.userId, gameLog.inventoryId);
             break;
     }
     if (typeof entry !== 'undefined') {
@@ -580,6 +526,7 @@ function enqueueGameLogTask(task) {
 /**
  * Queues raw game log JSON so entries are processed in order.
  * Called from C# / updateLoop.
+ *
  * @param {string} json
  * @returns {Promise<void>}
  */
@@ -597,18 +544,14 @@ async function processGameLogEvent(json) {
 
     const rawLogs = JSON.parse(json);
     beginEventFile(rawLogs[0]);
-    const gameLog = gameLogService.parseRawGameLog(
-        rawLogs[1],
-        rawLogs[2],
-        rawLogs.slice(3)
-    );
+    const gameLog = gameLogService.parseRawGameLog(rawLogs[1], rawLogs[2], rawLogs.slice(3));
     if (gameLog.type === 'local-identity') {
         noteEventTime(gameLog.dt);
         // 身份回填(UPDATE 归属)必须排在队列里执行: 不排队的话它会和后续
         // 同文件事件的 INSERT 并发, 之前 insert 的行可能错过回填窗口
-        enqueueGameLogTask(() =>
-            handleLocalIdentity(rawLogs[0], gameLog.dt, gameLog.displayName)
-        ).catch((err) => console.error('Failed to backfill local identity:', err));
+        enqueueGameLogTask(async () => {
+            await handleLocalIdentity(rawLogs[0], gameLog.dt, gameLog.displayName);
+        }).catch((err) => console.error('Failed to backfill local identity:', err));
         return;
     }
     noteEventTime(gameLog.dt);
@@ -621,6 +564,7 @@ async function processGameLogEvent(json) {
         console.log('gameLog:', gameLog);
     }
     await addGameLogEntry(gameLog, locationStore.lastLocation.location);
+    notifyIngestGameLog(gameLog, locationStore.lastLocation.location);
 }
 
 /**
@@ -633,6 +577,7 @@ export async function getGameLogTable() {
 
 /**
  * Fetches all game log entries since dateTill and processes them.
+ *
  * @param {string} dateTill
  */
 async function updateGameLog(dateTill) {

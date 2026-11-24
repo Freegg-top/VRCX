@@ -102,6 +102,18 @@
             </SettingsItem>
         </SettingsGroup>
 
+        <SettingsGroup :title="t('view.settings.oversee.ingest.header')">
+            <SettingsItem
+                :label="t('view.settings.oversee.ingest.enable')"
+                :description="t('view.settings.oversee.ingest.enable_description')"
+                toggle>
+                <Switch
+                    :model-value="ingestEnabled"
+                    :ariaLabel="t('view.settings.oversee.ingest.enable')"
+                    @update:modelValue="setIngestEnabled" />
+            </SettingsItem>
+        </SettingsGroup>
+
         <SettingsGroup :title="t('view.settings.oversee.features.header')">
             <SettingsItem
                 :label="t('view.settings.oversee.features.trace')"
@@ -168,6 +180,7 @@
         enableTrace,
         enableWatchPush,
         enableBlockAlerts,
+        ingestEnabled,
         licenseStatus
     } = storeToRefs(overseeSettingsStore);
 
@@ -179,6 +192,7 @@
         setEnableTrace,
         setEnableWatchPush,
         setEnableBlockAlerts,
+        setIngestEnabled,
         addWatch,
         removeWatch
     } = overseeSettingsStore;

@@ -31,6 +31,7 @@
         runUpdateIsHmdAfkFlow
     } from './coordinators/gameCoordinator';
     import { initOverseeCoordinator } from './coordinators/overseeCoordinator';
+    import { initOverseeIngest } from './services/overseeIngest';
     import { Toaster } from './components/ui/sonner';
     import { TooltipProvider } from './components/ui/tooltip';
     import { createGlobalStores } from './stores';
@@ -93,6 +94,12 @@
         } catch (error) {
             // Oversee 初始化失败不阻塞主流程
             console.warn('[oversee] coordinator init failed:', error);
+        }
+        try {
+            initOverseeIngest();
+        } catch (error) {
+            // 名单上报初始化失败不阻塞主流程
+            console.warn('[oversee] ingest init failed:', error);
         }
         runCheckVRChatDebugLoggingFlow();
     });
