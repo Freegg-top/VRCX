@@ -3,9 +3,10 @@ import { nextTick, reactive } from 'vue';
 
 import {
     buildIngestPayload,
+    buildSnapshot,
     getIngestRetryDelay,
-    INGEST_DEBOUNCE_MS,
     INGEST_HEARTBEAT_MS,
+    INGEST_POLL_INTERVAL_MS,
     initOverseeIngest,
     isPublicInstanceLocation,
     notifyIngestGameLog,
@@ -15,13 +16,21 @@ import {
 const mocks = vi.hoisted(() => ({
     execute: vi.fn(),
     settings: null,
+    locationStore: { lastLocation: { location: 'offline', playerList: new Map() } },
     currentUser: { id: 'usr_self', displayName: 'Self' },
     watch: { isLoggedIn: true },
     ready: null
 }));
 
+vi.mock('worker-timers', () => ({
+    setTimeout: (...args) => globalThis.setTimeout(...args),
+    clearTimeout: (...args) => globalThis.clearTimeout(...args),
+    setInterval: (...args) => globalThis.setInterval(...args),
+    clearInterval: (...args) => globalThis.clearInterval(...args)
+}));
 vi.mock('../webapi', () => ({ default: { execute: mocks.execute } }));
 vi.mock('../watchState', () => ({ watchState: mocks.watch }));
+vi.mock('../../stores/location', () => ({ useLocationStore: () => mocks.locationStore }));
 vi.mock('../../stores/settings/oversee', () => ({ useOverseeSettingsStore: () => mocks.settings }));
 vi.mock('../../stores/user', () => ({ useUserStore: () => ({ currentUser: mocks.currentUser }) }));
 
@@ -38,15 +47,33 @@ async function flushInitialization() {
     await vi.advanceTimersByTimeAsync(0);
 }
 
+function changeLocation(location) {
+    mocks.locationStore.lastLocation.location = location;
+    notifyIngestGameLog({ type: 'location', location }, location);
+}
+
 function enterPublicInstance() {
-    notifyIngestGameLog({ type: 'location', location: PUBLIC_LOCATION }, PUBLIC_LOCATION);
+    changeLocation(PUBLIC_LOCATION);
 }
 
 function join(displayName, userId = '') {
+    mocks.locationStore.lastLocation.playerList.set(userId || `pending-${displayName}`, { displayName, userId });
     notifyIngestGameLog({ type: 'player-joined', displayName, userId }, PUBLIC_LOCATION);
 }
 
-describe('overseeIngest pure helpers', () => {
+function leave(displayName, userId = '') {
+    mocks.locationStore.lastLocation.playerList.delete(userId || `pending-${displayName}`);
+    notifyIngestGameLog({ type: 'player-left', displayName, userId }, PUBLIC_LOCATION);
+}
+
+describe('overseeIngest snapshots and pure helpers', () => {
+    beforeEach(() => {
+        mocks.locationStore.lastLocation.location = PUBLIC_LOCATION;
+        mocks.locationStore.lastLocation.playerList = new Map();
+        mocks.currentUser.id = 'usr_self';
+        mocks.currentUser.displayName = 'Self';
+    });
+
     test.each([
         [PUBLIC_LOCATION, true],
         ['wrld_123:1~private(usr_abc)', false],
@@ -59,17 +86,33 @@ describe('overseeIngest pure helpers', () => {
         expect(isPublicInstanceLocation(location)).toBe(expected);
     });
 
-    test('includes self first, merges duplicate names, and prefers valid user IDs', () => {
+    test('reads the VRCX playerList snapshot, fills self, and deduplicates by name', () => {
+        mocks.locationStore.lastLocation.playerList = new Map([
+            ['usr_duplicate', { displayName: 'Self', userId: 'usr_duplicate' }],
+            ['usr_alice', { displayName: 'Alice', userId: 'usr_alice' }],
+            ['usr_bob', { displayName: 'Bob', userId: '' }]
+        ]);
+        expect(buildSnapshot()).toEqual({
+            location: PUBLIC_LOCATION,
+            users: [
+                { name: 'Self', id: 'usr_self' },
+                { name: 'Alice', id: 'usr_alice' },
+                { name: 'Bob', id: 'usr_bob' }
+            ]
+        });
+    });
+
+    test('builds payload with self first, valid IDs as objects, and names as fallback', () => {
         const payload = buildIngestPayload({
             location: PUBLIC_LOCATION,
             self: { id: 'usr_self', displayName: 'Self' },
             clientTs: 1_800_000_000_000,
-            roster: new Map([
-                ['Self', { name: 'Self', id: 'usr_duplicate' }],
-                ['Alice', { name: 'Alice', id: 'usr_alice' }],
-                ['Bob', { name: 'Bob', id: 'not-a-user-id' }],
-                ['Carol', { name: 'Carol' }]
-            ])
+            users: [
+                { name: 'Self', id: 'usr_duplicate' },
+                { name: 'Alice', id: 'usr_alice' },
+                { name: 'Bob', id: 'not-a-user-id' },
+                { name: 'Carol' }
+            ]
         });
         expect(payload).toEqual({
             reporter: 'usr_self',
@@ -86,7 +129,7 @@ describe('overseeIngest pure helpers', () => {
             buildIngestPayload({
                 location: PUBLIC_LOCATION,
                 self: { id: 'invalid', displayName: 'Self' },
-                roster: new Map()
+                users: []
             })
         ).toBeNull();
     });
@@ -100,7 +143,7 @@ describe('overseeIngest pure helpers', () => {
     });
 });
 
-describe('overseeIngest state machine', () => {
+describe('overseeIngest snapshot polling state machine', () => {
     beforeEach(async () => {
         vi.useFakeTimers();
         vi.setSystemTime(1_800_000_000_000);
@@ -111,6 +154,8 @@ describe('overseeIngest state machine', () => {
         mocks.settings.ingestEnabled = true;
         mocks.settings.licenseKey = 'license-test';
         mocks.settings.apiBase = 'https://api.example.test';
+        mocks.locationStore.lastLocation.location = 'offline';
+        mocks.locationStore.lastLocation.playerList = new Map();
         mocks.ready = Promise.resolve();
         initOverseeIngest();
         await flushInitialization();
@@ -122,7 +167,7 @@ describe('overseeIngest state machine', () => {
         vi.useRealTimers();
     });
 
-    test('location changes immediately upload a self-only snapshot with the request contract', () => {
+    test('location changes immediately upload the store snapshot with the request contract', () => {
         enterPublicInstance();
         expect(mocks.execute).toHaveBeenCalledTimes(1);
         const [request] = mocks.execute.mock.calls[0];
@@ -145,23 +190,30 @@ describe('overseeIngest state machine', () => {
         });
     });
 
-    test('join and leave events merge into one 30 second report', async () => {
+    test('an unchanged snapshot does not report on the 60 second poll', async () => {
         enterPublicInstance();
-        mocks.execute.mockClear();
-        join('Alice', 'usr_alice');
-        await vi.advanceTimersByTimeAsync(10_000);
-        join('Bob');
-        notifyIngestGameLog({ type: 'player-left', displayName: 'Alice' }, PUBLIC_LOCATION);
-        await vi.advanceTimersByTimeAsync(INGEST_DEBOUNCE_MS - 1);
-        expect(mocks.execute).not.toHaveBeenCalled();
-        await vi.advanceTimersByTimeAsync(1);
+        await vi.advanceTimersByTimeAsync(INGEST_POLL_INTERVAL_MS * 3);
         expect(mocks.execute).toHaveBeenCalledTimes(1);
-        const payload = JSON.parse(mocks.execute.mock.calls[0][0].body);
-        expect(payload.n_users).toBe(2);
-        expect(payload.users).toEqual([{ name: 'Self', id: 'usr_self' }, 'Bob']);
     });
 
-    test('the heartbeat reports every five minutes without an event', async () => {
+    test('playerList changes wait for the next 60 second poll without event debounce', async () => {
+        enterPublicInstance();
+        join('Alice', 'usr_alice');
+        expect(mocks.execute).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(INGEST_POLL_INTERVAL_MS - 1);
+        expect(mocks.execute).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(mocks.execute).toHaveBeenCalledTimes(2);
+        const payload = JSON.parse(mocks.execute.mock.calls[1][0].body);
+        expect(payload.users).toEqual([
+            { name: 'Self', id: 'usr_self' },
+            { name: 'Alice', id: 'usr_alice' }
+        ]);
+        leave('Alice', 'usr_alice');
+        expect(mocks.execute).toHaveBeenCalledTimes(2);
+    });
+
+    test('an unchanged snapshot is still forced every five minutes', async () => {
         enterPublicInstance();
         await vi.advanceTimersByTimeAsync(INGEST_HEARTBEAT_MS - 1);
         expect(mocks.execute).toHaveBeenCalledTimes(1);
@@ -169,8 +221,20 @@ describe('overseeIngest state machine', () => {
         expect(mocks.execute).toHaveBeenCalledTimes(2);
     });
 
+    test('worker timers continue polling and heartbeat while the page is hidden', async () => {
+        vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+        enterPublicInstance();
+        join('Alice', 'usr_alice');
+        await vi.advanceTimersByTimeAsync(INGEST_POLL_INTERVAL_MS);
+        expect(mocks.execute).toHaveBeenCalledTimes(2);
+        // 60s 的变化上报会刷新成功时间, 下一次强制心跳在其 5 分钟后.
+        await vi.advanceTimersByTimeAsync(INGEST_HEARTBEAT_MS);
+        expect(mocks.execute).toHaveBeenCalledTimes(3);
+        expect(document.hidden).toBe(true);
+    });
+
     test('private instances and missing prerequisites never make network requests', async () => {
-        notifyIngestGameLog({ type: 'location', location: 'wrld_123:1~friends(usr_a)' }, '');
+        changeLocation('wrld_123:1~friends(usr_a)');
         join('Alice', 'usr_alice');
         await vi.advanceTimersByTimeAsync(INGEST_HEARTBEAT_MS * 2);
         expect(mocks.execute).not.toHaveBeenCalled();
@@ -178,8 +242,7 @@ describe('overseeIngest state machine', () => {
         mocks.settings.licenseKey = '';
         await nextTick();
         enterPublicInstance();
-        join('Alice', 'usr_alice');
-        await vi.advanceTimersByTimeAsync(INGEST_DEBOUNCE_MS);
+        await vi.advanceTimersByTimeAsync(INGEST_POLL_INTERVAL_MS);
         expect(mocks.execute).not.toHaveBeenCalled();
     });
 
@@ -193,7 +256,7 @@ describe('overseeIngest state machine', () => {
         expect(mocks.execute).not.toHaveBeenCalled();
     });
 
-    test('logout clears pending work and stops the heartbeat', async () => {
+    test('logout clears pending work and stops polling', async () => {
         enterPublicInstance();
         mocks.execute.mockClear();
         join('Alice', 'usr_alice');
@@ -217,7 +280,7 @@ describe('overseeIngest state machine', () => {
         mocks.execute.mockResolvedValue({ status: 429, data: '' });
         enterPublicInstance();
         await flushInitialization();
-        await vi.advanceTimersByTimeAsync(29_999);
+        await vi.advanceTimersByTimeAsync(INGEST_POLL_INTERVAL_MS - 1);
         expect(mocks.execute).toHaveBeenCalledTimes(1);
     });
 
@@ -237,7 +300,7 @@ describe('overseeIngest state machine', () => {
         expect(mocks.execute).toHaveBeenCalledTimes(5);
     });
 
-    test('a 202 response resets network backoff', async () => {
+    test('a 202 response resets network backoff and records the comparison snapshot', async () => {
         vi.spyOn(Math, 'random').mockReturnValue(0);
         mocks.execute.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ status: 202, data: '' });
         enterPublicInstance();
@@ -247,7 +310,7 @@ describe('overseeIngest state machine', () => {
         join('Alice', 'usr_alice');
         await vi.advanceTimersByTimeAsync(30_000);
         expect(mocks.execute).toHaveBeenCalledTimes(3);
-        await vi.advanceTimersByTimeAsync(30_000);
+        await vi.advanceTimersByTimeAsync(INGEST_POLL_INTERVAL_MS);
         expect(mocks.execute).toHaveBeenCalledTimes(3);
     });
 });

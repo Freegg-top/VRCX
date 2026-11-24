@@ -1,32 +1,34 @@
 // Oversee 客户端众包实时名单上报 (方案 D / M2).
-// 仅内存保存当前公开实例名单; 所有失败均静默降级, 不影响游戏日志主流程.
+// 直接读取 VRCX 已维护的实例快照; 所有失败均静默降级, 不影响游戏日志主流程.
 
 import { watch } from 'vue';
+import * as workerTimers from 'worker-timers';
 
 import webApiService from './webapi';
 import { watchState } from './watchState';
 import { OVERSEE_API_BASE } from '../shared/constants/oversee';
+import { useLocationStore } from '../stores/location';
 import { useOverseeSettingsStore } from '../stores/settings/oversee';
 import { useUserStore } from '../stores/user';
 
-export const INGEST_DEBOUNCE_MS = 30 * 1000;
+export const INGEST_POLL_INTERVAL_MS = 60 * 1000;
 export const INGEST_HEARTBEAT_MS = 5 * 60 * 1000;
 export const INGEST_RETRY_BASE_MS = 30 * 1000;
 export const INGEST_RETRY_MAX_MS = 120 * 1000;
 const CLIENT_VERSION = 'vrcx-dlc/2026.11.24';
 const USR_ID_REGEX = /^usr_[a-z0-9-]+$/i;
 
-/** @type {Map<string, { name: string; id?: string }>} */
-const roster = new Map();
-let currentLocation = '';
-let debounceTimer = null;
-let heartbeatTimer = null;
+let trackedLocation = '';
+let lastSuccessfulSnapshotKey = '';
+let lastSuccessfulReportAt = 0;
+let pollTimer = null;
 let retryTimer = null;
 let retryAttempt = 0;
 let activeRequestId = 0;
 let nextRequestId = 0;
 let queuedReport = false;
 let queuedImmediateReport = false;
+let queuedForcedReport = false;
 let initialized = false;
 let settingsReady = false;
 let authStopped = false;
@@ -58,11 +60,49 @@ function validUserId(userId) {
 }
 
 /**
- * 构建契约 payload. 自己固定为第一项, 同名 roster 项合并, 无有效 usr_ ID 时仅报名字.
+ * 读取 VRCX 当前实例快照. playerList 通常已含自己, 缺失时用 currentUser 补齐;
+ * 显示名是去重键, 自己的 currentUser ID 优先.
+ *
+ * @returns {{ location: string; users: { name: string; id?: string }[] } | null}
+ */
+export function buildSnapshot() {
+    try {
+        const locationStore = useLocationStore();
+        const userStore = useUserStore();
+        const lastLocation = locationStore.lastLocation;
+        const selfName = String(userStore.currentUser?.displayName || '').trim();
+        const selfId = validUserId(userStore.currentUser?.id);
+        /** @type {{ name: string; id?: string }[]} */
+        const users = [];
+        const names = new Set();
+        if (selfName) {
+            users.push(selfId ? { name: selfName, id: selfId } : { name: selfName });
+            names.add(selfName);
+        }
+        for (const [mapUserId, player] of lastLocation.playerList || new Map()) {
+            const name = String(player?.displayName || '').trim();
+            if (!name || names.has(name)) {
+                continue;
+            }
+            const id = validUserId(player?.userId || mapUserId);
+            users.push(id ? { name, id } : { name });
+            names.add(name);
+        }
+        return {
+            location: String(lastLocation.location || '').trim(),
+            users
+        };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * 构建契约 payload. 自己固定为第一项, 同名项合并, 无有效 usr_ ID 时仅报名字.
  *
  * @param {{
  *     location: string;
- *     roster: Map<string, { name: string; id?: string }>;
+ *     users: { name: string; id?: string }[];
  *     self: { id?: string; displayName?: string };
  *     clientTs?: number;
  * }} input
@@ -75,27 +115,24 @@ function validUserId(userId) {
  *     client: string;
  * } | null}
  */
-export function buildIngestPayload({ location, roster: currentRoster, self, clientTs = Date.now() }) {
+export function buildIngestPayload({ location, users: snapshotUsers, self, clientTs = Date.now() }) {
     const reporter = validUserId(self?.id);
     const selfName = String(self?.displayName || '').trim();
     if (!reporter || !selfName || !location) {
         return null;
     }
 
-    /** @type {{ name: string; id: string } | string} */
-    const selfEntry = { name: selfName, id: reporter };
     /** @type {({ name: string; id: string } | string)[]} */
-    const users = [selfEntry];
-    for (const [displayName, entry] of currentRoster) {
-        const name = String(entry?.name || displayName || '').trim();
-        if (!name || name === selfName) {
+    const users = [{ name: selfName, id: reporter }];
+    const names = new Set([selfName]);
+    for (const entry of snapshotUsers) {
+        const name = String(entry?.name || '').trim();
+        if (!name || names.has(name)) {
             continue;
         }
         const id = validUserId(entry?.id);
         users.push(id ? { name, id } : name);
-    }
-    if (!users.length) {
-        return null;
+        names.add(name);
     }
     return {
         reporter,
@@ -105,6 +142,21 @@ export function buildIngestPayload({ location, roster: currentRoster, self, clie
         client_ts: clientTs,
         client: CLIENT_VERSION
     };
+}
+
+/**
+ * 快照对比键: location + 按 id/name 排序的名单, 与 Map 插入顺序无关.
+ *
+ * @param {{ location: string; users: { name: string; id?: string }[] }} snapshot
+ * @returns {string}
+ */
+function getSnapshotKey(snapshot) {
+    const users = snapshot.users.map((entry) => [validUserId(entry.id), entry.name]);
+    users.sort((left, right) => {
+        const idOrder = left[0].localeCompare(right[0]);
+        return idOrder || left[1].localeCompare(right[1]);
+    });
+    return JSON.stringify([snapshot.location, users]);
 }
 
 /**
@@ -120,40 +172,34 @@ export function getIngestRetryDelay(attempt, random = Math.random()) {
     return base + Math.floor(base * 0.2 * Math.max(0, Math.min(1, random)));
 }
 
-function clearDebounce() {
-    if (debounceTimer !== null) {
-        clearTimeout(debounceTimer);
-        debounceTimer = null;
-    }
-}
-
 function clearRetry() {
     if (retryTimer !== null) {
-        clearTimeout(retryTimer);
+        workerTimers.clearTimeout(retryTimer);
         retryTimer = null;
     }
 }
 
-function stopHeartbeat() {
-    if (heartbeatTimer !== null) {
-        clearInterval(heartbeatTimer);
-        heartbeatTimer = null;
+function stopPolling() {
+    if (pollTimer !== null) {
+        workerTimers.clearInterval(pollTimer);
+        pollTimer = null;
     }
 }
 
 /**
- * 登出或关闭开关时撤销内存名单、定时器及在飞请求的结果处理.
+ * 登出或关闭开关时撤销比较状态、定时器及在飞请求的结果处理.
  */
 function clearIngestState() {
-    currentLocation = '';
-    roster.clear();
-    clearDebounce();
+    trackedLocation = '';
+    lastSuccessfulSnapshotKey = '';
+    lastSuccessfulReportAt = 0;
     clearRetry();
-    stopHeartbeat();
+    stopPolling();
     retryAttempt = 0;
     activeRequestId = 0;
     queuedReport = false;
     queuedImmediateReport = false;
+    queuedForcedReport = false;
 }
 
 /**
@@ -168,7 +214,6 @@ function canReport() {
             watchState.isLoggedIn &&
             settings.ingestEnabled &&
             String(settings.licenseKey || '').trim() &&
-            isPublicInstanceLocation(currentLocation) &&
             !authStopped
         );
     } catch {
@@ -177,16 +222,20 @@ function canReport() {
 }
 
 /**
- * @returns {ReturnType<typeof buildIngestPayload>}
+ * @returns {{ payload: NonNullable<ReturnType<typeof buildIngestPayload>>; snapshotKey: string } | null}
  */
-function buildCurrentPayload() {
+function buildCurrentReport() {
     try {
-        const userStore = useUserStore();
-        return buildIngestPayload({
-            location: currentLocation,
-            roster,
-            self: userStore.currentUser || {}
+        const snapshot = buildSnapshot();
+        if (!snapshot || !isPublicInstanceLocation(snapshot.location) || !snapshot.users.length) {
+            return null;
+        }
+        const payload = buildIngestPayload({
+            location: snapshot.location,
+            users: snapshot.users,
+            self: useUserStore().currentUser || {}
         });
+        return payload ? { payload, snapshotKey: getSnapshotKey(snapshot) } : null;
     } catch {
         return null;
     }
@@ -198,25 +247,28 @@ function scheduleBackoff() {
         return;
     }
     retryAttempt += 1;
-    retryTimer = setTimeout(() => {
+    retryTimer = workerTimers.setTimeout(() => {
         retryTimer = null;
-        void requestReport(false).catch(() => {});
+        void requestReport(false, false).catch(() => {});
     }, getIngestRetryDelay(retryAttempt));
 }
 
 /**
- * 发送当前快照. immediate 仅用于换房/显式开启, 普通心跳与防抖尊重既有退避.
+ * 发送当前快照. 轮询仅在快照较上次成功上报变化或心跳到期时发送;
+ * immediate 用于换房/显式开启, 可绕过退避并强制发送.
  *
  * @param {boolean} immediate
+ * @param {boolean} force
  * @returns {Promise<void>}
  */
-async function requestReport(immediate) {
+async function requestReport(immediate, force) {
     if (!canReport()) {
         return;
     }
     if (activeRequestId) {
         queuedReport = true;
         queuedImmediateReport ||= immediate;
+        queuedForcedReport ||= force || immediate;
         return;
     }
     if (retryTimer !== null && !immediate) {
@@ -225,12 +277,16 @@ async function requestReport(immediate) {
     if (immediate) {
         clearRetry();
     }
-    clearDebounce();
 
-    const payload = buildCurrentPayload();
-    if (!payload) {
+    const report = buildCurrentReport();
+    if (!report) {
         return;
     }
+    const heartbeatDue = Date.now() - lastSuccessfulReportAt >= INGEST_HEARTBEAT_MS;
+    if (!immediate && !force && !heartbeatDue && report.snapshotKey === lastSuccessfulSnapshotKey) {
+        return;
+    }
+
     const settings = useOverseeSettingsStore();
     const license = String(settings.licenseKey || '').trim();
     const apiBase = String(settings.apiBase || OVERSEE_API_BASE)
@@ -251,7 +307,7 @@ async function requestReport(immediate) {
                 Authorization: `Bearer ${license}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(report.payload),
             keepalive: true
         };
         const response = await webApiService.execute(request);
@@ -260,14 +316,15 @@ async function requestReport(immediate) {
         }
         if (response.status === 202) {
             retryAttempt = 0;
+            lastSuccessfulSnapshotKey = report.snapshotKey;
+            lastSuccessfulReportAt = Date.now();
             authStopped = false;
             authWarningShown = false;
             flushQueued = true;
         } else if (response.status === 401 || response.status === 403) {
             authStopped = true;
-            clearDebounce();
             clearRetry();
-            stopHeartbeat();
+            stopPolling();
             if (!authWarningShown) {
                 authWarningShown = true;
                 console.debug('[oversee] ingest stopped: license rejected');
@@ -275,7 +332,7 @@ async function requestReport(immediate) {
         } else if (response.status >= 500) {
             scheduleBackoff();
         }
-        // 400/429 等响应不重试本周期; 后续新事件/心跳仍可触发.
+        // 400/429 等响应不重试本周期; 后续轮询仍可触发.
     } catch {
         if (activeRequestId === requestId) {
             scheduleBackoff();
@@ -285,10 +342,12 @@ async function requestReport(immediate) {
             activeRequestId = 0;
             const shouldFlush = flushQueued && queuedReport;
             const queuedImmediate = queuedImmediateReport;
+            const queuedForce = queuedForcedReport;
             queuedReport = false;
             queuedImmediateReport = false;
+            queuedForcedReport = false;
             if (shouldFlush) {
-                void requestReport(queuedImmediate).catch(() => {});
+                void requestReport(queuedImmediate, queuedForce).catch(() => {});
             }
         }
     }
@@ -296,82 +355,52 @@ async function requestReport(immediate) {
 
 function reportNow() {
     try {
-        void requestReport(true).catch(() => {});
+        void requestReport(true, true).catch(() => {});
     } catch {
         // 同步异常也不能泄漏到游戏日志处理链.
     }
 }
 
-function scheduleReport() {
-    try {
-        if (!canReport() || retryTimer !== null) {
-            return;
-        }
-        // trailing debounce: 新事件重新计 30s, 合并为最新完整快照.
-        clearDebounce();
-        debounceTimer = setTimeout(() => {
-            debounceTimer = null;
-            void requestReport(false).catch(() => {});
-        }, INGEST_DEBOUNCE_MS);
-    } catch {
-        // 静默降级.
-    }
-}
-
-function startHeartbeat() {
-    if (heartbeatTimer !== null || !canReport()) {
+function startPolling() {
+    if (pollTimer !== null || !canReport()) {
         return;
     }
-    heartbeatTimer = setInterval(() => {
-        void requestReport(false).catch(() => {});
-    }, INGEST_HEARTBEAT_MS);
+    // Web Worker 定时器避免 VR 中 CefSharp 隐藏页面后定时器被节流.
+    pollTimer = workerTimers.setInterval(() => {
+        void requestReport(false, false).catch(() => {});
+    }, INGEST_POLL_INTERVAL_MS);
 }
 
 function reportNowIfReady() {
     if (canReport()) {
-        startHeartbeat();
+        startPolling();
         reportNow();
     }
 }
 
 /**
- * 游戏日志协调器在原有 entry 落库后调用. 此函数自吞所有异常.
+ * 游戏日志协调器在原有 entry 落库后调用. join/left 已由 playerList 快照覆盖,
+ * 因而无需额外维护 roster 或 dirty 标记; 下一次 60s 轮询自然发现变化.
  *
  * @param {{ type?: string; location?: string; displayName?: string; userId?: string }} gameLog
  * @param {string} lastLocation
  */
 export function notifyIngestGameLog(gameLog, lastLocation) {
     try {
-        if (!gameLog || !watchState.isLoggedIn) {
+        if (!gameLog || !watchState.isLoggedIn || gameLog.type !== 'location') {
             return;
         }
-        if (gameLog.type === 'location') {
-            const location = String(gameLog.location || lastLocation || '').trim();
-            if (location === currentLocation) {
-                return;
-            }
-            currentLocation = location;
-            roster.clear();
-            clearDebounce();
-            clearRetry();
-            retryAttempt = 0;
-            queuedReport = false;
-            queuedImmediateReport = false;
-            reportNowIfReady();
+        const location = String(gameLog.location || lastLocation || '').trim();
+        if (location === trackedLocation) {
             return;
         }
-        const displayName = String(gameLog.displayName || '').trim();
-        if (!displayName) {
-            return;
-        }
-        if (gameLog.type === 'player-joined') {
-            const id = validUserId(gameLog.userId);
-            roster.set(displayName, id ? { name: displayName, id } : { name: displayName });
-            scheduleReport();
-        } else if (gameLog.type === 'player-left') {
-            roster.delete(displayName);
-            scheduleReport();
-        }
+        trackedLocation = location;
+        clearRetry();
+        retryAttempt = 0;
+        queuedReport = false;
+        queuedImmediateReport = false;
+        queuedForcedReport = false;
+        reportNowIfReady();
     } catch {
         // 上报模块任何异常都不得影响主功能.
     }
@@ -418,7 +447,7 @@ export function initOverseeIngest() {
                 if (!loggedIn) {
                     clearIngestState();
                 } else if (settingsReady) {
-                    startHeartbeat();
+                    startPolling();
                 }
             }
         )
