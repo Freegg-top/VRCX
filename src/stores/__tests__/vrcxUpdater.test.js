@@ -87,6 +87,52 @@ describe('useVRCXUpdaterStore.setAutoUpdateVRCX', () => {
         expect(mocks.configRepository.setString).toHaveBeenCalledWith('VRCX_autoUpdateVRCX', 'Notify');
     });
 
+    test('switches the update source and persists the selection', async () => {
+        const store = useVRCXUpdaterStore();
+
+        expect(store.updateSource).toBe('s3');
+        await store.setUpdateSource('github');
+
+        expect(store.updateSource).toBe('github');
+        expect(mocks.configRepository.setString).toHaveBeenCalledWith('VRCX_dlcx_updateSource', 'github');
+    });
+
+    test('uses the selected source and release tag for installer downloads', async () => {
+        const store = useVRCXUpdaterStore();
+        const asset = {
+            name: 'VRCX_Setup.exe',
+            browser_download_url: 'https://s3.freegg.top/vrcx/2026.2.0/VRCX_Setup.exe',
+            content_type: 'application/x-msdownload',
+            state: 'uploaded',
+            size: 198000000
+        };
+        store.VRCXUpdateDialog.release = 'VRCX DLC 2026.2.0';
+        store.VRCXUpdateDialog.releases = [
+            {
+                name: 'VRCX DLC 2026.2.0',
+                tag_name: 'v2026.2.0-dlc.1',
+                assets: [asset]
+            }
+        ];
+        globalThis.AppApi.CheckUpdateProgress = vi.fn().mockResolvedValue(0);
+        globalThis.AppApi.DownloadUpdate = vi.fn().mockResolvedValue(undefined);
+
+        store.installVRCXUpdate();
+        await flushPromises();
+
+        expect(globalThis.AppApi.DownloadUpdate).toHaveBeenLastCalledWith(asset.browser_download_url, '', asset.size);
+
+        await store.setUpdateSource('github');
+        store.installVRCXUpdate();
+        await flushPromises();
+
+        expect(globalThis.AppApi.DownloadUpdate).toHaveBeenLastCalledWith(
+            'https://github.com/Freegg-top/VRCX/releases/download/v2026.2.0-dlc.1/VRCX_Setup.exe',
+            '',
+            asset.size
+        );
+    });
+
     test('loads the packaged DLC changelog before the embedded fallback', async () => {
         const store = useVRCXUpdaterStore();
         globalThis.fetch = vi.fn().mockResolvedValue({

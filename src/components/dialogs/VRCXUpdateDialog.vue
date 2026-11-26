@@ -52,7 +52,7 @@
                             </Alert>
                         </TabsContent>
                     </Tabs>
-                    <FieldGroup class="mt-3">
+                    <FieldGroup class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <Field>
                             <FieldLabel>{{ t('dialog.vrcx_updater.release') }}</FieldLabel>
                             <FieldContent>
@@ -68,6 +68,24 @@
                                             :key="item.name"
                                             :value="item.name">
                                             {{ item.tag_name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FieldContent>
+                        </Field>
+                        <Field>
+                            <FieldLabel>{{ t('dialog.vrcx_updater.download_source') }}</FieldLabel>
+                            <FieldContent>
+                                <Select :model-value="updateSource" @update:modelValue="setUpdateSource">
+                                    <SelectTrigger class="w-full">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="s3">
+                                            {{ t('dialog.vrcx_updater.source_s3') }}
+                                        </SelectItem>
+                                        <SelectItem value="github">
+                                            {{ t('dialog.vrcx_updater.source_github') }}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -120,6 +138,7 @@
     const {
         appVersion,
         branch,
+        updateSource,
         checkingForVRCXUpdate,
         VRCXUpdateDialog,
         pendingVRCXInstall,
@@ -128,7 +147,8 @@
         isDlcBuild,
         officialLatestVersion
     } = storeToRefs(VRCXUpdaterStore);
-    const { installVRCXUpdate, loadBranchVersions, restartVRCX, updateProgressText, cancelUpdate } = VRCXUpdaterStore;
+    const { installVRCXUpdate, loadBranchVersions, restartVRCX, updateProgressText, cancelUpdate, setUpdateSource } =
+        VRCXUpdaterStore;
 
     const { t } = useI18n();
 

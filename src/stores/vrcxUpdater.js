@@ -28,6 +28,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
 
     const appVersion = ref('');
     const autoUpdateVRCX = ref('Auto Download');
+    const updateSource = ref('s3');
     const latestAppVersion = ref('');
     const branch = ref('Stable');
     const vrcxId = ref('');
@@ -65,9 +66,10 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             noUpdater.value = true;
         }
 
-        const [VRCX_autoUpdateVRCX, VRCX_id] = await Promise.all([
+        const [VRCX_autoUpdateVRCX, VRCX_id, VRCX_dlcx_updateSource] = await Promise.all([
             configRepository.getString('VRCX_autoUpdateVRCX', 'Auto Download'),
-            configRepository.getString('VRCX_id', '')
+            configRepository.getString('VRCX_id', ''),
+            configRepository.getString('VRCX_dlcx_updateSource', 's3')
         ]);
 
         if (VRCX_autoUpdateVRCX === 'Auto Install') {
@@ -81,6 +83,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
 
         appVersion.value = await AppApi.GetVersion();
         vrcxId.value = VRCX_id;
+        updateSource.value = VRCX_dlcx_updateSource === 'github' ? 'github' : 's3';
 
         await initBranch();
         await loadVrcxId();
@@ -156,6 +159,13 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         }
         autoUpdateVRCX.value = value;
         await configRepository.setString('VRCX_autoUpdateVRCX', value);
+    }
+    /**
+     * @param {string} value
+     */
+    async function setUpdateSource(value) {
+        updateSource.value = value === 'github' ? 'github' : 's3';
+        await configRepository.setString('VRCX_dlcx_updateSource', updateSource.value);
     }
     /**
      * @param {string} value
@@ -268,7 +278,13 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             await configRepository.setString('VRCX_id', vrcxId.value);
         }
     }
-    function getAssetOfInterest(assets) {
+    function getAssetDownloadUrl(asset, tagName) {
+        if (updateSource.value === 'github' && tagName) {
+            return `https://github.com/Freegg-top/VRCX/releases/download/${tagName}/${asset.name}`;
+        }
+        return asset.browser_download_url;
+    }
+    function getAssetOfInterest(assets, tagName) {
         let downloadUrl = '';
         let hashString = '';
         let size = 0;
@@ -282,7 +298,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                 (asset.content_type === 'application/x-msdownload' ||
                     asset.content_type === 'application/x-msdos-program')
             ) {
-                downloadUrl = asset.browser_download_url;
+                downloadUrl = getAssetDownloadUrl(asset, tagName);
                 if (asset.digest && asset.digest.startsWith('sha256:')) {
                     hashString = asset.digest.replace('sha256:', '');
                 }
@@ -297,7 +313,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             ) {
                 // 拓展版分发: 便携 zip 更新包, C# 在重启时解压覆盖安装目录
                 // (仅拓展版启用: 官方源的便携 zip 不得劫持官方安装)
-                downloadUrl = asset.browser_download_url;
+                downloadUrl = getAssetDownloadUrl(asset, tagName);
                 if (asset.digest && asset.digest.startsWith('sha256:')) {
                     hashString = asset.digest.replace('sha256:', '');
                 }
@@ -309,7 +325,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                 asset.name.endsWith(`${arch.value}.AppImage`) &&
                 asset.content_type === 'application/octet-stream'
             ) {
-                downloadUrl = asset.browser_download_url;
+                downloadUrl = getAssetDownloadUrl(asset, tagName);
                 if (asset.digest && asset.digest.startsWith('sha256:')) {
                     hashString = asset.digest.replace('sha256:', '');
                 }
@@ -419,7 +435,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
                 // update already downloaded
                 VRCXUpdateDialog.value.updatePendingIsLatest = true;
             } else if (compareVersionNames(releaseName, currentVersion.value) > 0) {
-                const { downloadUrl, hashString, size } = getAssetOfInterest(json.assets);
+                const { downloadUrl, hashString, size } = getAssetOfInterest(json.assets, json.tag_name);
                 if (!downloadUrl) {
                     return true;
                 }
@@ -545,7 +561,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
             if (release.name !== VRCXUpdateDialog.value.release) {
                 continue;
             }
-            const { downloadUrl, hashString, size } = getAssetOfInterest(release.assets);
+            const { downloadUrl, hashString, size } = getAssetOfInterest(release.assets, release.tag_name);
             if (!downloadUrl) {
                 return;
             }
@@ -624,6 +640,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
     return {
         appVersion,
         autoUpdateVRCX,
+        updateSource,
         latestAppVersion,
         branch,
         currentVersion,
@@ -643,6 +660,7 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         noUpdater,
 
         setAutoUpdateVRCX,
+        setUpdateSource,
         setBranch,
 
         showWhatsNewDialog,

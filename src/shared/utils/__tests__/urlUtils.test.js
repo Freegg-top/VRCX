@@ -4,12 +4,12 @@ import { getFaviconUrl, replaceVrcPackageUrl } from '../urlUtils';
 
 describe('getFaviconUrl', () => {
     it('returns favicon URL for valid URL', () => {
-        expect(getFaviconUrl('https://vrchat.com/home')).toBe('https://icons.duckduckgo.com/ip2/vrchat.com.ico');
+        expect(getFaviconUrl('https://vrchat.com/home')).toBe('https://vrchat.com/favicon.ico');
     });
 
     it('extracts host from complex URL', () => {
         expect(getFaviconUrl('https://store.steampowered.com/app/12345')).toBe(
-            'https://icons.duckduckgo.com/ip2/store.steampowered.com.ico'
+            'https://store.steampowered.com/favicon.ico'
         );
     });
 
