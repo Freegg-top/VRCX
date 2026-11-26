@@ -138,17 +138,31 @@ const tableAlter = {
     /**
      * P0-2: 把无主关注行(历史迁移写成的 '')修回当前登录用户。
      * 只在登录后由 initUserTables 调用。
+     * 同名用户可能同时存在已归属行(用户重新添加过)与无主行, 直接 UPDATE 会
+     * 撞 (user_id, owner_user_id) 主键; 先 INSERT OR IGNORE 补齐缺失行, 再清掉无主行。
      */
     async backfillWatchedUserOwner() {
         if (!dbVars.userId) {
             return;
         }
         try {
+            await sqliteService.executeNonQuery('BEGIN');
             await sqliteService.executeNonQuery(
-                `UPDATE watched_user SET owner_user_id = @owner WHERE owner_user_id IS NULL OR owner_user_id = ''`,
+                `INSERT OR IGNORE INTO watched_user (user_id, display_name, created_at, owner_user_id)
+                 SELECT user_id, display_name, created_at, @owner FROM watched_user
+                 WHERE owner_user_id IS NULL OR owner_user_id = ''`,
                 { '@owner': dbVars.userId }
             );
+            await sqliteService.executeNonQuery(
+                `DELETE FROM watched_user WHERE owner_user_id IS NULL OR owner_user_id = ''`
+            );
+            await sqliteService.executeNonQuery('COMMIT');
         } catch (e) {
+            try {
+                await sqliteService.executeNonQuery('ROLLBACK');
+            } catch (rollbackErr) {
+                console.error('[tableAlter] watched_user owner backfill rollback failed:', rollbackErr);
+            }
             console.error('[tableAlter] watched_user owner backfill failed:', e);
         }
     },

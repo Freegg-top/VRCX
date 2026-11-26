@@ -4,6 +4,7 @@ export * from './base/format';
 export { formatDateFilter } from '../../coordinators/dateCoordinator';
 export * from './base/string';
 export * from './avatar';
+export * from './bioLinks';
 export * from './chart';
 export * from './common';
 export * from './compare';

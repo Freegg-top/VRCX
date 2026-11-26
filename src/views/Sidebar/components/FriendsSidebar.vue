@@ -43,7 +43,7 @@
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <IconFrame
-                                                    :enabled="sidebarCosmetics"
+                                                    :enabled="isSidebarCosmeticsEnabled"
                                                     :icon-frame="currentUser.iconFrame" />
                                             </div>
                                             <div class="flex-1 overflow-hidden h-9 flex flex-col justify-between">
@@ -53,19 +53,14 @@
                                                     >{{ currentUser.displayName }}</span
                                                 >
                                                 <Location
-                                                    v-if="isGameRunning && !gameLogDisabled"
-                                                    class="extra block truncate text-xs"
-                                                    :location="lastLocation.location"
-                                                    :traveling="lastLocationDestination"
-                                                    :link="false" />
-                                                <Location
-                                                    v-else-if="
-                                                        isRealInstance(currentUser.$locationTag) ||
-                                                        isRealInstance(currentUser.$travelingToLocation)
+                                                    v-if="
+                                                        isRealInstance(selfLocation.location) ||
+                                                        isRealInstance(selfLocation.traveling)
                                                     "
+                                                    :key="`${selfLocation.location}|${selfLocation.traveling}`"
                                                     class="extra block truncate text-xs"
-                                                    :location="currentUser.$locationTag"
-                                                    :traveling="currentUser.$travelingToLocation"
+                                                    :location="selfLocation.location"
+                                                    :traveling="selfLocation.traveling"
                                                     :link="false" />
 
                                                 <span v-else class="extra block truncate text-xs">{{
@@ -242,7 +237,13 @@
         useLocationStore,
         useUserStore
     } from '../../../stores';
-    import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from '../friendsSidebarUtils';
+    import {
+        buildFriendRow,
+        buildInstanceHeaderRow,
+        buildToggleRow,
+        estimateRowSize,
+        resolveSelfLocation
+    } from '../friendsSidebarUtils';
     import { getFriendsSortFunction, isRealInstance } from '../../../shared/utils';
     import { instanceRequest, notificationRequest, queryRequest, userRequest } from '../../../api';
     import { useInviteChecks } from '../../../composables/useInviteChecks';
@@ -275,7 +276,7 @@
         sidebarFavoriteGroups,
         sidebarFavoriteGroupOrder,
         sidebarSortMethods,
-        sidebarCosmetics
+        isSidebarCosmeticsEnabled
     } = storeToRefs(appearanceSettingsStore);
     const { gameLogDisabled } = storeToRefs(useAdvancedSettingsStore());
     const userStore = useUserStore();
@@ -289,6 +290,15 @@
     const { checkCanInvite, checkCanInviteSelf } = useInviteChecks();
     const { userImage, userStatusClass } = useUserDisplay();
     const { presets: statusPresets, getStatusClass: presetStatusClass } = useStatusPresets();
+    const selfLocation = computed(() =>
+        resolveSelfLocation({
+            isGameRunning: isGameRunning.value,
+            gameLogDisabled: gameLogDisabled.value,
+            lastLocation: lastLocation.value,
+            lastLocationDestination: lastLocationDestination.value,
+            currentUser: currentUser.value
+        })
+    );
 
     const isFriendsGroupMe = ref(true);
     const isVIPFriends = ref(true);

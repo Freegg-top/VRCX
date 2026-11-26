@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
     currentInstanceWorld: null,
     currentInstanceUsersData: null,
     currentUser: null,
-    overseeSettings: null,
+    dlcxSettings: null,
     getMyCloudConnections: vi.fn(),
     saveChatboxUserBlacklist: vi.fn(),
     showUserDialog: vi.fn(),
@@ -57,7 +57,7 @@ vi.mock('../../../stores', () => ({
     useUserStore: () => ({
         currentUser: mocks.currentUser
     }),
-    useOverseeSettingsStore: () => mocks.overseeSettings,
+    useDLCXSettingsStore: () => mocks.dlcxSettings,
     useWorldStore: () => ({
         showWorldDialog: (...args) => mocks.showWorldDialog(...args)
     }),
@@ -87,7 +87,7 @@ vi.mock('../../../stores', () => ({
     })
 }));
 
-vi.mock('../../../services/overseeUserData', () => ({
+vi.mock('../../../services/dlcxUserData', () => ({
     getMyCloudConnections: (...args) => mocks.getMyCloudConnections(...args)
 }));
 
@@ -203,7 +203,7 @@ describe('PlayerList.vue', () => {
             id: 'usr_me',
             $homeLocation: null
         });
-        mocks.overseeSettings = {
+        mocks.dlcxSettings = {
             licenseKey: '',
             licenseStatus: 'unknown'
         };
@@ -311,8 +311,8 @@ describe('PlayerList.vue', () => {
             { ref: matchedRef, isFriend: false },
             { ref: friendRef, isFriend: true }
         ]);
-        mocks.overseeSettings.licenseKey = 'key';
-        mocks.overseeSettings.licenseStatus = 'ok';
+        mocks.dlcxSettings.licenseKey = 'key';
+        mocks.dlcxSettings.licenseStatus = 'ok';
         mocks.getMyCloudConnections.mockResolvedValue(
             new Map([
                 ['usr_match', { count: 4, lastSeen: '2026-11-22T00:00:00.000Z' }],
@@ -338,8 +338,8 @@ describe('PlayerList.vue', () => {
     });
 
     test('does not request cloud connections when the license is unavailable', () => {
-        mocks.overseeSettings.licenseStatus = 'invalid';
-        mocks.overseeSettings.licenseKey = 'key';
+        mocks.dlcxSettings.licenseStatus = 'invalid';
+        mocks.dlcxSettings.licenseKey = 'key';
 
         mount(PlayerList, {
             global: {

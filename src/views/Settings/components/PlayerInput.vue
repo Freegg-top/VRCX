@@ -24,7 +24,7 @@
                 @close-auto-focus.prevent>
                 <div v-if="resolving" class="text-muted-foreground flex items-center gap-2 border-b px-2 py-2 text-xs">
                     <Spinner class="size-3.5" />
-                    {{ t('view.oversee.player_input.searching') }}
+                    {{ t('view.dlcx.player_input.searching') }}
                 </div>
                 <div :id="listboxId" role="listbox" class="max-h-80 overflow-y-auto">
                     <button
@@ -51,7 +51,7 @@
                                 <Badge
                                     :variant="sourceBadgeVariant(candidate.source)"
                                     class="flex-none px-1.5 text-[10px]">
-                                    {{ t(`view.oversee.player_input.source_${candidate.source}`) }}
+                                    {{ t(`view.dlcx.player_input.source_${candidate.source}`) }}
                                 </Badge>
                             </span>
                             <span class="text-muted-foreground block truncate font-mono text-xs">
@@ -77,7 +77,7 @@
     import { Input } from '@/components/ui/input';
     import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
     import { Spinner } from '@/components/ui/spinner';
-    import { classifyPlayerInput, resolveLocalCandidates, resolvePlayerInput } from '@/services/overseeResolve';
+    import { classifyPlayerInput, resolveLocalCandidates, resolvePlayerInput } from '@/services/dlcxResolve';
 
     defineOptions({ inheritAttrs: false });
 
@@ -89,7 +89,7 @@
     const emit = defineEmits(['update:modelValue', 'select']);
 
     const { t } = useI18n();
-    const listboxId = `oversee-player-listbox-${useId()}`;
+    const listboxId = `dlcx-player-listbox-${useId()}`;
     const candidates = ref([]);
     const isOpen = ref(false);
     const activeIndex = ref(-1);
@@ -202,7 +202,7 @@
         localRequestId++;
         const text = props.modelValue.trim();
         if (!text) {
-            toast.error(t('view.oversee.error.invalidId'));
+            toast.error(t('view.dlcx.error.invalidId'));
             return;
         }
         const input = classifyPlayerInput(text);
@@ -221,8 +221,8 @@
                 toast.warning(
                     t(
                         result.status === 'notFound'
-                            ? 'view.oversee.player_input.not_found_vrc_unavailable'
-                            : 'view.oversee.player_input.vrc_unavailable'
+                            ? 'view.dlcx.player_input.not_found_vrc_unavailable'
+                            : 'view.dlcx.player_input.vrc_unavailable'
                     )
                 );
             }
@@ -235,7 +235,7 @@
             } else if (result.status === 'notFound') {
                 closeCandidates();
                 if (!result.vrcUnavailable) {
-                    toast.error(t('view.oversee.player_input.not_found', { name: input.value }));
+                    toast.error(t('view.dlcx.player_input.not_found', { name: input.value }));
                 }
             }
         } finally {
@@ -246,7 +246,7 @@
     }
 
     /**
-     * @param {import('@/services/overseeResolve').PlayerCandidate} candidate
+     * @param {import('@/services/dlcxResolve').PlayerCandidate} candidate
      */
     function selectCandidate(candidate) {
         submitRequestId++;

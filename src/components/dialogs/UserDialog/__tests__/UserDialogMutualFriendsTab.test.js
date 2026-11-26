@@ -4,12 +4,12 @@ import { mount } from '@vue/test-utils';
 
 // ─── Mocks ───────────────────────────────────────────────────────────
 
-const overseeMocks = vi.hoisted(() => ({
+const dlcxMocks = vi.hoisted(() => ({
     getUserConnections: vi.fn()
 }));
 
-vi.mock('../../../../services/overseeApi', () => ({
-    getUserConnections: overseeMocks.getUserConnections
+vi.mock('../../../../services/dlcxApi', () => ({
+    getUserConnections: dlcxMocks.getUserConnections
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -108,7 +108,7 @@ vi.mock('../../../../coordinators/userCoordinator', async (importOriginal) => {
 });
 
 import UserDialogMutualFriendsTab from '../UserDialogMutualFriendsTab.vue';
-import { useFriendStore, useOverseeSettingsStore, useUserStore } from '../../../../stores';
+import { useFriendStore, useDLCXSettingsStore, useUserStore } from '../../../../stores';
 import { userDialogMutualFriendSortingOptions } from '../../../../shared/constants';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -142,11 +142,11 @@ function mountComponent(overrides = {}) {
         stubActions: false
     });
 
-    const overseeSettingsStore = useOverseeSettingsStore(pinia);
-    overseeSettingsStore.$patch({
+    const dlcxSettingsStore = useDLCXSettingsStore(pinia);
+    dlcxSettingsStore.$patch({
         licenseKey: '',
         licenseStatus: 'unknown',
-        ...overrides.oversee
+        ...overrides.dlcx
     });
 
     const userStore = useUserStore(pinia);
@@ -192,7 +192,7 @@ describe('UserDialogMutualFriendsTab.vue', () => {
         databaseMockHandlers.updateMutualsForFriend.mockReset().mockResolvedValue(undefined);
         databaseMockHandlers.upsertMutualGraphMeta.mockReset().mockResolvedValue(undefined);
         processBulk.mockReset();
-        overseeMocks.getUserConnections.mockReset().mockResolvedValue({ results: [] });
+        dlcxMocks.getUserConnections.mockReset().mockResolvedValue({ results: [] });
     });
 
     describe('rendering', () => {
@@ -536,7 +536,7 @@ describe('UserDialogMutualFriendsTab.vue', () => {
         });
 
         test('renders cloud connections only after official and snapshot sources are empty', async () => {
-            overseeMocks.getUserConnections.mockResolvedValue({
+            dlcxMocks.getUserConnections.mockResolvedValue({
                 results: [
                     {
                         other_id: 'usr_cloud',
@@ -549,14 +549,14 @@ describe('UserDialogMutualFriendsTab.vue', () => {
             });
             const wrapper = mountComponent({
                 mutualFriends: [],
-                oversee: { licenseKey: 'key', licenseStatus: 'unknown' }
+                dlcx: { licenseKey: 'key', licenseStatus: 'unknown' }
             });
             await new Promise((resolve) => setTimeout(resolve, 0));
-            useOverseeSettingsStore().$patch({ licenseKey: 'key', licenseStatus: 'unknown' });
+            useDLCXSettingsStore().$patch({ licenseKey: 'key', licenseStatus: 'unknown' });
 
             await runFetch(wrapper, false);
 
-            expect(overseeMocks.getUserConnections).toHaveBeenCalledWith('usr_target', 50);
+            expect(dlcxMocks.getUserConnections).toHaveBeenCalledWith('usr_target', 50);
             expect(wrapper.text()).toContain('dialog.user.mutual_friends.fetch_failed_notice');
             expect(wrapper.text()).toContain('dialog.user.mutual_friends.cloud_fallback_hint');
             expect(wrapper.text()).toContain('dialog.user.mutual_friends.cloud_badge');
@@ -575,25 +575,25 @@ describe('UserDialogMutualFriendsTab.vue', () => {
             databaseMockHandlers.getMutualsForFriend.mockResolvedValue(['usr_snapshot']);
             const wrapper = mountComponent({
                 mutualFriends: [],
-                oversee: { licenseKey: 'key', licenseStatus: 'ok' }
+                dlcx: { licenseKey: 'key', licenseStatus: 'ok' }
             });
 
             await runFetch(wrapper, false);
 
             expect(wrapper.text()).toContain('usr_snapshot');
             expect(wrapper.text()).not.toContain('cloud_fallback_hint');
-            expect(overseeMocks.getUserConnections).not.toHaveBeenCalled();
+            expect(dlcxMocks.getUserConnections).not.toHaveBeenCalled();
         });
 
         test.each(['invalid', 'expired', 'offline'])('hides the cloud fallback for %s licenses', async (status) => {
             const wrapper = mountComponent({
                 mutualFriends: [],
-                oversee: { licenseKey: 'key', licenseStatus: status }
+                dlcx: { licenseKey: 'key', licenseStatus: status }
             });
 
             await runFetch(wrapper, false);
 
-            expect(overseeMocks.getUserConnections).not.toHaveBeenCalled();
+            expect(dlcxMocks.getUserConnections).not.toHaveBeenCalled();
             expect(wrapper.text()).not.toContain('cloud_fallback_hint');
         });
     });

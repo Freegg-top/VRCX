@@ -20,6 +20,7 @@ import { userProfile } from './userProfile.js';
 import { worldFavorites } from './worldFavorites.js';
 import { printFavorites } from './printFavorites.js';
 import { watchedUsers } from './watchedUsers.js';
+import { watchedUserCache } from './watchedUserCache.js';
 
 import sqliteService from '../sqlite.js';
 
@@ -62,6 +63,7 @@ const database = {
     ...friendNetwork,
     ...friendGroups,
     ...watchedUsers,
+    ...watchedUserCache,
     ...userProfile,
 
     setMaxTableSize(limit) {
@@ -296,6 +298,9 @@ const database = {
         }
         await sqliteService.executeNonQuery(
             `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_user_profile (user_id TEXT PRIMARY KEY, bio TEXT, bio_links TEXT, updated_at TEXT)`
+        );
+        await sqliteService.executeNonQuery(
+            `CREATE TABLE IF NOT EXISTS ${dbVars.userPrefix}_watched_user_cache (user_id TEXT PRIMARY KEY, display_name TEXT NOT NULL DEFAULT '', avatar_url TEXT NOT NULL DEFAULT '', language_tags TEXT NOT NULL DEFAULT '[]', trust TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL)`
         );
     },
 

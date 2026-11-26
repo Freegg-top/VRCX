@@ -15,6 +15,7 @@ import { addLocalWorldFavorite, addLocalAvatarFavorite } from '../coordinators/f
 import { useFavoriteStore } from './favorite';
 import { useGameLogStore } from './gameLog';
 import { useGameStore } from './game';
+import { useLaunchStore } from './launch';
 import { showGroupDialog } from '../coordinators/groupCoordinator';
 import { showWorldDialog } from '../coordinators/worldCoordinator';
 import {
@@ -560,6 +561,31 @@ export const useVrcxStore = defineStore('Vrcx', () => {
         const commandArg = args[1]?.trim();
         let shouldFocusWindow = true;
         switch (command) {
+            case 'location': {
+                // vrcx://location/<完整 location>：与实例面板「在 VRChat 中打开」
+                // 同款（原生 attach 已运行的游戏，失败自动兜底 self invite）——
+                // 供 DLCX 控制台网页的「加入」按钮唤起（浏览器协议 → 安装器注册
+                // → C# 转发运行中实例 → 此处）。
+                // 网页端会用 encodeURIComponent 编码（':' → '%3A'），必须解码，
+                // 否则 parseLocation 拿不到实例号 → launch 畸形 → 兜底邀请也被拒
+                let locationArg = input.replace('location/', '').trim();
+                try {
+                    locationArg = decodeURIComponent(locationArg);
+                } catch {
+                    // 无编码或非法序列时按原文使用
+                }
+                if (!locationArg) {
+                    break;
+                }
+                // 控制台路径没有实例对话框已加载的世界数据，提前补齐
+                // cachedWorlds 中的 imageUrl / thumbnailImageUrl，且不阻塞切房。
+                const { worldId } = parseLocation(locationArg);
+                if (worldId) {
+                    queryRequest.fetch('world.location', { worldId }).catch(() => {});
+                }
+                useLaunchStore().tryOpenInstanceInVrc(locationArg);
+                break;
+            }
             case 'world':
                 if (!searchStore.directAccessWorld(input.replace('world/', ''))) {
                     // fallback for mangled world ids

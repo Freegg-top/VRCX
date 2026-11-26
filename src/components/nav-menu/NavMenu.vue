@@ -322,7 +322,7 @@
     };
 
     const openGithub = () => {
-        openExternalLink('https://github.com/vrcx-team/VRCX');
+        openExternalLink('https://freegg.top/dlcx-preview/#/product');
     };
 
     const handleSupportLink = (id) => {

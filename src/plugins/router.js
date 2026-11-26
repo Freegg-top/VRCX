@@ -12,6 +12,7 @@ import FriendNetwork from './../views/FriendNetwork/FriendNetwork.vue';
 import FriendGroups from './../views/FriendGroups/FriendGroups.vue';
 import FriendAvatars from './../views/FriendAvatars/FriendAvatars.vue';
 import FriendWorlds from './../views/FriendWorlds/FriendWorlds.vue';
+import WatchedUsersPage from './../views/Feed/WatchedUsersPage.vue';
 import FriendsLocations from './../views/FriendsLocations/FriendsLocations.vue';
 import Dashboard from './../views/Dashboard/Dashboard.vue';
 import Gallery from './../views/Tools/Gallery.vue';
@@ -96,6 +97,11 @@ const routes = [
                 path: 'friend-worlds',
                 name: 'friend-worlds',
                 component: FriendWorlds
+            },
+            {
+                path: 'watched-users',
+                name: 'watched-users',
+                component: WatchedUsersPage
             },
             {
                 path: 'social/moderation',

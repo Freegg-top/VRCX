@@ -194,7 +194,7 @@
         useGalleryStore,
         useInstanceStore,
         useLocationStore,
-        useOverseeSettingsStore,
+        useDLCXSettingsStore,
         usePhotonStore,
         useUserStore
     } from '../../stores';
@@ -208,9 +208,9 @@
     import Timer from '../../components/Timer.vue';
     import { showUserDialog, lookupUser } from '../../coordinators/userCoordinator';
     import { showWorldDialog } from '../../coordinators/worldCoordinator';
-    import { getMyCloudConnections } from '../../services/overseeUserData';
+    import { getMyCloudConnections } from '../../services/dlcxUserData';
     import { watchState } from '../../services/watchState';
-    import { isOverseeLicenseAvailable, stampCloudConnectionsOnPlayers } from '../../services/overseeUserCardData';
+    import { isDLCXLicenseAvailable, stampCloudConnectionsOnPlayers } from '../../services/dlcxUserCardData';
 
     import PhotonEventTable from './components/PhotonEventTable.vue';
     import { useUserDisplay } from '../../composables/useUserDisplay';
@@ -222,7 +222,7 @@
     const { saveChatboxUserBlacklist } = photonStore;
 
     const { lastLocation } = storeToRefs(useLocationStore());
-    const overseeSettingsStore = useOverseeSettingsStore();
+    const dlcxSettingsStore = useDLCXSettingsStore();
     const { currentInstanceLocation, currentInstanceWorld, currentInstanceUsersData } = storeToRefs(useInstanceStore());
 
     const worldImageError = ref(false);
@@ -296,7 +296,7 @@
         return a[field].toLowerCase().localeCompare(b[field].toLowerCase());
     }
 
-    const cloudConnectionsEnabled = computed(() => isOverseeLicenseAvailable(overseeSettingsStore));
+    const cloudConnectionsEnabled = computed(() => isDLCXLicenseAvailable(dlcxSettingsStore));
     let cloudConnectionsRequestSeq = 0;
 
     async function loadCloudConnectionsForPlayers() {

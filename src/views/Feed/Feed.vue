@@ -58,17 +58,6 @@
                                 </Toggle>
                             </div>
                         </TooltipWrapper>
-                        <TooltipWrapper side="bottom" :content="t('view.feed.watched_users_tooltip')">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                class="ml-2"
-                                :ariaLabel="t('view.feed.watched_users_tooltip')"
-                                @click="watchedUsersDialogVisible = true">
-                                <Eye class="size-4" />
-                                {{ t('view.feed.watched_users') }}
-                            </Button>
-                        </TooltipWrapper>
                     </div>
                     <div class="relative min-w-0" style="flex: 1">
                         <div
@@ -113,13 +102,12 @@
                 </div>
             </template>
         </DataTableLayout>
-        <WatchedUsersDialog v-model:open="watchedUsersDialogVisible" />
     </div>
 </template>
 
 <script setup>
     import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
-    import { Eye, ListFilter, Star } from 'lucide-vue-next';
+    import { ListFilter, Star } from 'lucide-vue-next';
     import { getLocalTimeZone, today } from '@internationalized/date';
     import { storeToRefs } from 'pinia';
     import { useI18n } from 'vue-i18n';
@@ -139,7 +127,6 @@
     import { useVrcxVueTable } from '../../lib/table/useVrcxVueTable';
     import { createLocalRowId } from '../../lib/table/createLocalRowId';
     import { getHorizontalWheelScroll } from '../../shared/utils/horizontalScroll';
-    import WatchedUsersDialog from './dialogs/WatchedUsersDialog.vue';
 
     const { feedTable, feedTableData } = storeToRefs(useFeedStore());
     const { feedTableLookup } = useFeedStore();
@@ -162,7 +149,6 @@
     ];
 
     const popoverOpen = ref(false);
-    const watchedUsersDialogVisible = ref(false);
     const todayDate = today(getLocalTimeZone());
     const dateRange = ref(undefined);
     const hasDateFilter = computed(() => !!(feedTable.value.dateFrom || feedTable.value.dateTo));

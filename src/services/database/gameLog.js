@@ -1557,7 +1557,7 @@ const gameLog = {
     },
 
     /**
-     * Oversee D3 推送显示名解析: 取本地日志中该 user_id 最近一次使用的显示名.
+     * DLCX D3 推送显示名解析: 取本地日志中该 user_id 最近一次使用的显示名.
      *
      * @param {string} userId
      * @returns {Promise<string>} 无记录时返回空串

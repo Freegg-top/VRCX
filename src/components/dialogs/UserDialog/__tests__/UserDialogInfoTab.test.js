@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createTestingPinia } from '@pinia/testing';
 import { flushPromises, shallowMount } from '@vue/test-utils';
 
-const overseeMocks = vi.hoisted(() => ({
+const dlcxMocks = vi.hoisted(() => ({
     getUserHistory: vi.fn()
 }));
 
-vi.mock('../../../../services/overseeApi', () => ({
-    getUserHistory: overseeMocks.getUserHistory
+vi.mock('../../../../services/dlcxApi', () => ({
+    getUserHistory: dlcxMocks.getUserHistory
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -104,10 +104,10 @@ import {
     useAppearanceSettingsStore,
     useLocationStore,
     useModalStore,
-    useOverseeSettingsStore,
+    useDLCXSettingsStore,
     useUserStore
 } from '../../../../stores';
-import { clearCloudObservationCache } from '../../../../services/overseeUserCardData';
+import { clearCloudObservationCache } from '../../../../services/dlcxUserCardData';
 
 /**
  * @param overrides
@@ -132,12 +132,12 @@ function mountComponent(overrides = {}) {
     const advancedSettings = advancedSettingsStore;
     advancedSettings.translateText = vi.fn().mockResolvedValue('');
 
-    const overseeSettingsStore = useOverseeSettingsStore(pinia);
-    overseeSettingsStore.$patch({
+    const dlcxSettingsStore = useDLCXSettingsStore(pinia);
+    dlcxSettingsStore.$patch({
         licenseKey: '',
         licenseStatus: 'unknown',
         enableTrace: true,
-        ...overrides.oversee
+        ...overrides.dlcx
     });
 
     const userStore = useUserStore(pinia);
@@ -238,7 +238,7 @@ describe('UserDialogInfoTab.vue', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         clearCloudObservationCache();
-        overseeMocks.getUserHistory.mockReset().mockResolvedValue({ user: null, history: [] });
+        dlcxMocks.getUserHistory.mockReset().mockResolvedValue({ user: null, history: [] });
     });
 
     describe('unit behavior', () => {
@@ -252,20 +252,20 @@ describe('UserDialogInfoTab.vue', () => {
             await flushPromises();
 
             expect(creditsSpy).toHaveBeenCalledTimes(0);
-            expect(overseeMocks.getUserHistory).not.toHaveBeenCalled();
+            expect(dlcxMocks.getUserHistory).not.toHaveBeenCalled();
         });
 
         test('renders the cloud observation row for a trace-enabled other user', async () => {
-            overseeMocks.getUserHistory.mockResolvedValue({
+            dlcxMocks.getUserHistory.mockResolvedValue({
                 user: {
                     first_seen: '2026-01-01T00:00:00.000Z',
                     last_seen: '2026-11-22T00:00:00.000Z'
                 },
                 history: []
             });
-            const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'unknown' } });
+            const wrapper = mountComponent({ dlcx: { licenseKey: 'key', licenseStatus: 'unknown' } });
             await flushPromises();
-            useOverseeSettingsStore().$patch({
+            useDLCXSettingsStore().$patch({
                 licenseKey: 'key',
                 licenseStatus: 'unknown',
                 enableTrace: true
@@ -274,19 +274,20 @@ describe('UserDialogInfoTab.vue', () => {
             wrapper.vm.onTabActivated();
             await flushPromises();
 
-            expect(overseeMocks.getUserHistory).toHaveBeenCalledWith('usr_target', 1);
+            expect(dlcxMocks.getUserHistory).toHaveBeenCalledWith('usr_target', 1);
             expect(wrapper.text()).toContain('dialog.user.info.cloud_observation');
-            expect(wrapper.text()).toContain('dialog.user.info.cloud_observation_summary');
+            expect(wrapper.text()).toContain('dialog.user.info.cloud_observation_last');
+            expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation_summary');
         });
 
-        test('renders only the available side of a partial cloud observation', async () => {
-            overseeMocks.getUserHistory.mockResolvedValue({
+        test('hides cloud observation when only first-seen data is available', async () => {
+            dlcxMocks.getUserHistory.mockResolvedValue({
                 user: { first_seen: '2026-01-01T00:00:00.000Z', last_seen: '' },
                 history: []
             });
-            const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'ok' } });
+            const wrapper = mountComponent({ dlcx: { licenseKey: 'key', licenseStatus: 'ok' } });
             await flushPromises();
-            useOverseeSettingsStore().$patch({
+            useDLCXSettingsStore().$patch({
                 licenseKey: 'key',
                 licenseStatus: 'ok',
                 enableTrace: true
@@ -295,19 +296,20 @@ describe('UserDialogInfoTab.vue', () => {
             wrapper.vm.onTabActivated();
             await flushPromises();
 
-            expect(wrapper.text()).toContain('dialog.user.info.cloud_observation_first');
+            expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation');
+            expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation_first');
             expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation_summary');
             expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation_last');
         });
 
         test('hides the cloud observation row for empty or failed cloud data', async () => {
-            const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'ok' } });
+            const wrapper = mountComponent({ dlcx: { licenseKey: 'key', licenseStatus: 'ok' } });
             wrapper.vm.onTabActivated();
             await flushPromises();
             expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation');
 
-            const failedWrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: 'ok' } });
-            overseeMocks.getUserHistory.mockRejectedValueOnce(new Error('offline'));
+            const failedWrapper = mountComponent({ dlcx: { licenseKey: 'key', licenseStatus: 'ok' } });
+            dlcxMocks.getUserHistory.mockRejectedValueOnce(new Error('offline'));
             failedWrapper.vm.onTabActivated();
             await flushPromises();
             expect(failedWrapper.text()).not.toContain('dialog.user.info.cloud_observation');
@@ -316,16 +318,59 @@ describe('UserDialogInfoTab.vue', () => {
         test.each(['invalid', 'expired', 'offline'])(
             'stays invisible without requests for %s licenses',
             async (status) => {
-                const wrapper = mountComponent({ oversee: { licenseKey: 'key', licenseStatus: status } });
+                const wrapper = mountComponent({ dlcx: { licenseKey: 'key', licenseStatus: status } });
                 wrapper.vm.onTabActivated();
                 await flushPromises();
-                expect(overseeMocks.getUserHistory).not.toHaveBeenCalled();
+                expect(dlcxMocks.getUserHistory).not.toHaveBeenCalled();
                 expect(wrapper.text()).not.toContain('dialog.user.info.cloud_observation');
             }
         );
     });
 
     describe('dom rendering', () => {
+        test('renders Markdown and raw bio URLs as safe clickable anchors', () => {
+            const wrapper = mountComponent({
+                userDialog: {
+                    publicProfileRef: {
+                        bio: 'Site: [Example](https://example.com) and https://example.org.'
+                    }
+                }
+            });
+
+            const links = wrapper.findAll('pre a');
+            expect(links).toHaveLength(2);
+            expect(links[0].attributes('href')).toBe('https://example.com');
+            expect(links[0].attributes('target')).toBe('_blank');
+            expect(links[0].attributes('rel')).toBe('noopener noreferrer');
+            expect(links[0].text()).toBe('Example');
+            expect(links[1].attributes('href')).toBe('https://example.org');
+            expect(wrapper.text()).toContain('and');
+        });
+
+        test('renders bioLinks as visible chips with middle-truncated URLs and full titles', () => {
+            const shortUrl = 'https://example.com/profile';
+            const longUrl = `https://example.com/${'very-long-segment/'.repeat(8)}profile`;
+            const wrapper = mountComponent({
+                userDialog: {
+                    publicProfileRef: {
+                        bio: '',
+                        bioLinks: [shortUrl, longUrl]
+                    }
+                }
+            });
+
+            const chips = wrapper.findAll('a[title]');
+            expect(chips).toHaveLength(2);
+            expect(chips[0].attributes('href')).toBe(shortUrl);
+            expect(chips[0].attributes('target')).toBe('_blank');
+            expect(chips[0].attributes('rel')).toBe('noopener noreferrer');
+            expect(chips[0].text()).toContain(shortUrl);
+            expect(chips[0].find('img').exists()).toBe(true);
+            expect(chips[1].attributes('title')).toBe(longUrl);
+            expect(chips[1].text()).toContain('…');
+            expect(chips[1].text()).not.toContain(longUrl);
+        });
+
         test('renders imported InstanceActionBar and Spinner components when conditions are met', () => {
             const wrapper = mountComponent();
 

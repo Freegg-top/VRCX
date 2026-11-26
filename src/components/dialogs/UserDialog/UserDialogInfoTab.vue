@@ -165,21 +165,45 @@
                     </div>
                     <pre
                         class="text-xs font-[inherit]"
-                        style="white-space: pre-wrap; max-height: 210px; overflow-y: auto"
-                        >{{ bioCache.translated || replaceBioSymbols(userDialog.publicProfileRef?.bio) || '—' }}</pre>
+                        style="
+                            white-space: pre-wrap;
+                            max-height: 210px;
+                            overflow-y: auto;
+                        "><span v-if="!bioSegments.length">—</span
+                        ><template v-for="(segment, index) in bioSegments" :key="index"
+                            ><a
+                                v-if="segment.type === 'link'"
+                                :href="segment.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-primary underline underline-offset-2 hover:opacity-80"
+                                @click.prevent.stop="openExternalLink(segment.url)"
+                                >{{ segment.text }}</a
+                            ><template v-else>{{ segment.text }}</template></template
+                        ></pre>
                     <div
                         v-if="userDialog.publicProfileRef?.bioLinks && userDialog.publicProfileRef?.bioLinks.length"
                         class="flex flex-wrap items-center gap-1.5 mt-2">
-                        <TooltipWrapper v-for="(link, index) in userDialog.publicProfileRef?.bioLinks" :key="index">
-                            <template #content>
-                                <span v-text="link"></span>
-                            </template>
+                        <a
+                            v-for="(link, index) in userDialog.publicProfileRef.bioLinks"
+                            :key="`${link}-${index}`"
+                            :href="link"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            :title="link"
+                            class="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs text-primary hover:bg-accent hover:underline"
+                            @click.prevent.stop="openExternalLink(link)">
                             <img
                                 :src="getFaviconUrl(link)"
-                                style="width: 16px; height: 16px; vertical-align: middle; cursor: pointer"
-                                @click.stop="openExternalLink(link)"
-                                loading="lazy" />
-                        </TooltipWrapper>
+                                class="size-3.5 shrink-0"
+                                alt=""
+                                aria-hidden="true"
+                                loading="lazy"
+                                @error="onFaviconError($event, link)" />
+                            <span class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                                {{ formatBioLinkLabel(link) }}
+                            </span>
+                        </a>
                     </div>
                 </div>
 
@@ -317,7 +341,7 @@
                                     }}</span>
                                 </div>
                             </TooltipWrapper>
-                            <div v-if="cloudObservationSummary" class="flex justify-between items-start gap-2 text-xs">
+                            <div v-if="cloudObservationText" class="flex justify-between items-start gap-2 text-xs">
                                 <span class="text-muted-foreground shrink-0">{{
                                     t('dialog.user.info.cloud_observation')
                                 }}</span>
@@ -484,6 +508,7 @@
         isFriendOnline,
         isRealInstance,
         openExternalLink,
+        parseBioLinks,
         replaceBioSymbols,
         timeToText,
         userOnlineForTimestamp,
@@ -497,13 +522,13 @@
         useInstanceStore,
         useLocationStore,
         useModalStore,
-        useOverseeSettingsStore,
+        useDLCXSettingsStore,
         useUserStore,
         useGalleryStore
     } from '../../../stores';
     import { showWorldDialog } from '../../../coordinators/worldCoordinator';
     import { queryRequest, userRequest } from '../../../api';
-    import { getCloudObservationSummary, isOverseeLicenseAvailable } from '../../../services/overseeUserCardData';
+    import { getCloudObservationSummary, isDLCXLicenseAvailable } from '../../../services/dlcxUserCardData';
 
     import InstanceActionBar from '../../InstanceActionBar.vue';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
@@ -514,7 +539,7 @@
 
     const modalStore = useModalStore();
     const instanceStore = useInstanceStore();
-    const overseeSettingsStore = useOverseeSettingsStore();
+    const dlcxSettingsStore = useDLCXSettingsStore();
 
     const { hideUserNotes, hideUserMemos } = storeToRefs(useAppearanceSettingsStore());
     const { bioLanguage, translationApi, translationApiType } = storeToRefs(useAdvancedSettingsStore());
@@ -533,14 +558,34 @@
 
     const isEditNoteAndMemoDialogVisible = ref(false);
     const translateLoading = ref(false);
+    const bioSegments = computed(() =>
+        parseBioLinks(bioCache.value.translated || replaceBioSymbols(userDialog.value.publicProfileRef?.bio))
+    );
+
+    /**
+     * Keep both ends of long URLs readable; the anchor title exposes the full value.
+     *
+     * @param {string} link
+     */
+    function formatBioLinkLabel(link) {
+        const value = String(link || '');
+        const maxLength = 72;
+        if (value.length <= maxLength) {
+            return value;
+        }
+        const leadingLength = Math.ceil((maxLength - 1) / 2);
+        const trailingLength = Math.floor((maxLength - 1) / 2);
+        return `${value.slice(0, leadingLength)}…${value.slice(-trailingLength)}`;
+    }
+
     /** @type {import('vue').Ref<{ firstSeen: string; lastSeen: string } | null>} */
     const cloudObservation = ref(null);
     let cloudObservationRequestSeq = 0;
     const cloudObservationSummary = computed(() => {
         if (
             currentUser.value.id === userDialog.value.id ||
-            !overseeSettingsStore.enableTrace ||
-            !isOverseeLicenseAvailable(overseeSettingsStore)
+            !dlcxSettingsStore.enableTrace ||
+            !isDLCXLicenseAvailable(dlcxSettingsStore)
         ) {
             return null;
         }
@@ -548,17 +593,8 @@
     });
     const cloudObservationText = computed(() => {
         const summary = cloudObservationSummary.value;
-        if (!summary) {
+        if (!summary?.lastSeen) {
             return '';
-        }
-        if (summary.firstSeen && summary.lastSeen) {
-            return t('dialog.user.info.cloud_observation_summary', {
-                first: timeAgo(summary.firstSeen),
-                last: timeAgo(summary.lastSeen)
-            });
-        }
-        if (summary.firstSeen) {
-            return t('dialog.user.info.cloud_observation_first', { first: timeAgo(summary.firstSeen) });
         }
         return t('dialog.user.info.cloud_observation_last', { last: timeAgo(summary.lastSeen) });
     });
@@ -586,8 +622,8 @@
         if (
             !userId ||
             currentUser.value.id === userId ||
-            !overseeSettingsStore.enableTrace ||
-            !isOverseeLicenseAvailable(overseeSettingsStore)
+            !dlcxSettingsStore.enableTrace ||
+            !isDLCXLicenseAvailable(dlcxSettingsStore)
         ) {
             return;
         }

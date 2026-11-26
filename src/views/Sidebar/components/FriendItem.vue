@@ -10,7 +10,7 @@
                         <User class="size-5 text-muted-foreground" />
                     </AvatarFallback>
                 </Avatar>
-                <IconFrame :enabled="sidebarCosmetics" :icon-frame="friend.ref.iconFrame" />
+                <IconFrame :enabled="isSidebarCosmeticsEnabled" :icon-frame="friend.ref.iconFrame" />
             </div>
             <div class="flex-1 overflow-hidden h-9 flex flex-col justify-between">
                 <span
@@ -99,7 +99,7 @@
         isFavorite: Boolean
     });
 
-    const { hideNicknames, sidebarCosmetics } = storeToRefs(useAppearanceSettingsStore());
+    const { hideNicknames, isSidebarCosmeticsEnabled } = storeToRefs(useAppearanceSettingsStore());
     const { isRefreshFriendsLoading } = storeToRefs(useFriendStore());
     const { userImage, userStatusClass } = useUserDisplay();
 

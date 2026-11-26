@@ -30,8 +30,8 @@
         runUpdateIsGameRunningFlow,
         runUpdateIsHmdAfkFlow
     } from './coordinators/gameCoordinator';
-    import { initOverseeCoordinator } from './coordinators/overseeCoordinator';
-    import { initOverseeIngest } from './services/overseeIngest';
+    import { initDLCXCoordinator } from './coordinators/dlcxCoordinator';
+    import { initDLCXIngest } from './services/dlcxIngest';
     import { Toaster } from './components/ui/sonner';
     import { TooltipProvider } from './components/ui/tooltip';
     import { createGlobalStores } from './stores';
@@ -90,16 +90,16 @@
         }
 
         try {
-            initOverseeCoordinator();
+            initDLCXCoordinator();
         } catch (error) {
-            // Oversee 初始化失败不阻塞主流程
-            console.warn('[oversee] coordinator init failed:', error);
+            // DLCX 初始化失败不阻塞主流程
+            console.warn('[dlcx] coordinator init failed:', error);
         }
         try {
-            initOverseeIngest();
+            initDLCXIngest();
         } catch (error) {
             // 名单上报初始化失败不阻塞主流程
-            console.warn('[oversee] ingest init failed:', error);
+            console.warn('[dlcx] ingest init failed:', error);
         }
         runCheckVRChatDebugLoggingFlow();
     });

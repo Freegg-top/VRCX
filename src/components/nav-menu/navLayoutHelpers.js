@@ -1,4 +1,5 @@
 import { isNavEntryActionable } from './navActionUtils';
+import { DLC_NAV_FOLDER_ID } from './navLayoutDefaults';
 
 const DEFAULT_FOLDER_ICON = 'ri-folder-line';
 
@@ -61,11 +62,12 @@ export function buildMenuItems(layout, navDefinitionMap, t) {
                 return;
             }
 
+            const folderNameKey = entry.nameKey || (entry.id === DLC_NAV_FOLDER_ID ? 'nav_tooltip.dlc' : null);
             items.push({
                 index: entry.id,
                 icon: entry.icon || DEFAULT_FOLDER_ICON,
-                title: entry.name?.trim() || t('nav_menu.custom_nav.folder_name_placeholder'),
-                titleIsCustom: true,
+                title: folderNameKey || entry.name?.trim() || t('nav_menu.custom_nav.folder_name_placeholder'),
+                titleIsCustom: !folderNameKey,
                 children: folderDefinitions.map((definition) => ({
                     label: definition.labelKey,
                     routeName: definition.routeName,

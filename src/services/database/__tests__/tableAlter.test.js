@@ -43,11 +43,16 @@ function createLegacySchema() {
     db.exec(`CREATE TABLE favorite_friend (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, group_name TEXT)`);
     db.exec(`CREATE TABLE watched_user (user_id TEXT NOT NULL PRIMARY KEY, display_name TEXT, created_at TEXT)`);
     db.exec(`INSERT INTO favorite_world (created_at, world_id) VALUES ('2026-01-01', 'wrld_legacy')`);
-    db.exec(`INSERT INTO watched_user (user_id, display_name, created_at) VALUES ('usr_watched', 'Watched', '2026-01-01')`);
+    db.exec(
+        `INSERT INTO watched_user (user_id, display_name, created_at) VALUES ('usr_watched', 'Watched', '2026-01-01')`
+    );
 }
 
 function columnNames(table) {
-    return db.prepare(`PRAGMA table_info(${table})`).all().map((row) => row.name);
+    return db
+        .prepare(`PRAGMA table_info(${table})`)
+        .all()
+        .map((row) => row.name);
 }
 
 function oneRow(sql) {
@@ -55,9 +60,7 @@ function oneRow(sql) {
 }
 
 beforeEach(() => {
-    const rows = db
-        .prepare(`SELECT name, type FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'`)
-        .all();
+    const rows = db.prepare(`SELECT name, type FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'`).all();
     rows.forEach(({ name, type }) => {
         db.exec(`DROP ${type === 'view' ? 'VIEW' : 'TABLE'} IF EXISTS ${name}`);
     });
@@ -89,8 +92,12 @@ describe('P0-2: 登录后的回填序列(initUserTables 等价调用)能救回�
         db.exec(
             `CREATE TABLE watched_user (user_id TEXT NOT NULL, display_name TEXT, created_at TEXT, owner_user_id TEXT NOT NULL DEFAULT '', PRIMARY KEY (user_id, owner_user_id))`
         );
-        db.exec(`INSERT INTO watched_user (user_id, display_name, created_at, owner_user_id) VALUES ('usr_a', 'A', '2026-01-01', '')`);
-        db.exec(`INSERT INTO watched_user (user_id, display_name, created_at, owner_user_id) VALUES ('usr_b', 'B', '2026-01-02', 'usr_other')`);
+        db.exec(
+            `INSERT INTO watched_user (user_id, display_name, created_at, owner_user_id) VALUES ('usr_a', 'A', '2026-01-01', '')`
+        );
+        db.exec(
+            `INSERT INTO watched_user (user_id, display_name, created_at, owner_user_id) VALUES ('usr_b', 'B', '2026-01-02', 'usr_other')`
+        );
 
         await tableAlter.migrateWatchedUserOwner();
         await tableAlter.backfillWatchedUserOwner();
@@ -99,6 +106,30 @@ describe('P0-2: 登录后的回填序列(initUserTables 等价调用)能救回�
         expect(oneRow(`SELECT owner_user_id FROM watched_user WHERE user_id = 'usr_b'`).owner_user_id).toBe(
             'usr_other'
         );
+    });
+
+    test('backfillWatchedUserOwner 遇到同名已归属行时清除无主副本且不报主键冲突', async () => {
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        dbVars.userId = 'usr_me';
+        db.exec(`DROP TABLE watched_user`);
+        db.exec(
+            `CREATE TABLE watched_user (user_id TEXT NOT NULL, display_name TEXT, created_at TEXT, owner_user_id TEXT NOT NULL DEFAULT '', PRIMARY KEY (user_id, owner_user_id))`
+        );
+        // 历史无主行 + 用户重新添加后产生的已归属行, 同一 user_id 两行
+        db.exec(
+            `INSERT INTO watched_user (user_id, display_name, created_at, owner_user_id) VALUES ('usr_a', 'A', '2026-01-01', '')`
+        );
+        db.exec(
+            `INSERT INTO watched_user (user_id, display_name, created_at, owner_user_id) VALUES ('usr_a', 'A', '2026-01-02', 'usr_me')`
+        );
+
+        await tableAlter.backfillWatchedUserOwner();
+
+        expect(db.prepare(`SELECT user_id, owner_user_id FROM watched_user`).all()).toEqual([
+            { user_id: 'usr_a', owner_user_id: 'usr_me' }
+        ]);
+        expect(errorSpy).not.toHaveBeenCalled();
+        errorSpy.mockRestore();
     });
 
     test('migrateWatchedUserOwner 对老结构按当前账号重建表并迁移数据', async () => {
@@ -114,7 +145,9 @@ describe('P0-2: 登录后的回填序列(initUserTables 等价调用)能救回�
         dbVars.userId = 'usr_me';
         await tableAlter.addFavoriteOwnerColumn();
         db.exec(`UPDATE favorite_world SET owner_user_id = '' WHERE world_id = 'wrld_legacy'`);
-        db.exec(`INSERT INTO favorite_world (created_at, world_id, owner_user_id) VALUES ('2026-02-01', 'wrld_null', NULL)`);
+        db.exec(
+            `INSERT INTO favorite_world (created_at, world_id, owner_user_id) VALUES ('2026-02-01', 'wrld_null', NULL)`
+        );
 
         await tableAlter.backfillFavoriteOwner();
 

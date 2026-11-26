@@ -1,4 +1,33 @@
 /**
+ * Prefer game-log location while it is available, but do not hide the API
+ * location during startup before the log history has been restored.
+ *
+ * @param {object} options
+ * @returns {{ location: string; traveling: string }}
+ */
+export function resolveSelfLocation({
+    isGameRunning,
+    gameLogDisabled,
+    lastLocation,
+    lastLocationDestination,
+    currentUser
+}) {
+    const gameLocation = lastLocation?.location || '';
+    const gameTraveling = lastLocationDestination || '';
+    // A reset writes date = 0 before the destination/location event arrives.
+    // That is still an active game-log stream, not a reason to resurrect the
+    // previous API snapshot while the user is changing worlds.
+    const hasGameLog = Boolean(gameLocation || gameTraveling || lastLocation?.date != null);
+    if (isGameRunning && !gameLogDisabled && hasGameLog) {
+        return { location: gameLocation, traveling: gameTraveling };
+    }
+    return {
+        location: currentUser?.$locationTag || currentUser?.location || '',
+        traveling: currentUser?.$travelingToLocation || currentUser?.travelingToLocation || ''
+    };
+}
+
+/**
  * @param {object} opts
  * @param {string} opts.key - Unique key
  * @param {string} opts.label - Display label

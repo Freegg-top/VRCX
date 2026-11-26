@@ -1,7 +1,7 @@
 import { i18n } from '../plugins/i18n';
 import { resetFriendNetworkState } from './friendNetworkCoordinator';
 import { resetMutualCoordinator } from './mutualCoordinator';
-import { invalidateMyCloudConnections } from '../services/overseeUserData';
+import { invalidateMyCloudConnections } from '../services/dlcxUserData';
 
 import Noty from 'noty';
 

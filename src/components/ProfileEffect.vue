@@ -15,7 +15,7 @@
             class="absolute inset-0 block h-full w-full object-fit object-top pointer-events-none" />
         <img
             v-if="baseUrl"
-            v-show="!isAnimated"
+            v-show="showBase"
             v-bind="$attrs"
             :src="baseUrl"
             class="absolute inset-0 block h-full w-full object-fit object-top pointer-events-none" />
@@ -47,6 +47,9 @@
     const introActive = ref(false);
     const introDuration = ref(null);
     let introTimer;
+
+    // 静态特效只有 base 资源，动画模式下也必须回退到 base，否则窗口聚焦时会整个消失
+    const showBase = computed(() => !isAnimated.value || !mainUrl.value);
 
     function clearIntroTimer() {
         clearTimeout(introTimer);

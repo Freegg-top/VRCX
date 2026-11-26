@@ -13,24 +13,21 @@ export const defaultVisibility = {
     clocks: true,
     zoom: true,
     servers: true,
-    oversee: true
+    dlcx: true
 };
 
 /**
  * Resolve the single cloud indicator state without triggering requests.
  *
- * @param {{ licenseKey?: unknown; licenseStatus?: string; sseEnabled?: boolean; connState?: string }} input
+ * @param {{ licenseKey?: unknown; licenseStatus?: string; connState?: string }} input
  * @returns {'invalid' | 'expired' | 'live' | 'connecting' | 'paused' | 'error' | null}
  */
-export function getOverseeStatus({ licenseKey, licenseStatus, sseEnabled, connState } = {}) {
+export function getDLCXStatus({ licenseKey, licenseStatus, connState } = {}) {
     if (!String(licenseKey ?? '').trim()) {
         return null;
     }
     if (licenseStatus === 'invalid' || licenseStatus === 'expired') {
         return licenseStatus;
-    }
-    if (!sseEnabled) {
-        return 'paused';
     }
     if (connState === 'live') {
         return 'live';
@@ -134,7 +131,13 @@ export function loadVisibility(storage) {
     try {
         const saved = storage.getItem('VRCX_statusBarVisibility');
         if (saved) {
-            return { ...defaultVisibility, ...JSON.parse(saved) };
+            const parsed = JSON.parse(saved);
+            // 兼容旧版按键名 oversee 保存的可见性开关
+            if (parsed && typeof parsed === 'object' && 'oversee' in parsed && !('dlcx' in parsed)) {
+                parsed.dlcx = parsed.oversee;
+                delete parsed.oversee;
+            }
+            return { ...defaultVisibility, ...parsed };
         }
     } catch {
         // ignore

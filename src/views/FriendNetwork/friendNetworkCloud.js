@@ -1,5 +1,5 @@
 /**
- * @typedef {import('@/services/overseeUserData').CloudConnection} CloudConnection
+ * @typedef {import('@/services/dlcxUserData').CloudConnection} CloudConnection
  */
 
 /**

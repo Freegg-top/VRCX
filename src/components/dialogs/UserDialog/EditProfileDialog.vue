@@ -202,7 +202,8 @@
                             <img
                                 v-if="link"
                                 :src="getFaviconUrl(link)"
-                                style="width: 16px; height: 16px; vertical-align: middle" />
+                                style="width: 16px; height: 16px; vertical-align: middle"
+                                @error="onFaviconError($event, link)" />
                             <div v-else style="width: 16px; height: 16px" />
                         </template>
                         <template #actions>
@@ -711,7 +712,7 @@
     import { Badge } from '../../ui/badge';
 
     import { userRequest } from '../../../api';
-    import { languageClass, getFaviconUrl, arraysMatch, debounce } from '../../../shared/utils';
+    import { languageClass, getFaviconUrl, onFaviconError, arraysMatch, debounce } from '../../../shared/utils';
     import { useUserStore, useAuthStore, useGalleryStore, useModalStore } from '../../../stores';
     import { useStatusPresets } from './composables/useStatusPresets';
     import GallerySelectDialog from '../GroupDialog/GallerySelectDialog.vue';

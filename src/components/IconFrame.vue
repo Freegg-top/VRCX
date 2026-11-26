@@ -15,7 +15,7 @@
             class="absolute top-[-15%] left-[-15%] h-[130%] w-[130%] max-w-none pointer-events-none" />
         <img
             v-if="baseUrl"
-            v-show="!isAnimated"
+            v-show="showBase"
             v-bind="$attrs"
             :src="baseUrl"
             class="absolute top-[-15%] left-[-15%] h-[130%] w-[130%] max-w-none pointer-events-none" />
@@ -47,6 +47,10 @@
     const introActive = ref(false);
     const introDuration = ref(null);
     let introTimer;
+
+    // 静态边框只有 base 资源（没有 mainAnimation），动画模式下也必须显示 base，
+    // 否则窗口聚焦时该边框会整个消失
+    const showBase = computed(() => !isAnimated.value || !mainUrl.value);
 
     function clearIntroTimer() {
         clearTimeout(introTimer);

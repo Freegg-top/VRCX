@@ -86,4 +86,28 @@ describe('useVRCXUpdaterStore.setAutoUpdateVRCX', () => {
         expect(store.pendingVRCXUpdate).toBe(true);
         expect(mocks.configRepository.setString).toHaveBeenCalledWith('VRCX_autoUpdateVRCX', 'Notify');
     });
+
+    test('loads the packaged DLC changelog before the embedded fallback', async () => {
+        const store = useVRCXUpdaterStore();
+        globalThis.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve('## Local release notes')
+        });
+
+        await store.loadDlcChangeLog();
+
+        expect(store.dlcChangeLogText).toBe('## Local release notes');
+        expect(store.dlcChangeLogLoaded).toBe(true);
+        expect(globalThis.fetch).toHaveBeenCalledWith(expect.stringContaining('changelog.txt?t='));
+    });
+
+    test('uses localized embedded changelog content when the local file is unavailable', async () => {
+        const store = useVRCXUpdaterStore();
+        globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
+
+        await store.loadDlcChangeLog();
+
+        expect(store.dlcChangeLogText).toBe('dialog.change_log.dlc_fallback');
+        expect(store.dlcChangeLogLoaded).toBe(true);
+    });
 });

@@ -5,7 +5,7 @@ import configRepository from '../../../services/config';
 import { DASHBOARD_NAV_KEY_PREFIX, isToolNavKey, navDefinitions } from '../../../shared/constants';
 import { triggerNavEntryAction } from '../navActionUtils';
 import { buildMenuItems, findFirstNavEntry, findFirstNavKey } from '../navLayoutHelpers';
-import { createBaseDefaultNavLayout, insertDashboardEntries } from '../navLayoutDefaults';
+import { createBaseDefaultNavLayout, ensureDlcNavGroup, insertDashboardEntries } from '../navLayoutDefaults';
 import { dispatchNavLayoutUpdated, NAV_LAYOUT_UPDATED_EVENT } from '../navLayoutEvents';
 import {
     buildNavDefinitionsForLayout,
@@ -178,14 +178,16 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
         } catch (error) {
             console.error('Failed to load custom nav', error);
         } finally {
-            const fallbackLayout = layoutData?.length ? layoutData : createDefaultNavLayout();
+            const sourceLayout = layoutData?.length ? layoutData : createDefaultNavLayout();
+            const fallbackLayout = ensureDlcNavGroup(sourceLayout, t);
             const normalizedHiddenKeys = normalizeHiddenKeys(hiddenKeysData, navDefinitionMap.value);
             const sanitized = sanitizeLayoutLocal(fallbackLayout, normalizedHiddenKeys);
             navLayout.value = sanitized;
             navHiddenKeys.value = normalizedHiddenKeys;
             if (
                 layoutData?.length &&
-                (JSON.stringify(sanitized) !== JSON.stringify(fallbackLayout) ||
+                (JSON.stringify(fallbackLayout) !== JSON.stringify(sourceLayout) ||
+                    JSON.stringify(sanitized) !== JSON.stringify(fallbackLayout) ||
                     JSON.stringify(normalizedHiddenKeys) !== JSON.stringify(hiddenKeysData))
             ) {
                 await saveNavLayout(sanitized, normalizedHiddenKeys);

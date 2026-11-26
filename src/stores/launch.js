@@ -99,9 +99,13 @@ export const useLaunchStore = defineStore('Launch', () => {
             console.error(e);
         }
         console.log('Attach Game', launchUrl, result);
-        if (!result) {
+        if (result) {
+            // 已 attach 运行中的 VRChat 并开始切换房间
+            toast.success(t('message.invite.attach_started'));
+        } else {
             toast.warning('Failed open instance in VRChat, falling back to self invite');
             // self invite fallback
+            let invited = false;
             try {
                 const L = parseLocation(location);
                 await instanceRequest.selfInvite({
@@ -109,9 +113,14 @@ export const useLaunchStore = defineStore('Launch', () => {
                     worldId: L.worldId,
                     shortName
                 });
+                invited = true;
                 toast.success(t('message.invite.self_sent'));
             } catch (e) {
                 console.error(e);
+                toast.error(t('message.invite.self_send_failed'));
+            }
+            if (invited) {
+                toast.info(t('message.invite.self_send_hint'));
             }
         }
         setTimeout(() => {

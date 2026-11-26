@@ -47,7 +47,13 @@
                     <Collapsible
                         v-else
                         class="group/collapsible"
-                        :default-open="activeMenuIndex && item.children?.some((e) => e.index === activeMenuIndex)">
+                        :open="isDlcFolder ? dlcGroupOpen : undefined"
+                        :default-open="
+                            isDlcFolder
+                                ? dlcGroupOpen
+                                : activeMenuIndex && item.children?.some((e) => e.index === activeMenuIndex)
+                        "
+                        @update:open="handleFolderOpenChange">
                         <template #default="{ open }">
                             <CollapsibleTrigger as-child>
                                 <SidebarMenuButton
@@ -142,10 +148,12 @@
 </template>
 
 <script setup>
+    import { computed, ref } from 'vue';
     import { ChevronRight } from 'lucide-vue-next';
     import { useI18n } from 'vue-i18n';
 
     import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+    import { DLC_NAV_FOLDER_ID } from './navLayoutDefaults';
     import {
         ContextMenu,
         ContextMenuContent,
@@ -167,7 +175,7 @@
         SidebarMenuSubItem
     } from '@/components/ui/sidebar';
 
-    defineProps({
+    const props = defineProps({
         item: {
             type: Object,
             required: true
@@ -217,6 +225,30 @@
         'open-custom-nav'
     ]);
     const { t } = useI18n();
+
+    const DLC_NAV_EXPANDED_KEY = 'VRCX_dlcx_nav_expanded';
+    const isDlcFolder = computed(() => props.item.index === DLC_NAV_FOLDER_ID);
+    const dlcGroupOpen = ref(readDlcGroupOpen());
+
+    function readDlcGroupOpen() {
+        try {
+            return localStorage.getItem(DLC_NAV_EXPANDED_KEY) !== 'false';
+        } catch {
+            return true;
+        }
+    }
+
+    function handleFolderOpenChange(open) {
+        if (!isDlcFolder.value) {
+            return;
+        }
+        dlcGroupOpen.value = open;
+        try {
+            localStorage.setItem(DLC_NAV_EXPANDED_KEY, String(open));
+        } catch {
+            // The group still works for this session when storage is unavailable.
+        }
+    }
 </script>
 
 <style scoped>

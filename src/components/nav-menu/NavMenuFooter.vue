@@ -14,8 +14,11 @@
                             <span>{{ t('nav_menu.changelog') }}</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem @click="emit('support-link', 'freegg')">
-                            <span>{{ t('nav_menu.freegg') }}</span>
+                        <DropdownMenuItem @click="emit('open-github')">
+                            <span>{{ t('view.settings.general.general.repository_url') }}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem @click="emit('support-link', 'discord')">
+                            <span>{{ t('view.settings.general.general.support') }}</span>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

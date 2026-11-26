@@ -230,7 +230,7 @@
     import { useModalStore } from '../../stores/modal';
     import { showUserDialog } from '../../coordinators/userCoordinator';
     import { watchState } from '../../services/watchState';
-    import { getMyCloudConnections, invalidateMyCloudConnections } from '../../services/overseeUserData';
+    import { getMyCloudConnections, invalidateMyCloudConnections } from '../../services/dlcxUserData';
     import {
         forceRefreshAnalysis,
         getMetUsers,

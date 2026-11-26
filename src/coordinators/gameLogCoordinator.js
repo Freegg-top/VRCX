@@ -37,7 +37,7 @@ import { useVrStore } from '../stores/vr';
 import { useVrcxStore } from '../stores/vrcx';
 
 import gameLogService from '../services/gameLog.js';
-import { notifyIngestGameLog } from '../services/overseeIngest';
+import { notifyIngestGameLog } from '../services/dlcxIngest';
 import { beginEventFile, noteEventTime } from '../services/database/gameLogAccount';
 import { handleLocalIdentity } from './gameLogIdentityCoordinator';
 

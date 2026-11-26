@@ -208,11 +208,11 @@
     import { database } from '../../../services/database';
     import { processBulk } from '../../../services/request';
     import { useOptionKeySelect } from '../../../composables/useOptionKeySelect';
-    import { useFriendStore, useOverseeSettingsStore, useUserStore } from '../../../stores';
+    import { useFriendStore, useDLCXSettingsStore, useUserStore } from '../../../stores';
     import { userDialogMutualFriendSortingOptions } from '../../../shared/constants';
     import { userRequest } from '../../../api';
-    import { getUserConnections } from '../../../services/overseeApi';
-    import { shouldLoadCloudMutualFallback } from '../../../services/overseeUserCardData';
+    import { getUserConnections } from '../../../services/dlcxApi';
+    import { shouldLoadCloudMutualFallback } from '../../../services/dlcxUserCardData';
     import { showUserDialog } from '../../../coordinators/userCoordinator';
 
     const { t } = useI18n();
@@ -220,7 +220,7 @@
 
     const userStore = useUserStore();
     const friendStore = useFriendStore();
-    const overseeSettingsStore = useOverseeSettingsStore();
+    const dlcxSettingsStore = useDLCXSettingsStore();
     const { userDialog, currentUser } = storeToRefs(userStore);
     const { cachedUsers } = userStore;
 
@@ -417,8 +417,8 @@
             !shouldLoadCloudMutualFallback({
                 officialSucceeded,
                 historicalCount: retrospectiveMutuals.value.length,
-                licenseKey: overseeSettingsStore.licenseKey,
-                licenseStatus: overseeSettingsStore.licenseStatus
+                licenseKey: dlcxSettingsStore.licenseKey,
+                licenseStatus: dlcxSettingsStore.licenseStatus
             })
         ) {
             return;

@@ -151,7 +151,12 @@ export async function runHandleUserUpdateFlow(ref, props, { now = Date.now, nowI
         ref.$previousLocation = props.location[1];
         ref.$travelingToTime = now();
     }
-    if (ref.bannerType === 'avatarBanner' && props.bannerUrl && props.bannerUrl[0]) {
+    if (
+        ref.bannerType === 'avatarBanner' &&
+        props.bannerUrl &&
+        props.bannerUrl[0] &&
+        props.bannerUrl[0] !== props.bannerUrl[1]
+    ) {
         const currentBannerUrl = props.bannerUrl[0];
         const previousBannerUrl = props.bannerUrl[1];
         let avatarInfo = {
@@ -196,7 +201,7 @@ export async function runHandleUserUpdateFlow(ref, props, { now = Date.now, nowI
                 feedStore.addFeedEntry(persistedFeed);
             }
         }
-    } else if (props.iconUrl && props.iconUrl[0]) {
+    } else if (props.iconUrl && props.iconUrl[0] && props.iconUrl[0] !== props.iconUrl[1]) {
         const currentIconUrl = props.iconUrl[0];
         const previousIconUrl = props.iconUrl[1];
         let avatarInfo = {

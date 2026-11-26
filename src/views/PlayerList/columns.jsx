@@ -52,6 +52,8 @@ const getInstanceIconWeight = (item) => {
 
 const sortInstanceIcon = (a, b) => getInstanceIconWeight(b) - getInstanceIconWeight(a);
 
+import { useLocationStore } from '@/stores/location';
+
 export const createColumns = ({
     randomUserColours,
     chatboxUserBlacklist,
@@ -61,6 +63,14 @@ export const createColumns = ({
     userImage,
     showCloudConnections
 }) => {
+    // 进房时间在渲染时读取（createColumns 可能在测试/无 Pinia 环境被调用）
+    const getCurrentInstanceJoinTime = () => {
+        try {
+            return Number(useLocationStore().lastLocation?.date);
+        } catch {
+            return Number.NaN;
+        }
+    };
     const cols = [
         {
             id: 'avatar',
@@ -255,19 +265,34 @@ export const createColumns = ({
                                 <span>👥{r.ref.$mutualCount}</span>
                             </TooltipWrapper>
                         ) : null}
-                        {showCloudConnections?.value && !r?.isFriend && r?.ref?.$cloudLastSeen ? (
-                            <TooltipWrapper
-                                side="left"
-                                content={t('table.playerList.cloud_last_seen', {
-                                    time: timeAgo(r.ref.$cloudLastSeen),
-                                    count: r.ref.$cloudCoSeenCount ?? 0
-                                })}
-                            >
-                                <span class="inline-flex items-center text-muted-foreground" aria-hidden="true">
-                                    <Clock class="h-3.5 w-3.5" />
-                                </span>
-                            </TooltipWrapper>
-                        ) : null}
+                        {(() => {
+                            // 当前房必然产生「刚刚同处」的云端记录（开启上报后），
+                            // 徽章语义是「上一次在别的房间遇到」：只显示早于进房时间的记录
+                            if (!showCloudConnections?.value || r?.isFriend || !r?.ref?.$cloudLastSeen) {
+                                return null;
+                            }
+                            const lastSeenMs = Date.parse(r.ref.$cloudLastSeen);
+                            const joinedMs = getCurrentInstanceJoinTime();
+                            if (!Number.isFinite(lastSeenMs)) {
+                                return null;
+                            }
+                            if (Number.isFinite(joinedMs) && joinedMs > 0 && lastSeenMs >= joinedMs) {
+                                return null;
+                            }
+                            return (
+                                <TooltipWrapper
+                                    side="left"
+                                    content={t('table.playerList.cloud_last_seen', {
+                                        time: timeAgo(r.ref.$cloudLastSeen),
+                                        count: r.ref.$cloudCoSeenCount ?? 0
+                                    })}
+                                >
+                                    <span class="inline-flex items-center text-muted-foreground" aria-hidden="true">
+                                        <Clock class="h-3.5 w-3.5" />
+                                    </span>
+                                </TooltipWrapper>
+                            );
+                        })()}
                         {r?.ref?.$mutualGroupCount > 0 ? (
                             <TooltipWrapper
                                 side="left"

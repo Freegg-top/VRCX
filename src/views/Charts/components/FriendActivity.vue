@@ -81,15 +81,9 @@
                                 </div>
                             </div>
                             <div class="flex-1 overflow-hidden">
-                                <span
-                                    class="block truncate font-medium leading-[18px]"
-                                    v-text="item.label"></span>
+                                <span class="block truncate font-medium leading-[18px]" v-text="item.label"></span>
                             </div>
-                            <CheckIcon
-                                :class="[
-                                    'ml-auto size-4',
-                                    selected ? 'opacity-100' : 'opacity-0'
-                                ]" />
+                            <CheckIcon :class="['ml-auto size-4', selected ? 'opacity-100' : 'opacity-0']" />
                         </div>
                     </template>
                     <template #empty>
@@ -106,10 +100,7 @@
             </div>
             <template v-else-if="!isLoading">
                 <div
-                    v-if="
-                        friendActivityDetailData.length === 0 &&
-                        friendWorldRecords.length === 0
-                    "
+                    v-if="friendActivityDetailData.length === 0 && friendWorldRecords.length === 0"
                     class="text-muted-foreground py-10 text-center text-sm">
                     {{ t('view.charts.friend_activity.no_data') }}
                 </div>
@@ -128,36 +119,66 @@
                         <div class="text-muted-foreground mb-2 text-sm">
                             {{ t('view.charts.friend_activity.world_records') }}
                         </div>
-                        <div class="flex flex-col gap-1">
-                            <div
+                        <ol class="flex flex-col" data-testid="friend-world-timeline">
+                            <li
                                 v-for="row in friendWorldRecords"
                                 :key="row.created_at + row.location"
-                                class="hover:bg-accent flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 text-sm"
-                                @click="openWorld(row)">
-                                <span class="min-w-0 flex-1 truncate">
-                                    {{ row.worldName || row.location }}
-                                </span>
-                                <Badge
-                                    v-if="row.groupName"
-                                    variant="outline"
-                                    class="flex-none text-xs">
-                                    {{ row.groupName }}
-                                </Badge>
-                                <span
-                                    v-if="row.durationMs > 0"
-                                    class="text-muted-foreground flex-none text-xs">
-                                    {{ timeToText(row.durationMs, true) }}
-                                </span>
-                                <span
-                                    v-else
-                                    class="text-muted-foreground flex-none text-xs">
-                                    {{ t('view.charts.friend_activity.still_here') }}
-                                </span>
-                                <span class="text-muted-foreground flex-none text-xs">
+                                class="group grid grid-cols-[3.25rem_1rem_minmax(0,1fr)] gap-x-2">
+                                <time
+                                    class="text-muted-foreground pt-4 text-right font-mono text-xs tabular-nums"
+                                    :datetime="row.created_at">
                                     {{ formatTime(row.created_at) }}
-                                </span>
-                            </div>
-                        </div>
+                                </time>
+                                <div class="relative flex justify-center">
+                                    <span
+                                        class="bg-border absolute bottom-0 top-0 w-px group-last:hidden"
+                                        aria-hidden="true" />
+                                    <span
+                                        class="border-primary bg-background relative z-10 mt-5 size-2.5 rounded-full border-2"
+                                        aria-hidden="true" />
+                                </div>
+                                <button
+                                    type="button"
+                                    class="hover:bg-accent focus-visible:ring-ring/50 mb-2 flex min-w-0 items-center gap-3 rounded-lg border p-2 text-left transition-colors focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-default disabled:opacity-60"
+                                    :disabled="!row.worldId"
+                                    :data-testid="`friend-world-record-${row.worldId}`"
+                                    @click="openWorld(row)">
+                                    <img
+                                        v-if="getWorldThumbnail(row.worldId)"
+                                        class="size-14 flex-none rounded-md object-cover"
+                                        :src="getWorldThumbnail(row.worldId)"
+                                        :alt="getWorldDisplayName(row)"
+                                        loading="lazy" />
+                                    <div
+                                        v-else
+                                        class="bg-muted flex size-14 flex-none items-center justify-center rounded-md">
+                                        <Globe class="text-muted-foreground size-6" />
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="min-w-0 truncate text-sm font-medium">
+                                                {{ getWorldDisplayName(row) }}
+                                            </span>
+                                            <Badge v-if="row.groupName" variant="outline" class="flex-none text-xs">
+                                                {{ row.groupName }}
+                                            </Badge>
+                                        </div>
+                                        <div
+                                            v-if="row.instanceName"
+                                            class="text-muted-foreground mt-1 truncate font-mono text-xs">
+                                            #{{ row.instanceName }}
+                                        </div>
+                                        <div class="text-muted-foreground mt-1 text-xs">
+                                            {{
+                                                row.durationMs > 0
+                                                    ? timeToText(row.durationMs, true)
+                                                    : t('view.charts.friend_activity.still_here')
+                                            }}
+                                        </div>
+                                    </div>
+                                </button>
+                            </li>
+                        </ol>
                     </div>
                 </template>
             </template>
@@ -175,7 +196,7 @@
     import { storeToRefs } from 'pinia';
     import { useI18n } from 'vue-i18n';
 
-    import { ArrowLeft, ArrowRight, Calendar as CalendarIcon, CheckIcon, RefreshCcw } from 'lucide-vue-next';
+    import { ArrowLeft, ArrowRight, Calendar as CalendarIcon, CheckIcon, Globe, RefreshCcw } from 'lucide-vue-next';
     import { fromDate, getLocalTimeZone, today } from '@internationalized/date';
     import { toDate } from 'reka-ui/date';
 
@@ -189,9 +210,11 @@
     import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
     import { TooltipWrapper } from '../../../components/ui/tooltip';
     import { Badge } from '../../../components/ui/badge';
-    import { timeToText } from '../../../shared/utils';
+    import { parseLocation, timeToText } from '../../../shared/utils';
     import { useAppearanceSettingsStore, useFriendStore, useUserStore } from '../../../stores';
+    import { useWorldStore } from '../../../stores/world';
     import { database } from '../../../services/database';
+    import { worldRequest } from '../../../api';
     import { showWorldDialog } from '../../../coordinators/worldCoordinator';
     import { VirtualCombobox } from '../../../components/ui/virtual-combobox';
     import { useUserDisplay } from '../../../composables/useUserDisplay';
@@ -203,6 +226,7 @@
 
     const appearanceSettingsStore = useAppearanceSettingsStore();
     const friendStore = useFriendStore();
+    const worldStore = useWorldStore();
     const { friends, allFavoriteFriendIds } = storeToRefs(friendStore);
     const { currentUser } = storeToRefs(useUserStore());
     const { t } = useI18n();
@@ -214,10 +238,7 @@
 
     const { barWidth } = useInstanceActivitySettings();
 
-    const {
-        activityDetailData,
-        getActivityData
-    } = useInstanceActivityData();
+    const { activityDetailData, getActivityData } = useInstanceActivityData();
 
     // 独立页专用日期导航: 好友的动态/世界记录可能存在于自己没有游戏日志的
     // 日期, 因此不沿用 useDateNavigation 的"按自己的日志日期集合禁用/跳转"逻辑,
@@ -225,9 +246,7 @@
     const selectedDate = ref(dayjs().toDate());
     const todayStart = dayjs().startOf('day');
 
-    const isNextDayBtnDisabled = computed(() =>
-        dayjs(selectedDate.value).isSameOrAfter(todayStart, 'day')
-    );
+    const isNextDayBtnDisabled = computed(() => dayjs(selectedDate.value).isSameOrAfter(todayStart, 'day'));
 
     const isPrevDayBtnDisabled = ref(false);
 
@@ -283,9 +302,7 @@
                 list.push(friendRef);
             }
         }
-        list.sort((a, b) =>
-            String(a.displayName).localeCompare(String(b.displayName))
-        );
+        list.sort((a, b) => String(a.displayName).localeCompare(String(b.displayName)));
         return list;
     });
 
@@ -308,13 +325,12 @@
             return [];
         }
         const friendId = selectedFriendId.value;
-        return activityDetailData.value.filter((arr) =>
-            arr.some((row) => row.user_id === friendId)
-        );
+        return activityDetailData.value.filter((arr) => arr.some((row) => row.user_id === friendId));
     });
 
     // 动态中可见的世界轨迹 (GPS 位置变动 + Online 上线, 不限于同框实例)
     const friendWorldRecords = ref([]);
+    const pendingWorldThumbnailFetches = new Set();
 
     watch(
         [selectedFriendId, selectedDate],
@@ -324,37 +340,39 @@
                 return;
             }
             try {
-                const start = dayjs
-                    .tz(selectedDate.value)
-                    .startOf('day')
-                    .toISOString();
-                const end = dayjs
-                    .tz(selectedDate.value)
-                    .endOf('day')
-                    .toISOString();
-                const rows = await database.getFriendWorldActivity(
-                    selectedFriendId.value,
-                    start,
-                    end
-                );
+                const start = dayjs.tz(selectedDate.value).startOf('day').toISOString();
+                const end = dayjs.tz(selectedDate.value).endOf('day').toISOString();
+                const rows = await database.getFriendWorldActivity(selectedFriendId.value, start, end);
                 // 相邻重复 (Online 后紧跟同世界的 GPS) 去重
-                /** @type {Array<{ created_at: string; location: string; worldName: string; groupName: string; durationMs?: number }>} */
+                /**
+                 * @type {{
+                 *     created_at: string;
+                 *     location: string;
+                 *     worldName: string;
+                 *     groupName: string;
+                 *     durationMs?: number;
+                 * }[]}
+                 */
                 const deduped = [];
                 for (const row of rows) {
                     const prev = deduped[deduped.length - 1];
                     if (prev && prev.location === row.location) {
                         continue;
                     }
-                    deduped.push(row);
+                    const location = parseLocation(row.location);
+                    deduped.push({
+                        ...row,
+                        worldId: location.worldId,
+                        instanceName: location.instanceName
+                    });
                 }
                 // 停留时长 = 与下一条(更新的)记录的时间差; 最新一条 = 至今
                 deduped.forEach((row, index) => {
                     const newer = deduped[index - 1];
-                    row.durationMs = newer
-                        ? dayjs(newer.created_at).diff(row.created_at)
-                        : 0;
+                    row.durationMs = newer ? dayjs(newer.created_at).diff(row.created_at) : 0;
                 });
                 friendWorldRecords.value = deduped;
+                void fetchMissingWorldThumbnails(deduped);
             } catch (err) {
                 console.error('[friend-activity] world records failed:', err);
             }
@@ -362,18 +380,59 @@
         { immediate: true }
     );
 
+    // 与好友的世界页一致: 先读本地缓存, 缺失时通过 worldRequest 补拉并写回缓存
+    function getWorldThumbnail(worldId) {
+        const cached = worldStore.cachedWorlds.get(worldId);
+        if (!cached?.thumbnailImageUrl) {
+            return null;
+        }
+        return cached.thumbnailImageUrl.replace('256', '128');
+    }
+
+    function getWorldDisplayName(row) {
+        return row.worldName || worldStore.cachedWorlds.get(row.worldId)?.name || row.worldId || row.location;
+    }
+
+    async function fetchMissingWorldThumbnails(records) {
+        const missingWorldIds = [
+            ...new Set(
+                records
+                    .map((row) => row.worldId)
+                    .filter(
+                        (worldId) =>
+                            worldId &&
+                            !pendingWorldThumbnailFetches.has(worldId) &&
+                            !worldStore.cachedWorlds.get(worldId)?.thumbnailImageUrl
+                    )
+            )
+        ];
+        if (missingWorldIds.length === 0) {
+            return;
+        }
+
+        await Promise.allSettled(
+            missingWorldIds.map(async (worldId) => {
+                pendingWorldThumbnailFetches.add(worldId);
+                try {
+                    await worldRequest.getWorld({ worldId });
+                } finally {
+                    pendingWorldThumbnailFetches.delete(worldId);
+                }
+            })
+        );
+        friendWorldRecords.value = [...friendWorldRecords.value];
+    }
+
     /**
-     *
      * @param row
      */
     function openWorld(row) {
-        if (row.location.startsWith('wrld_')) {
-            showWorldDialog(row.location.split(':')[0]);
+        if (row.worldId) {
+            showWorldDialog(row.location);
         }
     }
 
     /**
-     *
      * @param date
      */
     function formatTime(date) {
@@ -384,12 +443,7 @@
 
     onMounted(async () => {
         try {
-            await getActivityData(
-                selectedDate,
-                currentUser,
-                friends,
-                allFavoriteFriendIds
-            );
+            await getActivityData(selectedDate, currentUser, friends, allFavoriteFriendIds);
         } catch (error) {
             console.error('error in mounted', error);
         } finally {
@@ -400,12 +454,7 @@
     reloadData = async function () {
         isLoading.value = true;
         try {
-            await getActivityData(
-                selectedDate,
-                currentUser,
-                friends,
-                allFavoriteFriendIds
-            );
+            await getActivityData(selectedDate, currentUser, friends, allFavoriteFriendIds);
         } catch (error) {
             console.error('Error in reloadData:', error);
         } finally {

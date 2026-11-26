@@ -58,6 +58,13 @@ const navDefinitions = [
         routeName: 'friend-worlds'
     },
     {
+        key: 'watched-users',
+        icon: 'ri-eye-line',
+        tooltip: 'nav_tooltip.watched_users',
+        labelKey: 'nav_tooltip.watched_users',
+        routeName: 'watched-users'
+    },
+    {
         key: 'search',
         icon: 'ri-search-line',
         tooltip: 'nav_tooltip.search',

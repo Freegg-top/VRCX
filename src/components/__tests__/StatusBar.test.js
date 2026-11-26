@@ -6,7 +6,7 @@ import { ref } from 'vue';
 
 import StatusBar from '../StatusBar.vue';
 import en from '../../localization/en.json';
-import { sseConnState } from '../../services/overseeWatch';
+import { sseConnState } from '../../services/dlcxWatch';
 
 const routerMocks = vi.hoisted(() => ({
     push: vi.fn(),
@@ -204,12 +204,11 @@ function mountStatusBar(storeOverrides = {}) {
                         GeneralSettings: {
                             ...storeOverrides.GeneralSettings
                         },
-                        OverseeSettings: {
+                        DLCXSettings: {
                             licenseKey: '',
                             licenseStatus: 'unknown',
                             apiBase: 'https://api.freegg.top',
-                            sseEnabled: true,
-                            ...storeOverrides.OverseeSettings
+                            ...storeOverrides.DLCXSettings
                         }
                     }
                 })
@@ -290,7 +289,7 @@ describe('StatusBar.vue - Servers indicator', () => {
     });
 });
 
-describe('StatusBar.vue - Oversee indicator', () => {
+describe('StatusBar.vue - DLCX indicator', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         sseConnState.value = 'off';
@@ -298,18 +297,17 @@ describe('StatusBar.vue - Oversee indicator', () => {
 
     test('renders nothing when license is not configured', () => {
         const wrapper = mountStatusBar();
-        expect(wrapper.find('[data-testid="oversee-status"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="dlcx-status"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('Cloud:');
     });
 
     test.each([
         [{ licenseStatus: 'invalid' }, 'Cloud: Invalid license', 'bg-destructive'],
         [{ licenseStatus: 'expired' }, 'Cloud: License expired', 'bg-destructive'],
-        [{}, 'Cloud: Paused', 'bg-status-offline-alt'],
-        [{ sseEnabled: false }, 'Cloud: Paused', 'bg-status-offline-alt']
+        [{}, 'Cloud: Paused', 'bg-status-offline-alt']
     ])('maps license and paused states', (overrides, label, colorClass) => {
-        const wrapper = mountStatusBar({ OverseeSettings: { licenseKey: 'key', ...overrides } });
-        const indicator = wrapper.find('[data-testid="oversee-status"]');
+        const wrapper = mountStatusBar({ DLCXSettings: { licenseKey: 'key', ...overrides } });
+        const indicator = wrapper.find('[data-testid="dlcx-status"]');
         expect(indicator.text()).toBe(label);
         expect(indicator.find(`.${colorClass}`).exists()).toBe(true);
     });
@@ -321,15 +319,15 @@ describe('StatusBar.vue - Oversee indicator', () => {
         ['error', 'Cloud: Connection failed', 'bg-destructive']
     ])('maps SSE state %s', (connState, label, colorClass) => {
         sseConnState.value = connState;
-        const wrapper = mountStatusBar({ OverseeSettings: { licenseKey: 'key', licenseStatus: 'ok' } });
-        const indicator = wrapper.find('[data-testid="oversee-status"]');
+        const wrapper = mountStatusBar({ DLCXSettings: { licenseKey: 'key', licenseStatus: 'ok' } });
+        const indicator = wrapper.find('[data-testid="dlcx-status"]');
         expect(indicator.text()).toBe(label);
         expect(indicator.find(`.${colorClass}`).exists()).toBe(true);
     });
 
-    test('opens the Oversee settings tab on click', async () => {
-        const wrapper = mountStatusBar({ OverseeSettings: { licenseKey: 'key', licenseStatus: 'ok' } });
-        await wrapper.find('[data-testid="oversee-status"]').trigger('click');
-        expect(routerMocks.push).toHaveBeenCalledWith({ name: 'settings', query: { tab: 'oversee' } });
+    test('opens the DLCX settings tab on click', async () => {
+        const wrapper = mountStatusBar({ DLCXSettings: { licenseKey: 'key', licenseStatus: 'ok' } });
+        await wrapper.find('[data-testid="dlcx-status"]').trigger('click');
+        expect(routerMocks.push).toHaveBeenCalledWith({ name: 'settings', query: { tab: 'dlcx' } });
     });
 });

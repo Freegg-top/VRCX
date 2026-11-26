@@ -1,6 +1,6 @@
 import { extractFileId, extractFileVersion, extractVariantVersion } from './fileUtils';
 import { replaceBioSymbols } from './base/string';
-import { getFaviconUrl, replaceVrcPackageUrl } from './urlUtils';
+import { getFaviconUrl, getFaviconFallbackUrl, onFaviconError, replaceVrcPackageUrl } from './urlUtils';
 import { AppDebug } from '../../services/appConfig.js';
 import { getAvailablePlatforms } from './platformUtils';
 
@@ -64,6 +64,8 @@ export { deleteVRChatCache, checkVRChatCache, getBundleDateSize } from '../../co
 export {
     getAvailablePlatforms,
     getFaviconUrl,
+    getFaviconFallbackUrl,
+    onFaviconError,
     convertFileUrlToImageUrl,
     replaceVrcPackageUrl,
     extractFileId,

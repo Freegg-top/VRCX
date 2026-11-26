@@ -5,7 +5,6 @@ import { database } from '../services/database';
 import { watchState } from '../services/watchState';
 import { useWatchedStore } from '../stores/watched';
 import { useFriendStore } from '../stores/friend';
-import { reconcileWatchedSync, syncWatchedAdd, syncWatchedRemove } from './overseeWatchedSync';
 
 const REFRESH_RATE_PER_SECOND = 1;
 const MAX_RETRY = 3;
@@ -23,7 +22,6 @@ export async function initWatchedUsers() {
     const rows = await database.getWatchedUsers();
     watchedStore.watchedUsers.clear();
     rows.forEach((row) => watchedStore.setWatchedUser(row));
-    await reconcileWatchedSync();
 }
 
 /**
@@ -40,22 +38,13 @@ export async function addWatchedUser(userId, displayName) {
         displayName,
         created_at: new Date().toJSON()
     };
-    let persisted = false;
     try {
         // P2-2: service 已改 async, 这里 await 后 try/catch 才真正捕获得到失败
         await database.addWatchedUser(userId, displayName);
-        persisted = true;
     } catch (err) {
         console.error('Failed to persist watched user:', userId, err);
     }
     watchedStore.setWatchedUser(user);
-    if (persisted) {
-        try {
-            await syncWatchedAdd(userId);
-        } catch (err) {
-            console.error('Failed to sync watched user to Oversee:', userId, err);
-        }
-    }
     // fetch immediately so the next change is diffed against fresh data
     try {
         await userRequest.getUser({ userId });
@@ -71,22 +60,13 @@ export async function addWatchedUser(userId, displayName) {
  */
 export async function removeWatchedUser(userId) {
     const watchedStore = useWatchedStore();
-    let persisted = false;
     try {
         // P2-2: await 异步删除, 失败不再被静默吞掉
         await database.removeWatchedUser(userId);
-        persisted = true;
     } catch (err) {
         console.error('Failed to remove watched user:', userId, err);
     }
     watchedStore.removeWatchedUser(userId);
-    if (persisted) {
-        try {
-            await syncWatchedRemove(userId);
-        } catch (err) {
-            console.error('Failed to remove watched user from Oversee:', userId, err);
-        }
-    }
 }
 
 /**

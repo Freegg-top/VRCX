@@ -3,7 +3,8 @@ import { mount } from '@vue/test-utils';
 
 const mocks = vi.hoisted(() => ({
     appearanceStore: {
-        hideNicknames: false
+        hideNicknames: false,
+        isSidebarCosmeticsEnabled: false
     },
     friendStore: {
         isRefreshFriendsLoading: false,
@@ -95,7 +96,10 @@ vi.mock('@/components/Timer.vue', () => ({
 }));
 
 vi.mock('@/components/IconFrame.vue', () => ({
-    default: { template: '<span data-testid="icon-frame" />' }
+    default: {
+        props: ['enabled', 'iconFrame'],
+        template: '<span data-testid="icon-frame" :data-enabled="String(enabled)" :data-frame="iconFrame" />'
+    }
 }));
 
 vi.mock('lucide-vue-next', () => ({
@@ -144,6 +148,7 @@ function mountItem(props = {}) {
 describe('FriendItem.vue', () => {
     beforeEach(() => {
         mocks.appearanceStore.hideNicknames = false;
+        mocks.appearanceStore.isSidebarCosmeticsEnabled = false;
         mocks.friendStore.isRefreshFriendsLoading = false;
         mocks.friendStore.allFavoriteFriendIds = new Set();
         mocks.confirmDeleteFriend.mockReset();
@@ -166,6 +171,27 @@ describe('FriendItem.vue', () => {
         await button.trigger('click');
         expect(mocks.confirmDeleteFriend).toHaveBeenCalledWith('usr_orphan');
         expect(mocks.showUserDialog).not.toHaveBeenCalled();
+    });
+
+    test('passes the effective cosmetics setting and the friend icon frame to IconFrame', () => {
+        mocks.appearanceStore.isSidebarCosmeticsEnabled = true;
+        const wrapper = mountItem({
+            friend: makeFriend({
+                ref: {
+                    displayName: 'Alice',
+                    $userColour: '#fff',
+                    statusDescription: 'Online',
+                    location: 'wrld_abc:123',
+                    travelingToLocation: '',
+                    $location_at: 123,
+                    iconFrame: 'invt_frame'
+                }
+            })
+        });
+
+        const iconFrame = wrapper.get('[data-testid="icon-frame"]');
+        expect(iconFrame.attributes('data-enabled')).toBe('true');
+        expect(iconFrame.attributes('data-frame')).toBe('invt_frame');
     });
 
     test.each([

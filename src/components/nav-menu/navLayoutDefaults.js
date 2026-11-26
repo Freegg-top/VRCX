@@ -1,15 +1,29 @@
 import { DASHBOARD_NAV_KEY_PREFIX } from '../../shared/constants';
 
+export const DLC_NAV_FOLDER_ID = 'default-folder-dlc';
+export const DLC_NAV_KEYS = [
+    'friend-network',
+    'friend-avatars',
+    'friend-worlds',
+    'charts-friend-activity',
+    'friend-groups',
+    'watched-users'
+];
+
 export function createBaseDefaultNavLayout(t) {
     return [
         { type: 'item', key: 'feed' },
         { type: 'item', key: 'friends-locations' },
         { type: 'item', key: 'game-log' },
         { type: 'item', key: 'player-list' },
-        { type: 'item', key: 'friend-network' },
-        { type: 'item', key: 'friend-groups' },
-        { type: 'item', key: 'friend-avatars' },
-        { type: 'item', key: 'friend-worlds' },
+        {
+            type: 'folder',
+            id: DLC_NAV_FOLDER_ID,
+            nameKey: 'nav_tooltip.dlc',
+            name: t('nav_tooltip.dlc'),
+            icon: 'ri-sparkling-line',
+            items: [...DLC_NAV_KEYS]
+        },
         { type: 'item', key: 'search' },
         {
             type: 'folder',
@@ -35,11 +49,77 @@ export function createBaseDefaultNavLayout(t) {
             nameKey: 'nav_tooltip.charts',
             name: t('nav_tooltip.charts'),
             icon: 'ri-pie-chart-line',
-            items: ['charts-instance', 'charts-mutual', 'charts-hot-worlds', 'charts-friend-activity']
+            items: ['charts-instance', 'charts-mutual', 'charts-hot-worlds']
         },
         { type: 'item', key: 'tools' },
         { type: 'item', key: 'direct-access' }
     ];
+}
+
+/**
+ * Move DLC entries from older flat/custom layouts into one stable folder.
+ * Other entries retain their relative order and custom folders stay intact.
+ */
+export function ensureDlcNavGroup(layout, t) {
+    if (!Array.isArray(layout)) {
+        return layout;
+    }
+
+    const dlcKeySet = new Set(DLC_NAV_KEYS);
+    const foundKeys = new Set();
+    const nextLayout = [];
+    let insertAt = -1;
+
+    layout.forEach((entry) => {
+        if (entry?.type === 'item' && dlcKeySet.has(entry.key)) {
+            foundKeys.add(entry.key);
+            if (insertAt === -1) {
+                insertAt = nextLayout.length;
+            }
+            return;
+        }
+
+        if (entry?.type === 'folder') {
+            const existingDlcFolder = entry.id === DLC_NAV_FOLDER_ID;
+            const remainingItems = (entry.items || []).filter((key) => {
+                if (!dlcKeySet.has(key)) {
+                    return true;
+                }
+                foundKeys.add(key);
+                if (insertAt === -1) {
+                    insertAt = nextLayout.length;
+                }
+                return false;
+            });
+
+            if (existingDlcFolder) {
+                if (insertAt === -1) {
+                    insertAt = nextLayout.length;
+                }
+                return;
+            }
+            if (remainingItems.length || !(entry.items || []).length) {
+                nextLayout.push({ ...entry, items: remainingItems });
+            }
+            return;
+        }
+
+        nextLayout.push(entry);
+    });
+
+    if (!foundKeys.size && insertAt === -1) {
+        return layout;
+    }
+
+    nextLayout.splice(insertAt === -1 ? nextLayout.length : insertAt, 0, {
+        type: 'folder',
+        id: DLC_NAV_FOLDER_ID,
+        nameKey: 'nav_tooltip.dlc',
+        name: t('nav_tooltip.dlc'),
+        icon: 'ri-sparkling-line',
+        items: [...DLC_NAV_KEYS]
+    });
+    return nextLayout;
 }
 
 export function insertDashboardEntries(layout, dashboardDefinitions) {

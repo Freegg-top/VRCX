@@ -105,7 +105,7 @@
                             <Field orientation="horizontal">
                                 <FieldLabel>{{ t('view.settings.appearance.appearance.show_cosmetics') }}</FieldLabel>
                                 <Switch
-                                    :model-value="sidebarCosmetics"
+                                    :model-value="isSidebarCosmeticsEnabled"
                                     :ariaLabel="t('view.settings.appearance.appearance.show_cosmetics')"
                                     @update:modelValue="setSidebarCosmetics" />
                             </Field>
@@ -309,7 +309,10 @@
                 <span class="sidebar-tab-count"> ({{ groupInstances.length }}) </span>
             </template>
             <template #friends>
-                <div class="h-full overflow-hidden">
+                <div
+                    class="h-full overflow-hidden"
+                    :inert="isSettingsPopoverOpen ? '' : undefined"
+                    data-testid="friends-sidebar-panel">
                     <FriendsSidebar />
                 </div>
             </template>
@@ -401,7 +404,7 @@
         isSameInstanceAboveFavorites,
         isSidebarDivideByFriendGroup,
         sidebarFavoriteGroups,
-        sidebarCosmetics
+        isSidebarCosmeticsEnabled
     } = storeToRefs(appearanceSettingsStore);
     const {
         setSidebarSortMethod1,

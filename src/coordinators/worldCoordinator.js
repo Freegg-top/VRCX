@@ -110,9 +110,9 @@ export function showWorldDialog(tag, shortName = null, options = {}) {
             D.timeSpent = ref.timeSpent;
         }
     });
-    const loadWorldRequest = worldRequest.getWorld({
-        worldId: L.worldId
-    });
+    const loadWorldRequest = forceRefresh
+        ? worldRequest.getWorld({ worldId: L.worldId })
+        : queryRequest.fetch('world.dialog', { worldId: L.worldId });
     loadWorldRequest
         .catch((err) => {
             nextTick(() => (D.loading = false));

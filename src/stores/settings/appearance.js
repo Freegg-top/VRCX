@@ -88,7 +88,9 @@ export const useAppearanceSettingsStore = defineStore(
         const isSidebarDivideByFriendGroup = ref(false);
         const sidebarFavoriteGroups = ref([]);
         const sidebarFavoriteGroupOrder = ref([]);
-        const sidebarCosmetics = ref(false);
+        // null = 未单独设置，右侧栏跟随全局 VRC Profile Cosmetics 开关
+        const sidebarCosmetics = ref(/** @type {boolean | null} */ (null));
+        const isSidebarCosmeticsEnabled = computed(() => sidebarCosmetics.value ?? displayVRCProfileCosmetics.value);
         const hideUserNotes = ref(false);
         const hideUserMemos = ref(false);
         const hideUnfriends = ref(false);
@@ -208,7 +210,7 @@ export const useAppearanceSettingsStore = defineStore(
                 configRepository.getBool('VRCX_sidebarDivideByFriendGroup', true),
                 configRepository.getString('VRCX_sidebarFavoriteGroups', '[]'),
                 configRepository.getString('VRCX_sidebarFavoriteGroupOrder', '[]'),
-                configRepository.getBool('VRCX_sidebarCosmetics', false),
+                configRepository.getBool('VRCX_sidebarCosmetics', null),
                 configRepository.getBool('VRCX_hideUserNotes', false),
                 configRepository.getBool('VRCX_hideUserMemos', false),
                 configRepository.getBool('VRCX_hideUnfriends', false),
@@ -293,7 +295,8 @@ export const useAppearanceSettingsStore = defineStore(
             isSidebarDivideByFriendGroup.value = isSidebarDivideByFriendGroupConfig;
             sidebarFavoriteGroups.value = JSON.parse(sidebarFavoriteGroupsConfig);
             sidebarFavoriteGroupOrder.value = JSON.parse(sidebarFavoriteGroupOrderConfig);
-            sidebarCosmetics.value = sidebarCosmeticsConfig;
+            // 只有显式设置过（true/false）才覆盖全局，未设置时保持 null 以跟随全局
+            sidebarCosmetics.value = typeof sidebarCosmeticsConfig === 'boolean' ? sidebarCosmeticsConfig : null;
             hideUserNotes.value = hideUserNotesConfig;
             hideUserMemos.value = hideUserMemosConfig;
             hideUnfriends.value = hideUnfriendsConfig;
@@ -571,10 +574,7 @@ export const useAppearanceSettingsStore = defineStore(
         }
         function setShowMutualFriendsBadge() {
             showMutualFriendsBadge.value = !showMutualFriendsBadge.value;
-            configRepository.setBool(
-                'VRCX_showMutualFriendsBadge',
-                showMutualFriendsBadge.value
-            );
+            configRepository.setBool('VRCX_showMutualFriendsBadge', showMutualFriendsBadge.value);
         }
 
         /**
@@ -712,7 +712,8 @@ export const useAppearanceSettingsStore = defineStore(
             configRepository.setString('VRCX_sidebarFavoriteGroupOrder', JSON.stringify(value));
         }
         function setSidebarCosmetics() {
-            sidebarCosmetics.value = !sidebarCosmetics.value;
+            // 以「当前生效值」取反，保证第一次点击就得到用户预期的结果
+            sidebarCosmetics.value = !isSidebarCosmeticsEnabled.value;
             configRepository.setBool('VRCX_sidebarCosmetics', sidebarCosmetics.value);
         }
         function setHideUserNotes() {
@@ -955,6 +956,7 @@ export const useAppearanceSettingsStore = defineStore(
             sidebarFavoriteGroups,
             sidebarFavoriteGroupOrder,
             sidebarCosmetics,
+            isSidebarCosmeticsEnabled,
             hideUserNotes,
             hideUserMemos,
             hideUnfriends,

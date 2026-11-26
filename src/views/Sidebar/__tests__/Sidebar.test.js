@@ -153,6 +153,19 @@ describe('Sidebar.vue', () => {
         mocks.markAllAsSeen.mockClear();
     });
 
+    it('makes the friend list inert while the settings popover is open', async () => {
+        const wrapper = mount(Sidebar);
+        const panel = wrapper.get('[data-testid="friends-sidebar-panel"]');
+
+        expect(panel.attributes('inert')).toBeUndefined();
+        wrapper.vm.isSettingsPopoverOpen = true;
+        await wrapper.vm.$nextTick();
+        expect(panel.attributes('inert')).toBe('');
+        wrapper.vm.isSettingsPopoverOpen = false;
+        await wrapper.vm.$nextTick();
+        expect(panel.attributes('inert')).toBeUndefined();
+    });
+
     it('opens quick search and marks notifications read', async () => {
         const wrapper = mount(Sidebar);
         const buttons = wrapper.findAll('button');

@@ -25,7 +25,11 @@ vi.mock('@/components/ui/sidebar', () => ({
 }));
 
 vi.mock('@/components/ui/collapsible', () => ({
-    Collapsible: { template: '<div><slot :open="true" /></div>' },
+    Collapsible: {
+        emits: ['update:open'],
+        template:
+            '<div><button data-testid="collapsible-toggle" @click="$emit(\'update:open\', false)" /><slot :open="true" /></div>'
+    },
     CollapsibleTrigger: { template: '<div><slot /></div>' },
     CollapsibleContent: { template: '<div><slot /></div>' }
 }));
@@ -90,6 +94,27 @@ describe('NavMenuFolderItem', () => {
         await wrapper.find('[data-testid="submenu-btn"]').trigger('click');
 
         expect(wrapper.emitted('submenu-click')).toBeTruthy();
+    });
+
+    it('remembers the DLC folder collapsed state', async () => {
+        localStorage.removeItem('VRCX_dlcx_nav_expanded');
+        const wrapper = mount(NavMenuFolderItem, {
+            props: {
+                item: { ...folderItem, index: 'default-folder-dlc' },
+                isCollapsed: false,
+                activeMenuIndex: '',
+                collapsedDropdownOpenId: null,
+                hasNotifications: false,
+                isEntryNotified: () => false,
+                isNavItemNotified: () => false,
+                isDashboardItem: () => false,
+                isToolItem: () => false
+            }
+        });
+
+        await wrapper.find('[data-testid="collapsible-toggle"]').trigger('click');
+
+        expect(localStorage.getItem('VRCX_dlcx_nav_expanded')).toBe('false');
     });
 
     it('emits collapsed-dropdown-open-change in collapsed mode', async () => {

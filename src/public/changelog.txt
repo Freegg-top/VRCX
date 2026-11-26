@@ -1,0 +1,8 @@
+## VRCX DLCX 2026.11.23-dlc.12
+
+### DLCX customization
+
+- Added the guided first-run introduction and optional data-sharing explanation.
+- Grouped friend network, avatar, world, activity, and group tools under DLC in the sidebar.
+- Improved cloud observation details and local changelog reliability.
+- Included DLCX customization, localization, and stability improvements.

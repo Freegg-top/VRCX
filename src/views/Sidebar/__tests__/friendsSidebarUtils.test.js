@@ -1,6 +1,97 @@
 import { describe, expect, test } from 'vitest';
 
-import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from '../friendsSidebarUtils';
+import {
+    buildFriendRow,
+    buildInstanceHeaderRow,
+    buildToggleRow,
+    estimateRowSize,
+    resolveSelfLocation
+} from '../friendsSidebarUtils';
+
+describe('resolveSelfLocation', () => {
+    const currentUser = {
+        $locationTag: 'wrld_api:123',
+        $travelingToLocation: ''
+    };
+
+    test('falls back to the API location while game-log history is empty', () => {
+        expect(
+            resolveSelfLocation({
+                isGameRunning: true,
+                gameLogDisabled: false,
+                lastLocation: { location: '' },
+                lastLocationDestination: '',
+                currentUser
+            })
+        ).toEqual({ location: 'wrld_api:123', traveling: '' });
+    });
+
+    test('prefers a valid game-log location while the game is running', () => {
+        expect(
+            resolveSelfLocation({
+                isGameRunning: true,
+                gameLogDisabled: false,
+                lastLocation: { location: 'wrld_log:456' },
+                lastLocationDestination: '',
+                currentUser
+            })
+        ).toEqual({ location: 'wrld_log:456', traveling: '' });
+    });
+
+    test('immediately follows a game-log world change instead of the stale API world', () => {
+        expect(
+            resolveSelfLocation({
+                isGameRunning: true,
+                gameLogDisabled: false,
+                lastLocation: { date: 200, location: 'wrld_new:789' },
+                lastLocationDestination: '',
+                currentUser: {
+                    $locationTag: 'wrld_old:123',
+                    $travelingToLocation: ''
+                }
+            })
+        ).toEqual({ location: 'wrld_new:789', traveling: '' });
+    });
+
+    test('updates the full location when only the instance changes within the same world', () => {
+        expect(
+            resolveSelfLocation({
+                isGameRunning: true,
+                gameLogDisabled: false,
+                lastLocation: { date: 200, location: 'wrld_same:new-instance~region(us)' },
+                lastLocationDestination: '',
+                currentUser: {
+                    $locationTag: 'wrld_same:old-instance~region(use)',
+                    $travelingToLocation: ''
+                }
+            })
+        ).toEqual({ location: 'wrld_same:new-instance~region(us)', traveling: '' });
+    });
+
+    test('does not restore the old API world during a game-log location reset', () => {
+        expect(
+            resolveSelfLocation({
+                isGameRunning: true,
+                gameLogDisabled: false,
+                lastLocation: { date: 0, location: '' },
+                lastLocationDestination: '',
+                currentUser
+            })
+        ).toEqual({ location: '', traveling: '' });
+    });
+
+    test('uses the API location when game logs are disabled', () => {
+        expect(
+            resolveSelfLocation({
+                isGameRunning: true,
+                gameLogDisabled: true,
+                lastLocation: { location: 'wrld_log:456' },
+                lastLocationDestination: '',
+                currentUser
+            })
+        ).toEqual({ location: 'wrld_api:123', traveling: '' });
+    });
+});
 
 // ─── buildToggleRow ──────────────────────────────────────────────────
 

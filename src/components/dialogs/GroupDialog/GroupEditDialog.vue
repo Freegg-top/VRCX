@@ -174,7 +174,8 @@
                                         <img
                                             v-if="link"
                                             :src="getFaviconUrl(link)"
-                                            style="width: 16px; height: 16px; vertical-align: middle" />
+                                            style="width: 16px; height: 16px; vertical-align: middle"
+                                            @error="onFaviconError($event, link)" />
                                         <div v-else style="width: 16px; height: 16px" />
                                     </template>
                                     <template #actions>
@@ -313,7 +314,7 @@
 
     import { groupRequest } from '../../../api';
     import { applyGroup, showGroupDialog } from '../../../coordinators/groupCoordinator';
-    import { getFaviconUrl } from '../../../shared/utils';
+    import { getFaviconUrl, onFaviconError } from '../../../shared/utils';
     import { useGroupStore, useUserStore } from '../../../stores';
     import GallerySelectDialog from './GallerySelectDialog.vue';
 

@@ -51,13 +51,6 @@ vi.mock('../../../coordinators/watchedCoordinator', () => ({
     removeWatchedUser: vi.fn()
 }));
 
-vi.mock('../dialogs/WatchedUsersDialog.vue', () => ({
-    default: {
-        props: ['open'],
-        template: '<div v-if="open" data-testid="watched-users-dialog" />'
-    }
-}));
-
 vi.mock('../../../stores', () => ({
     useFeedStore: () => ({
         feedTable: mocks.feedTable,
@@ -196,6 +189,13 @@ describe('Feed.vue', () => {
         mocks.pagination.value = { pageIndex: 2, pageSize: 10 };
         mocks.filteredRows = [{ id: 'r1' }];
         mocks.maxTableSize = 100;
+    });
+
+    test('does not render the removed watched-users toolbar button', () => {
+        const wrapper = mount(Feed);
+
+        expect(wrapper.text()).not.toContain('view.feed.watched_users');
+        expect(wrapper.text()).not.toContain('view.feed.watched_users_tooltip');
     });
 
     test('applies date filter from calendar and triggers lookup', async () => {

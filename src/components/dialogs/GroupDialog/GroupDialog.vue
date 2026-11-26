@@ -449,21 +449,32 @@
                             }}</span>
                         </div>
                     </TooltipWrapper>
-                    <div v-if="groupDialog.ref.links?.length" class="flex justify-between items-start gap-2 text-xs">
+                    <div
+                        v-if="groupDialog.ref.links?.length"
+                        class="flex flex-col items-start gap-1.5 text-xs">
                         <span class="text-muted-foreground shrink-0">{{ t('dialog.group.info.links') }}</span>
-                        <div class="flex gap-1">
-                            <template v-for="(link, index) in groupDialog.ref.links" :key="index">
-                                <TooltipWrapper v-if="link">
-                                    <template #content>
-                                        <span v-text="link" />
-                                    </template>
-                                    <img
-                                        :src="getFaviconUrl(link)"
-                                        style="width: 16px; height: 16px; vertical-align: middle; cursor: pointer"
-                                        @click.stop="openExternalLink(link)"
-                                        loading="lazy" />
-                                </TooltipWrapper>
-                            </template>
+                        <div class="flex w-full flex-wrap items-center gap-1.5">
+                            <a
+                                v-for="(link, index) in groupDialog.ref.links"
+                                v-show="link"
+                                :key="`${link}-${index}`"
+                                :href="link"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                :title="link"
+                                class="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs text-primary hover:bg-accent hover:underline"
+                                @click.prevent.stop="openExternalLink(link)">
+                                <img
+                                    :src="getFaviconUrl(link)"
+                                    class="size-3.5 shrink-0"
+                                    alt=""
+                                    aria-hidden="true"
+                                    loading="lazy"
+                                    @error="onFaviconError($event, link)" />
+                                <span class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                                    {{ formatGroupLinkLabel(link) }}
+                                </span>
+                            </a>
                         </div>
                     </div>
                     <div class="flex justify-between items-center gap-2 text-xs">
@@ -739,6 +750,22 @@
 
     const { showFullscreenImageDialog } = useGalleryStore();
     const instanceStore = useInstanceStore();
+
+    /**
+     * 链接显示文本：超长 URL 中间省略（与用户资料卡链接同款规则）.
+     *
+     * @param {string} link
+     */
+    function formatGroupLinkLabel(link) {
+        const value = String(link || '');
+        const maxLength = 72;
+        if (value.length <= maxLength) {
+            return value;
+        }
+        const leadingLength = Math.ceil((maxLength - 1) / 2);
+        const trailingLength = Math.floor((maxLength - 1) / 2);
+        return `${value.slice(0, leadingLength)}…${value.slice(-trailingLength)}`;
+    }
 
     function showPreviousInstancesListDialog(groupRef) {
         instanceStore.showPreviousInstancesListDialog('group', groupRef);

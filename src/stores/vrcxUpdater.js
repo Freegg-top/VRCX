@@ -44,9 +44,9 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
         buildName: '',
         changeLog: ''
     });
-    // 拓展版当前运行版本的更新日志: 打包脚本写入安装目录 html/changelog.txt, 与应用同源
+    // 拓展版当前运行版本的更新日志: src/public/changelog.txt 会复制到应用根目录
     const dlcChangeLogText = ref('');
-    // 语义: 本次会话已成功加载过 (加载失败保持 false, 下次打开对话框可重试)
+    // 本地文件与内嵌回退均已准备完成，避免每次打开重复请求
     const dlcChangeLogLoaded = ref(false);
     const whatsNewDialog = ref(emptyWhatsNewDialog());
     const pendingVRCXUpdate = ref(false);
@@ -579,24 +579,25 @@ export const useVRCXUpdaterStore = defineStore('VRCXUpdater', () => {
     }
 
     /**
-     * 读取本地打包的当前运行版本更新日志 (安装目录 html/changelog.txt, 与应用同源)
-     * 相对路径 + 时间戳防缓存; 请求失败/空内容/HTML 错误页均视为未加载, 静默保持 text 为空
+     * 优先读取随前端资源打包的 changelog.txt；缺失、空内容或 HTML 错误页使用内嵌说明。
      */
     async function loadDlcChangeLog() {
+        dlcChangeLogText.value = t('dialog.change_log.dlc_fallback');
         try {
-            const response = await fetch(`changelog.txt?t=${Date.now()}`);
-            if (!response.ok) {
-                return;
+            const changelogUrl = new URL('changelog.txt', document.baseURI);
+            changelogUrl.searchParams.set('t', String(Date.now()));
+            const response = await fetch(changelogUrl.href);
+            if (response.ok) {
+                const text = await response.text();
+                // dev server 等场景下缺失文件可能回退成 index.html, 不能当作更新日志
+                if (text.trim() && !/<!doctype html|<html[\s>]/i.test(text)) {
+                    dlcChangeLogText.value = text;
+                }
             }
-            const text = await response.text();
-            // dev server 等场景下缺失文件可能回退成 index.html, 不能当作更新日志
-            if (!text.trim() || /<!doctype html|<html[\s>]/i.test(text)) {
-                return;
-            }
-            dlcChangeLogText.value = text;
-            dlcChangeLogLoaded.value = true;
         } catch (error) {
-            console.error('Failed to load local DLC changelog', error);
+            console.warn('Failed to load local DLC changelog; using embedded fallback', error);
+        } finally {
+            dlcChangeLogLoaded.value = true;
         }
     }
     function restartVRCX(isUpgrade) {

@@ -345,7 +345,7 @@
     }
 
     function loadLastActiveTab() {
-        const tab = userDialog.value.lastActiveTab === 'overseeTrace' ? 'Info' : userDialog.value.lastActiveTab;
+        const tab = userDialog.value.lastActiveTab === 'dlcxTrace' ? 'Info' : userDialog.value.lastActiveTab;
         userDialog.value.activeTab = tab;
         userDialog.value.lastActiveTab = tab;
         handleUserDialogTab(tab);

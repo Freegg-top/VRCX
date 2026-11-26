@@ -82,6 +82,7 @@
         <ModerationReportDialog />
         <GlobalToolsDialogs />
         <ChangelogDialog />
+        <DLCXOnboardingDialog />
         <WhatsNewDialog />
         <SpotlightDialog />
     </template>
@@ -123,6 +124,7 @@
     import StatusBar from '../../components/StatusBar.vue';
     import VRChatConfigDialog from '../Settings/dialogs/VRChatConfigDialog.vue';
     import WorldImportDialog from '../Favorites/dialogs/WorldImportDialog.vue';
+    import DLCXOnboardingDialog from '../../components/onboarding/DLCXOnboardingDialog.vue';
     import WhatsNewDialog from '../../components/onboarding/WhatsNewDialog.vue';
     import SpotlightDialog from '../../components/onboarding/SpotlightDialog.vue';
 

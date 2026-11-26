@@ -51,16 +51,14 @@
                             </div>
                         </TooltipWrapper>
 
-                        <TooltipWrapper v-if="visibility.oversee && overseeStatus" :content="overseeTooltip" side="top">
+                        <TooltipWrapper v-if="visibility.dlcx && dlcxStatus" :content="dlcxTooltip" side="top">
                             <div
                                 class="flex items-center gap-1 px-2 h-[22px] whitespace-nowrap border-r border-border cursor-pointer hover:bg-accent"
-                                data-testid="oversee-status"
-                                @click="handleOverseeClick">
-                                <span
-                                    class="inline-block size-2 rounded-full shrink-0"
-                                    :class="overseeStatusColorClass" />
+                                data-testid="dlcx-status"
+                                @click="handleDLCXClick">
+                                <span class="inline-block size-2 rounded-full shrink-0" :class="dlcxStatusColorClass" />
                                 <span class="text-foreground text-[11px]">{{
-                                    t(`status_bar.oversee_${overseeStatus}`)
+                                    t(`status_bar.dlcx_${dlcxStatus}`)
                                 }}</span>
                             </div>
                         </TooltipWrapper>
@@ -338,11 +336,11 @@
                     {{ t('status_bar.proxy') }}
                 </ContextMenuCheckboxItem>
                 <ContextMenuCheckboxItem
-                    v-if="overseeConfigured"
-                    :model-value="visibility.oversee"
+                    v-if="dlcxConfigured"
+                    :model-value="visibility.dlcx"
                     @select.prevent
-                    @update:model-value="toggleVisibility('oversee')">
-                    {{ t('status_bar.oversee') }}
+                    @update:model-value="toggleVisibility('dlcx')">
+                    {{ t('status_bar.dlcx') }}
                 </ContextMenuCheckboxItem>
                 <ContextMenuCheckboxItem
                     :model-value="visibility.ws"
@@ -429,7 +427,7 @@
         useGameLogStore,
         useGameStore,
         useGeneralSettingsStore,
-        useOverseeSettingsStore,
+        useDLCXSettingsStore,
         useUserStore,
         useVrcStatusStore,
         useVrcxStore
@@ -443,7 +441,7 @@
     import { useRouter } from 'vue-router';
     import { openExternalLink } from '@/shared/utils/appActions';
     import { wsState } from '@/services/websocket';
-    import { sseConnState } from '@/services/overseeWatch';
+    import { sseConnState } from '@/services/dlcxWatch';
 
     import dayjs from 'dayjs';
     import timezone from 'dayjs/plugin/timezone';
@@ -452,7 +450,7 @@
     import {
         defaultVisibility,
         formatAppUptime,
-        getOverseeStatus,
+        getDLCXStatus,
         formatUtcHour,
         normalizeClock,
         normalizeUtcHour,
@@ -476,39 +474,38 @@
     const vrcxStore = useVrcxStore();
     const vrcStatusStore = useVrcStatusStore();
     const generalSettingsStore = useGeneralSettingsStore();
-    const overseeSettingsStore = useOverseeSettingsStore();
-    const { licenseKey, licenseStatus, apiBase, sseEnabled } = storeToRefs(overseeSettingsStore);
+    const dlcxSettingsStore = useDLCXSettingsStore();
+    const { licenseKey, licenseStatus, apiBase } = storeToRefs(dlcxSettingsStore);
 
-    const overseeConfigured = computed(() => Boolean(String(licenseKey.value || '').trim()));
-    const overseeStatus = computed(() =>
-        getOverseeStatus({
+    const dlcxConfigured = computed(() => Boolean(String(licenseKey.value || '').trim()));
+    const dlcxStatus = computed(() =>
+        getDLCXStatus({
             licenseKey: licenseKey.value,
             licenseStatus: licenseStatus.value,
-            sseEnabled: sseEnabled.value,
             connState: sseConnState.value
         })
     );
-    const overseeStatusColorClass = computed(() => {
-        if (overseeStatus.value === 'live') {
+    const dlcxStatusColorClass = computed(() => {
+        if (dlcxStatus.value === 'live') {
             return 'bg-status-online';
         }
-        if (overseeStatus.value === 'connecting') {
+        if (dlcxStatus.value === 'connecting') {
             return 'bg-status-askme';
         }
-        if (overseeStatus.value === 'invalid' || overseeStatus.value === 'expired' || overseeStatus.value === 'error') {
+        if (dlcxStatus.value === 'invalid' || dlcxStatus.value === 'expired' || dlcxStatus.value === 'error') {
             return 'bg-destructive';
         }
         return 'bg-status-offline-alt';
     });
-    const overseeTooltip = computed(() => {
-        if (!overseeStatus.value) {
+    const dlcxTooltip = computed(() => {
+        if (!dlcxStatus.value) {
             return '';
         }
-        return `${t(`status_bar.oversee_${overseeStatus.value}`)}\n${t('status_bar.oversee_api', { apiBase: apiBase.value })}`;
+        return `${t(`status_bar.dlcx_${dlcxStatus.value}`)}\n${t('status_bar.dlcx_api', { apiBase: apiBase.value })}`;
     });
 
-    function handleOverseeClick() {
-        router.push({ name: 'settings', query: { tab: 'oversee' } });
+    function handleDLCXClick() {
+        router.push({ name: 'settings', query: { tab: 'dlcx' } });
     }
 
     const { nowPlaying } = storeToRefs(gameLogStore);
@@ -752,7 +749,13 @@
         ]);
         if (savedVis) {
             try {
-                Object.assign(visibility, JSON.parse(savedVis));
+                const parsedVis = JSON.parse(savedVis);
+                // 兼容旧版按键名 oversee 保存的可见性开关
+                if (parsedVis && typeof parsedVis === 'object' && 'oversee' in parsedVis && !('dlcx' in parsedVis)) {
+                    parsedVis.dlcx = parsedVis.oversee;
+                    delete parsedVis.oversee;
+                }
+                Object.assign(visibility, parsedVis);
             } catch {
                 // ignore
             }
